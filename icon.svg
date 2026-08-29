@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="104" fill="#2f6b43"/>
+  <text x="50%" y="53%" text-anchor="middle" dominant-baseline="central"
+        font-family="'Segoe UI', Arial, sans-serif" font-weight="800" font-style="italic"
+        font-size="210" fill="#ffffff">PT</text>
+</svg>

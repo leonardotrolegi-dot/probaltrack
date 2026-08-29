@@ -1,0 +1,14 @@
+{
+  "name": "Probal Track",
+  "short_name": "Probal Track",
+  "description": "Gestión Comercial - Team Carne",
+  "start_url": ".",
+  "scope": ".",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#12160f",
+  "theme_color": "#2f6b43",
+  "icons": [
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}
