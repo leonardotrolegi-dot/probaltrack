@@ -15,6 +15,7 @@
 <link rel="icon" href="icon.svg">
 <!-- Firebase (banco em tempo real). No claude.ai estes scripts são bloqueados e o app usa a base do Claude automaticamente. -->
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script>
   /* ===========================================================
@@ -737,10 +738,36 @@
   .rep-pdf{width:100%;margin-top:16px;display:flex;align-items:center;justify-content:center;gap:8px}
   .rep-pdf svg{width:18px;height:18px}
 
+  .auth-input{
+    width:100%;border:1.5px solid var(--line);border-radius:12px;background:var(--surface-2);
+    color:var(--ink);padding:13px 14px;font-size:16px;font-family:inherit;margin-bottom:4px;
+  }
+  .auth-input:focus{outline:none;border-color:var(--accent)}
+
   .hidden{display:none!important}
 </style>
 
 <div class="app" id="app">
+
+  <!-- ACCESO DE LA EMPRESA (Firebase) -->
+  <section class="login hidden" id="authGate">
+    <div class="brand">
+      <div class="mark"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></div>
+      <div>
+        <h1>Probal Track</h1>
+        <p>Acceso de la empresa</p>
+      </div>
+    </div>
+    <div class="card">
+      <span class="lbl">Correo de la empresa</span>
+      <input type="email" id="authEmail" class="auth-input" placeholder="acceso@empresa.com" autocomplete="username">
+      <span class="lbl">Contraseña</span>
+      <input type="password" id="authPass" class="auth-input" placeholder="••••••••" autocomplete="current-password">
+      <p class="hint">Solo la primera vez en este dispositivo — después entra directo con el PIN.</p>
+    </div>
+    <div class="err" id="authErr"></div>
+    <button class="btn" id="authBtn">Entrar</button>
+  </section>
 
   <!-- LOGIN -->
   <section class="login" id="login">
@@ -781,6 +808,7 @@
 
     <div class="err" id="loginErr"></div>
     <button class="btn" id="loginBtn" disabled>Entrar</button>
+    <button class="mgr-link hidden" id="companyOut" type="button" style="margin-top:2px">Cerrar sesión de empresa</button>
   </section>
 
   <!-- APP SHELL -->
@@ -1428,13 +1456,10 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
     dbh.collection("routes").onSnapshot(function(snap){ ROUTES=groupBySeller(snap.docs); reRenderCurrent(); }, noop);
   }
   function dbBoot(){
-    // 1) Firebase Firestore (site próprio / Vercel)
-    try{
-      if(window.firebase && window.FIREBASE_CONFIG && window.FIREBASE_CONFIG.projectId){
-        if(!firebase.apps.length) firebase.initializeApp(window.FIREBASE_CONFIG);
-        dbh = firebase.firestore(); useDB = true; subscribeDB(); return;
-      }
-    }catch(e){}
+    // 1) Firebase (site próprio / Vercel) — com login da empresa
+    if(window.firebase && window.FIREBASE_CONFIG && window.FIREBASE_CONFIG.projectId){
+      try{ firebaseBoot(); return; }catch(e){}
+    }
     // 2) Base do Claude (dentro do claude.ai)
     var p; try{ p = (window.claude && window.claude.use) ? window.claude.use("db") : null; }catch(e){ p=null; }
     if(!p){ localBoot(); return; }
@@ -1442,6 +1467,39 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
       if(!h){ localBoot(); return; }
       dbh=h; useDB=true; subscribeDB();
     }, function(){ localBoot(); });
+  }
+  function firebaseBoot(){
+    if(!firebase.apps.length) firebase.initializeApp(window.FIREBASE_CONFIG);
+    var auth = firebase.auth();
+    $("#companyOut").classList.remove("hidden");
+    // enquanto não sabe, mostra a porta da empresa
+    $("#login").classList.add("hidden"); $("#authGate").classList.remove("hidden");
+    auth.onAuthStateChanged(function(user){
+      if(user){
+        $("#authGate").classList.add("hidden");
+        if(!current && !isManager){ $("#login").classList.remove("hidden"); }
+        if(!useDB){ dbh=firebase.firestore(); useDB=true; subscribeDB(); }
+      } else {
+        useDB=false; current=null; isManager=false;
+        $("#shell").classList.add("hidden"); $("#mShell").classList.add("hidden"); $("#login").classList.add("hidden");
+        $("#authGate").classList.remove("hidden");
+      }
+    });
+    function doAuth(){
+      var em=$("#authEmail").value.trim(), pw=$("#authPass").value;
+      if(!em || !pw){ $("#authErr").textContent="Ingrese correo y contraseña."; return; }
+      var b=$("#authBtn"), old=b.textContent; b.disabled=true; b.textContent="Entrando…";
+      auth.signInWithEmailAndPassword(em, pw).then(function(){
+        $("#authPass").value=""; $("#authErr").textContent=""; b.disabled=false; b.textContent=old;
+      }).catch(function(){
+        $("#authErr").textContent="Correo o contraseña incorrectos."; b.disabled=false; b.textContent=old;
+      });
+    }
+    $("#authBtn").addEventListener("click", doAuth);
+    $("#authPass").addEventListener("keydown", function(e){ if(e.key==="Enter") doAuth(); });
+    $("#companyOut").addEventListener("click", function(){
+      if(window.confirm("¿Cerrar la sesión de la empresa en este dispositivo?")) auth.signOut();
+    });
   }
   function putVisit(v){
     if(!DB[v.sellerId]) DB[v.sellerId]=[];
