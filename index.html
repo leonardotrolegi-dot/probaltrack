@@ -17,6 +17,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script>
   /* ===========================================================
      COLE AQUI a configuração do SEU projeto Firebase.
@@ -275,9 +276,11 @@
     box-shadow:var(--shadow-lg);max-height:210px;overflow-y:auto;display:none;
   }
   .ac-list.on{display:block}
-  .ac-item{padding:11px 14px;font-size:15px;cursor:pointer;border-bottom:1px solid var(--line-soft)}
+  .ac-item{padding:11px 14px;font-size:15px;cursor:pointer;border-bottom:1px solid var(--line-soft);display:flex;justify-content:space-between;align-items:baseline;gap:10px}
   .ac-item:last-child{border-bottom:none}
   .ac-item:hover,.ac-item.hi{background:var(--accent-soft)}
+  .ac-item .ac-nm{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .ac-item .ac-kg{color:var(--ink-faint);font-size:12px;white-space:nowrap;flex:none;font-variant-numeric:tabular-nums}
   .ac-item small{color:var(--ink-faint);display:block;font-size:12px}
   .ac-empty{padding:12px 14px;font-size:13.5px;color:var(--ink-faint)}
 
@@ -738,6 +741,15 @@
   .rep-pdf{width:100%;margin-top:16px;display:flex;align-items:center;justify-content:center;gap:8px}
   .rep-pdf svg{width:18px;height:18px}
 
+  .kacct-kg{font-size:12px;color:var(--ink-faint);font-weight:600;font-variant-numeric:tabular-nums}
+  .admin-card{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:14px;box-shadow:var(--shadow);margin-bottom:16px}
+  .admin-title{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--ink-faint);margin-bottom:11px}
+  .admin-title svg{width:16px;height:16px;color:var(--accent)}
+  .admin-row{display:flex;gap:9px;flex-wrap:wrap}
+  .imp-btn{flex:1;min-width:140px;display:flex;align-items:center;justify-content:center;gap:8px;cursor:pointer}
+  .imp-btn svg{width:16px;height:16px}
+  .admin-note{font-size:12px;color:var(--ink-faint);margin-top:10px;line-height:1.45}
+
   .auth-input{
     width:100%;border:1.5px solid var(--line);border-radius:12px;background:var(--surface-2);
     color:var(--ink);padding:13px 14px;font-size:16px;font-family:inherit;margin-bottom:4px;
@@ -1063,6 +1075,16 @@
           <h2>Resumen del equipo</h2>
           <p>Actividad de cada vendedor de un vistazo.</p>
         </div>
+
+        <div class="admin-card">
+          <div class="admin-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14a9 3 0 0 0 18 0V5"/><path d="M3 12a9 3 0 0 0 18 0"/></svg> Base de datos</div>
+          <div class="admin-row">
+            <label class="btn-sec imp-btn"><input type="file" id="impCli" accept=".xlsx,.xls,.csv" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg> Importar clientes</label>
+            <label class="btn-sec imp-btn"><input type="file" id="impPro" accept=".xlsx,.xls,.csv" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg> Importar prospectos</label>
+          </div>
+          <div class="admin-note" id="impStatus">Clientes: hoja “base kg” (col. A = nombre, col. O = kg). Prospectos: nombre, estancia, vendedor.</div>
+        </div>
+
         <div class="kpis" id="mKpi"></div>
         <div id="mTeam"></div>
       </section>
@@ -1342,7 +1364,7 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
     "Rodolfo":"8534","Billie":"6902","Thatyany":"3427","Martin":"5691","Pré venta":"8160"
   };
   function slug(s){ return s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/[^a-z0-9]+/g,"_").replace(/^_|_$/g,""); }
-  var SELLERS=[], SELLER_BY={}, KEY={}, CLIENTES=[], PROSPECTOS=[], _cliSeen={};
+  var SELLERS=[], SELLER_BY={}, KEY={}, CLIENTES_FALLBACK=[], _cliSeen={};
   RAW_8020.split("\n").forEach(function(ln){
     ln=ln.trim(); if(!ln) return;
     var p=ln.split("|"), resp=(p[0]||"").trim(), cli=(p[1]||"").trim(), est=(p[2]||"").trim();
@@ -1351,10 +1373,24 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
     if(!SELLER_BY[id]){ var s={id:id, name:resp, role:"Comercial", pin:(PINS[resp]||"1234"), color:SELLER_COLORS[SELLERS.length%SELLER_COLORS.length]}; SELLERS.push(s); SELLER_BY[id]=s; KEY[id]=[]; }
     var idNome = est ? (cli+" · "+est) : cli;
     KEY[id].push({c:cli, e:est, id:idNome});
-    if(!_cliSeen[idNome]){ _cliSeen[idNome]=1; CLIENTES.push({nome:idNome, loc:est||""}); }
+    if(!_cliSeen[cli]){ _cliSeen[cli]=1; CLIENTES_FALLBACK.push({nome:cli, loc:est||""}); }
   });
-  var CLI_LOC={}; CLIENTES.forEach(function(c){ CLI_LOC[c.nome]=c.loc; });
-  function listForMotivo(mot){ return mot==="Prospecto" ? PROSPECTOS : CLIENTES; }
+  var PROSPECTOS_FALLBACK=[];
+  var NAME2ID={}; SELLERS.forEach(function(s){ NAME2ID[slug(s.name)]=s.id; });
+
+  // Catálogo (clientes/prospectos) — vem del banco vía importación del gestor
+  var CAT_CLI=[], CAT_PRO=[], KGMAP={};
+  function kgFor(n){ return KGMAP[n]||0; }
+  function listForMotivo(mot){
+    if(mot==="Prospecto"){
+      var arr = CAT_PRO.length ? CAT_PRO : PROSPECTOS_FALLBACK;
+      var sid = current ? current.id : null;
+      return sid ? arr.filter(function(x){ return !x.vendedor || x.vendedor===sid; }) : arr;
+    }
+    return CAT_CLI.length ? CAT_CLI : CLIENTES_FALLBACK;
+  }
+  function inList(nome, mot){ return listForMotivo(mot).some(function(x){ return x.nome===nome; }); }
+  var CLI_LOC={};
   function currentMotivo(){ var r=$$("input[name=motivo]").filter(function(x){return x.checked;})[0]; return r?r.value:"Cliente"; }
 
   var CPAL = ["--c1","--c2","--c3","--c4","--c5","--c6","--c7","--c8","--c9","--c10"];
@@ -1454,6 +1490,16 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
   function subscribeDB(){
     dbh.collection("visits").onSnapshot(function(snap){ DB=groupBySeller(snap.docs); reRenderCurrent(); }, noop);
     dbh.collection("routes").onSnapshot(function(snap){ ROUTES=groupBySeller(snap.docs); reRenderCurrent(); }, noop);
+    dbh.collection("catalog").onSnapshot(function(snap){
+      var cli=[], pro=[], kg={};
+      snap.docs.forEach(function(d){ var v=d.data()||{};
+        if(v.tipo==="Prospecto"){ pro.push({nome:v.nome, loc:v.estancia||"", vendedor:v.vendedor||""}); }
+        else { cli.push({nome:v.nome, loc:"", kg:v.kg||0}); if(v.kg) kg[v.nome]=v.kg; }
+      });
+      cli.sort(function(a,b){ return (b.kg||0)-(a.kg||0); });
+      pro.sort(function(a,b){ return a.nome<b.nome?-1:1; });
+      CAT_CLI=cli; CAT_PRO=pro; KGMAP=kg; reRenderCurrent();
+    }, noop);
   }
   function dbBoot(){
     // 1) Firebase (site próprio / Vercel) — com login da empresa
@@ -1528,6 +1574,7 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
   }
   function esc(s){ return String(s).replace(/[&<>"]/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c];}); }
   function fmtDate(iso){ if(!iso) return "—"; var p=iso.split("-"); return p[2]+"/"+p[1]+"/"+p[0]; }
+  function fmtKg(n){ n=Math.round(n||0); return String(n).replace(/\B(?=(\d{3})+(?!\d))/g,"."); }
   function cssVar(n){ return getComputedStyle(document.documentElement).getPropertyValue(n).trim(); }
   function todayISO(){ return new Date().toISOString().slice(0,10); }
   function daysSince(iso){ if(!iso) return null; var a=new Date(iso+"T00:00:00"), b=new Date(todayISO()+"T00:00:00"); return Math.round((b-a)/86400000); }
@@ -1738,11 +1785,12 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
     if(!q){ acMatches = src.slice(); }
     acHi = -1;
     if(acMatches.length===0){
-      acList.innerHTML = '<div class="ac-empty">Sin coincidencias — se guardará como nuevo registro.</div>';
+      acList.innerHTML = '<div class="ac-empty">No está en la lista. Solo el gestor puede agregarlo.</div>';
       acList.classList.add("on"); return;
     }
     acList.innerHTML = acMatches.slice(0,8).map(function(c,i){
-      return '<div class="ac-item" data-i="'+i+'">'+hl(c.nome,q)+'<small>'+c.loc+'</small></div>';
+      var right = c.kg ? fmtKg(c.kg)+' kg' : (c.loc||'');
+      return '<div class="ac-item" data-i="'+i+'"><span class="ac-nm">'+hl(c.nome,q)+'</span>'+(right?'<span class="ac-kg">'+right+'</span>':'')+'</div>';
     }).join("");
     acList.classList.add("on");
     $$(".ac-item",acList).forEach(function(el){
@@ -1822,10 +1870,11 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
   $("#saveBtn").addEventListener("click", function(){
     var cli = acInput.value.trim();
     if(!cli){ acInput.focus(); toast("Elija el cliente primero.", true); return; }
+    var motivo = $$("input[name=motivo]").filter(function(x){return x.checked;})[0].value;
+    if(!inList(cli, motivo)){ acInput.focus(); toast("Ese "+(motivo==="Prospecto"?"prospecto":"cliente")+" no está en la lista. Pídalo al gestor.", true); return; }
     var obs = $("#fObs").value.trim();
     if(!obs){ $("#fObs").focus(); toast("Las observaciones son obligatorias.", true); return; }
     stopRec();
-    var motivo = $$("input[name=motivo]").filter(function(x){return x.checked;})[0].value;
     var rec2 = {
       id:"v"+Date.now()+Math.random().toString(36).slice(2,5),
       sellerId:current.id,
@@ -2142,7 +2191,7 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
         var sitTag = sitSpecial(st.situacao) ? '<span class="sit '+sitClass(st.situacao)+'">'+esc(st.situacao)+'</span>' : '';
         return '<div class="kacct">'+
           '<div class="stripe" style="background:'+stripeCol[status.cls]+'"></div>'+
-          '<div class="info"><b>'+esc(r.c)+'</b><div class="loc">'+(r.e?esc(r.e):'&nbsp;')+'</div><div class="meta2">'+meta+'</div></div>'+
+          '<div class="info"><b>'+esc(r.c)+'</b>'+(kgFor(r.c)?' <span class="kacct-kg">('+fmtKg(kgFor(r.c))+' kg)</span>':'')+'<div class="loc">'+(r.e?esc(r.e):'&nbsp;')+'</div><div class="meta2">'+meta+'</div></div>'+
           '<div class="kcount"><b>'+st.count+'</b><span>visita'+(st.count!==1?'s':'')+'</span></div>'+
           '<div class="right"><span class="pill '+status.cls+'">'+status.label+'</span>'+sitTag+extra+'</div>'+
         '</div>';
@@ -2281,8 +2330,10 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
   $("#rAdd").addEventListener("click", function(){
     var cli=$("#rCliente").value.trim();
     if(!cli){ $("#rCliente").focus(); toast("Escriba el cliente o prospecto.", true); return; }
+    var rmot=$("#rMotivo").value;
+    if(!inList(cli, rmot)){ $("#rCliente").focus(); toast("Ese "+(rmot==="Prospecto"?"prospecto":"cliente")+" no está en la lista. Pídalo al gestor.", true); return; }
     var fecha=$("#rFecha").value || todayISO();
-    addRouteVisit(current.id, cli, $("#rMotivo").value, fecha);
+    addRouteVisit(current.id, cli, rmot, fecha);
     $("#rCliente").value="";
     gotoDate(fecha); renderRoute();
     toast("Añadido a la ruta ✓");
@@ -2742,6 +2793,74 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
     btn.addEventListener("click", function(){ on?stop():start(); });
   }
 
+  // ---------- IMPORTAR BASE (gestor) ----------
+  function readSheet(file, cb){
+    if(!window.XLSX){ toast("La importación funciona en el sitio publicado (Vercel).", true); return; }
+    var reader=new FileReader();
+    reader.onload=function(e){ try{ cb(XLSX.read(new Uint8Array(e.target.result), {type:"array"})); }catch(err){ toast("No pude leer el archivo.", true); } };
+    reader.onerror=function(){ toast("No pude leer el archivo.", true); };
+    reader.readAsArrayBuffer(file);
+  }
+  function numKg(v){ var n=parseFloat((""+v).replace(/[^\d.-]/g,"")); return isNaN(n)?0:Math.round(n); }
+  function importClientes(file){
+    readSheet(file, function(wb){
+      var name = wb.SheetNames.filter(function(n){ return n.toLowerCase().indexOf("base kg")>=0; })[0] || wb.SheetNames[0];
+      var rows = XLSX.utils.sheet_to_json(wb.Sheets[name], {header:1, defval:""});
+      var out=[];
+      for(var i=3;i<rows.length;i++){ var r=rows[i]||[]; var nome=(""+(r[0]||"")).trim(); if(!nome) continue; out.push({tipo:"Cliente", nome:nome, kg:numKg(r[14])}); }
+      if(!out.length){ toast("No encontré datos (hoja “base kg”, col. A).", true); return; }
+      if(!window.confirm("Importar "+out.length+" clientes? Reemplaza la lista actual de clientes.")) return;
+      commitCatalog("Cliente", out);
+    });
+  }
+  function importProspectos(file){
+    readSheet(file, function(wb){
+      var rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], {header:1, defval:""});
+      var out=[];
+      for(var i=1;i<rows.length;i++){ var r=rows[i]||[]; var nome=(""+(r[0]||"")).trim(); if(!nome) continue;
+        var est=(""+(r[1]||"")).trim(), vend=(""+(r[2]||"")).trim();
+        var sid = vend ? (NAME2ID[slug(vend)]||slug(vend)) : "";
+        out.push({tipo:"Prospecto", nome: est?(nome+" · "+est):nome, estancia:est, vendedor:sid});
+      }
+      if(!out.length){ toast("No encontré datos (nombre, estancia, vendedor).", true); return; }
+      if(!window.confirm("Importar "+out.length+" prospectos? Reemplaza la lista actual de prospectos.")) return;
+      commitCatalog("Prospecto", out);
+    });
+  }
+  function commitCatalog(tipo, items){
+    if(!useDB || !dbh){ toast("Base no disponible en esta vista.", true); return; }
+    $("#impStatus").textContent = "Importando… no cierre la app.";
+    var col = dbh.collection("catalog");
+    function chunk(list, fn){ // roda em lotes de 40
+      var i=0; function step(){ var ops=[]; for(;i<list.length && ops.length<40;i++){ ops.push(fn(list[i])); }
+        if(!ops.length) return Promise.resolve();
+        return Promise.all(ops).then(function(){ return i<list.length ? step() : null; }); }
+      return step();
+    }
+    Promise.resolve(col.where("tipo","==",tipo).get()).then(function(snap){
+      var olds = snap.docs.map(function(d){ return d.id; });
+      return chunk(olds, function(id){ return col.doc(id).delete().catch(noop); });
+    }).then(function(){
+      var seen={};
+      return chunk(items, function(it){
+        var base=(tipo==="Prospecto"?"p_":"c_")+slug(it.nome); var id=base, n=1; while(seen[id]){ id=base+"_"+(n++); } seen[id]=1;
+        var body={tipo:tipo, nome:it.nome};
+        if(it.kg!=null) body.kg=it.kg;
+        if(it.estancia!=null) body.estancia=it.estancia;
+        if(it.vendedor!=null) body.vendedor=it.vendedor;
+        return col.doc(id).set(body).catch(noop);
+      });
+    }).then(function(){
+      $("#impStatus").textContent = items.length+" "+(tipo==="Prospecto"?"prospectos":"clientes")+" importados ✓";
+      toast("Base actualizada ✓");
+    }).catch(function(){ $("#impStatus").textContent="Error al importar. Intente de nuevo."; toast("Error al importar.", true); });
+  }
+  function initImport(){
+    var a=$("#impCli"), b=$("#impPro");
+    if(a) a.addEventListener("change", function(e){ if(e.target.files && e.target.files[0]) importClientes(e.target.files[0]); e.target.value=""; });
+    if(b) b.addEventListener("change", function(e){ if(e.target.files && e.target.files[0]) importProspectos(e.target.files[0]); e.target.value=""; });
+  }
+
   // ---------- toast ----------
   var toastT;
   function toast(msg, warn){
@@ -2757,6 +2876,7 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
   initRoute();
   initAgenda();
   initReport();
+  initImport();
   makeFilter("#sPeriod","#sCustom","#sFrom","#sTo", fSeller, rerenderSeller);
   makeFilter("#mPeriod","#mCustom","#mFrom","#mTo", fMgr, rerenderMgr);
   dbBoot(); // dados compartilhados (db) ou localStorage
