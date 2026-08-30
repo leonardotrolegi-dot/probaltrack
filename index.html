@@ -1700,7 +1700,7 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
     if(v==="clientes")   renderSellerChart("clientes");
     if(v==="prospectos") renderSellerChart("prospectos");
     if(v==="carteira")   render80();
-    if(v==="rota")       renderRoute();
+    if(v==="rota")     { gotoCurrentWeek(); renderRoute(); }
     shell.querySelector("main").scrollTop = 0;
   }
   $$(".tab",$("#navSeller")).forEach(function(t){
@@ -2255,6 +2255,7 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
   }
   function ensureRouteMonth(){ if(!rMonthSel){ var n=new Date(); rMonthSel=n.getFullYear()+"-"+("0"+(n.getMonth()+1)).slice(-2); } }
   function gotoDate(iso){ rMonthSel=iso.slice(0,7); var w=weeksOfMonth(rMonthSel); for(var i=0;i<w.length;i++){ if(w[i].days.some(function(d){return d.iso===iso;})){ rWeekIdx=i; return; } } rWeekIdx=0; }
+  function gotoCurrentWeek(){ gotoDate(todayISO()); }
 
   function buildRouteControls(){
     ensureRouteMonth();
