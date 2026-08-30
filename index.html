@@ -1739,7 +1739,7 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
   }
 
   // ---------- FILTER SETUP ----------
-  var MESES = ["enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"];
+  var MESES = ["enero","febrero","marzo","abril","mayo","junio","julio","agosto","setiembre","octubre","noviembre","diciembre"];
   function cap(s){ return s.charAt(0).toUpperCase()+s.slice(1); }
   function buildPeriod(sel){
     var opts = '<option value="all">Todo el período</option>';
@@ -2295,7 +2295,8 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
     var list=routeFor(current.id);
     $("#rotaList").innerHTML = week.days.map(function(day){
       var items=list.filter(function(x){ return x.fecha===day.iso; });
-      var head='<div class="rday-head"><b>'+DIA_N[day.wd]+' '+day.dayNum+'</b>'+(day.inMonth?'':'<span class="cnt ghost">otro mes</span>')+'<span class="cnt">'+items.length+'</span><span class="line"></span></div>';
+      var mName = MESES[parseInt(day.iso.slice(5,7),10)-1] || "";
+      var head='<div class="rday-head"><b>'+DIA_N[day.wd]+' '+day.dayNum+' '+mName+'</b><span class="cnt">'+items.length+'</span><span class="line"></span></div>';
       var body = items.length ? items.map(routeCard).join("") : '<div class="rday-empty">Sin visitas.</div>';
       return '<div class="rday">'+head+body+'</div>';
     }).join("");
