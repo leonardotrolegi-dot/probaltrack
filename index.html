@@ -11,8 +11,8 @@
 <meta name="apple-mobile-web-app-title" content="Probal Track">
 <meta name="mobile-web-app-capable" content="yes">
 <link rel="manifest" href="manifest.json">
-<link rel="apple-touch-icon" href="icon.svg">
-<link rel="icon" href="icon.svg">
+<link rel="apple-touch-icon" href="icon.svg?v=2">
+<link rel="icon" href="icon.svg?v=2">
 <!-- Firebase (banco em tempo real). No claude.ai estes scripts são bloqueados e o app usa a base do Claude automaticamente. -->
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
@@ -664,6 +664,11 @@
   .ag-form select{appearance:none;-webkit-appearance:none;padding-right:36px;
     background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 24 24' fill='none' stroke='%237d887f' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
     background-repeat:no-repeat;background-position:right 11px center;}
+  .ag-vends{display:grid;grid-template-columns:repeat(2,1fr);gap:7px}
+  .ag-vend{display:flex;align-items:center;gap:8px;border:1.5px solid var(--line);border-radius:11px;padding:9px 11px;font-size:14px;cursor:pointer;background:var(--surface-2)}
+  .ag-vend input{width:18px;height:18px;flex:none;accent-color:var(--accent)}
+  .ag-vend span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .ag-vend.ag-all{grid-column:1 / -1;font-weight:700;background:var(--accent-soft);border-color:var(--accent)}
   .ag-dates{display:flex;flex-wrap:wrap;gap:7px;margin-top:9px}
   .ag-chip{
     display:inline-flex;align-items:center;gap:7px;background:var(--accent-soft);color:var(--accent);
@@ -1117,8 +1122,8 @@
             <button class="btn-sec" id="agAddDate" type="button">+ Agregar fecha</button>
           </div>
           <div class="ag-dates" id="agDates"></div>
-          <label class="ag-lbl">Derivar a</label>
-          <select id="agVendedor"></select>
+          <label class="ag-lbl">Derivar a (uno o varios)</label>
+          <div class="ag-vends" id="agVendedores"></div>
           <div class="ra-row two" style="margin-top:4px">
             <button class="btn" id="agCreate">Crear y enviar</button>
             <button class="btn-sec" id="agCancel" type="button">Cancelar</button>
@@ -2481,12 +2486,19 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
   // ---------- AGENDA ESPECIAL (gestor) ----------
   var agDates = [];
   function initAgenda(){
-    $("#agVendedor").innerHTML = '<option value="__all">Todos los vendedores</option>' +
-      SELLERS.map(function(s){ return '<option value="'+s.id+'">'+esc(s.name)+'</option>'; }).join("");
-    $("#agFecha").value = todayISO();
-    $("#agOpen").addEventListener("click", function(){
-      $("#agForm").classList.toggle("hidden");
+    $("#agVendedores").innerHTML =
+      '<label class="ag-vend ag-all"><input type="checkbox" id="agAll"><span>Todos</span></label>' +
+      SELLERS.map(function(s){ return '<label class="ag-vend"><input type="checkbox" class="ag-vsel" value="'+s.id+'"><span>'+esc(s.name)+'</span></label>'; }).join("");
+    $("#agAll").addEventListener("change", function(){
+      var on=this.checked; $$(".ag-vsel",$("#agVendedores")).forEach(function(c){ c.checked=on; });
     });
+    $$(".ag-vsel",$("#agVendedores")).forEach(function(c){
+      c.addEventListener("change", function(){
+        $("#agAll").checked = $$(".ag-vsel",$("#agVendedores")).every(function(x){ return x.checked; });
+      });
+    });
+    $("#agFecha").value = todayISO();
+    $("#agOpen").addEventListener("click", function(){ $("#agForm").classList.toggle("hidden"); });
     $("#agCancel").addEventListener("click", function(){ resetAgenda(); });
     $("#agAddDate").addEventListener("click", function(){
       var f=$("#agFecha").value; if(!f) return;
@@ -2505,7 +2517,9 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
   function resetAgenda(){
     agDates=[]; renderAgDates();
     $("#agForm").classList.add("hidden");
-    $("#agTitulo").value=""; $("#agTipo").value="Reunión"; $("#agVendedor").value="__all";
+    $("#agTitulo").value=""; $("#agTipo").value="Reunión";
+    if($("#agAll")) $("#agAll").checked=false;
+    $$(".ag-vsel",$("#agVendedores")).forEach(function(c){ c.checked=false; });
     $("#agFecha").value=todayISO();
   }
   function createAgenda(){
@@ -2513,9 +2527,9 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
       var f=$("#agFecha").value; if(f) agDates=[f];
     }
     if(agDates.length===0){ toast("Elija al menos una fecha.", true); return; }
+    var targets = $$(".ag-vsel",$("#agVendedores")).filter(function(c){ return c.checked; }).map(function(c){ return c.value; });
+    if(targets.length===0){ toast("Elija al menos un vendedor.", true); return; }
     var tipo=$("#agTipo").value, titulo=$("#agTitulo").value.trim();
-    var target=$("#agVendedor").value;
-    var targets = target==="__all" ? SELLERS.map(function(s){return s.id;}) : [target];
     targets.forEach(function(sid){
       agDates.forEach(function(f){
         putRoute({id:"e"+Date.now()+Math.random().toString(36).slice(2,7), sellerId:sid, kind:"evento", tipo:tipo, titulo:titulo, fecha:f});
