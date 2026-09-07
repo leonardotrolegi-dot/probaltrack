@@ -1207,6 +1207,8 @@
         </div>
         <div class="kpis" id="mKpiPro"></div>
         <div class="chart-card" id="mChartPro"></div>
+        <div class="sec-label" style="margin-top:22px">Motivos de rechazo</div>
+        <div class="chart-card" id="mChartRech"></div>
       </section>
 
       <!-- 80/20 GLOBAL -->
@@ -1803,7 +1805,7 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
     $("#mFilter").classList.toggle("hidden", !showF);
     if(v==="equipa")     renderTeam();
     if(v==="clientes")   renderMgrChart("clientes");
-    if(v==="prospectos") renderMgrChart("prospectos");
+    if(v==="prospectos"){ renderMgrChart("prospectos"); renderRechazos(); }
     if(v==="carteira")   renderMgr80();
     if(v==="rutas")      renderMgrRoutes();
     if(v==="miruta")   { gGotoCurrentWeek(); gRenderRuta(); }
@@ -1815,7 +1817,7 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
   function rerenderMgr(){
     if(curMView==="equipa")     renderTeam();
     if(curMView==="clientes")   renderMgrChart("clientes");
-    if(curMView==="prospectos") renderMgrChart("prospectos");
+    if(curMView==="prospectos"){ renderMgrChart("prospectos"); renderRechazos(); }
     if(curMView==="carteira")   renderMgr80();
     if(curMView==="rutas")      renderMgrRoutes();
     if(curMView==="miruta")     gRenderRuta();
@@ -2564,6 +2566,22 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
       hint: "Toque un vendedor para ver sus clientes",
       onLegClick: function(i, d){ renderMgrDrill(which, d.sellerId); }
     });
+  }
+  // Pizza de motivos de rechazo (todos os vendedores)
+  function renderRechazos(){
+    var map={}, total=0;
+    SELLERS.forEach(function(s){
+      vFilt(visitsFor(s.id), fMgr).forEach(function(x){
+        var p=x.presupuesto;
+        if(x.motivo==="Prospecto" && p && p.enviado && p.resultado==="Recusado" && p.motivoRechazo){
+          map[p.motivoRechazo]=(map[p.motivoRechazo]||0)+1; total++;
+        }
+      });
+    });
+    var el=$("#mChartRech");
+    if(!total){ el.innerHTML='<div class="empty"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M21.21 15.89A10 10 0 1 1 8 2.83"/><path d="M22 12A10 10 0 0 0 12 2v10z"/></svg><div>Sin propuestas rechazadas en el período.</div></div>'; return; }
+    var data=Object.keys(map).map(function(k){ return {name:k, count:map[k]}; }).sort(function(a,b){ return b.count-a.count; });
+    drawDonut(data, null, el, { label:"motivos", hint:"Motivos de rechazo de propuestas enviadas", onLegClick:function(){} });
   }
   // Nível 2: pizza de um vendedor por cliente
   function renderMgrDrill(which, sellerId){
