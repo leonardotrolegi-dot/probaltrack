@@ -772,8 +772,11 @@
   .pres-opt{flex:1;border:1.5px solid var(--line);background:var(--surface);color:var(--ink-soft);border-radius:11px;padding:11px;font-size:14.5px;font-weight:700;cursor:pointer;font-family:inherit}
   .pres-opt.vend.on{background:var(--accent-soft);border-color:var(--activo);color:var(--activo)}
   .pres-opt.rec.on{background:color-mix(in srgb,var(--danger) 14%,transparent);border-color:var(--danger);color:var(--danger)}
-  .presup-motivo{width:100%;margin-top:9px;border:1.5px solid var(--danger);border-radius:11px;background:var(--surface);color:var(--ink);padding:11px 12px;font-size:15px;font-family:inherit}
+  .presup-motivo{width:100%;margin-top:9px;border:1.5px solid var(--danger);border-radius:11px;background:var(--surface);color:var(--ink);padding:11px 34px 11px 12px;font-size:15px;font-family:inherit;appearance:none;-webkit-appearance:none;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 24 24' fill='none' stroke='%23b23b3b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 11px center}
   .presup-motivo:focus{outline:none;border-color:var(--danger)}
+  .presup-motivo-obs{width:100%;margin-top:8px;border:1.5px solid var(--line);border-radius:11px;background:var(--surface);color:var(--ink);padding:11px 12px;font-size:15px;font-family:inherit}
+  .presup-motivo-obs:focus{outline:none;border-color:var(--accent)}
   .presup-tag{font-size:10.5px;font-weight:700;letter-spacing:.03em;text-transform:uppercase;padding:3px 7px;border-radius:20px;background:color-mix(in srgb,var(--prospecto) 16%,transparent);color:var(--prospecto);flex:none}
   .m-presup{margin-top:14px}
   .m-presup table{width:100%;border-collapse:collapse;font-size:14px;margin-top:8px}
@@ -930,7 +933,16 @@
                 <button type="button" class="pres-opt rec" data-v="Recusado">Recusado</button>
               </div>
             </div>
-            <input type="text" class="presup-motivo hidden" id="presupMotivo" placeholder="Motivo del rechazo">
+            <select class="presup-motivo hidden" id="presupMotivo">
+              <option value="">— Motivo del rechazo —</option>
+              <option>Precio</option>
+              <option>Fidelidad competencia</option>
+              <option>Fidelidad vendedor competencia</option>
+              <option>No tenemos producto</option>
+              <option>Plazo de entrega</option>
+              <option>Plazo de pago</option>
+            </select>
+            <input type="text" class="presup-motivo-obs hidden" id="presupMotivoObs" placeholder="Observación (opcional)">
           </div>
         </div>
 
@@ -1878,6 +1890,7 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
     if($("#presupRows")) $("#presupRows").innerHTML="";
     $$(".pres-opt",$("#presupSeg")).forEach(function(b){ b.classList.remove("on"); });
     if($("#presupMotivo")){ $("#presupMotivo").value=""; $("#presupMotivo").classList.add("hidden"); }
+    if($("#presupMotivoObs")){ $("#presupMotivoObs").value=""; $("#presupMotivoObs").classList.add("hidden"); }
   }
   function readPresup(){
     if(!$("#presupEnviado").checked) return {enviado:false, items:[]};
@@ -1890,7 +1903,10 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
     });
     var sel=$$(".pres-opt",$("#presupSeg")).filter(function(b){return b.classList.contains("on");})[0];
     var resultado = sel? sel.dataset.v : "";
-    return {enviado:true, items:items, resultado:resultado, motivoRechazo: resultado==="Recusado" ? $("#presupMotivo").value.trim() : ""};
+    var rec = resultado==="Recusado";
+    return {enviado:true, items:items, resultado:resultado,
+      motivoRechazo: rec ? $("#presupMotivo").value : "",
+      motivoObs: rec ? $("#presupMotivoObs").value.trim() : ""};
   }
   function initPresup(){
     $("#presupEnviado").addEventListener("change", function(){
@@ -1906,7 +1922,7 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
         if(!was) b.classList.add("on");
         var rec = b.classList.contains("on") && b.dataset.v==="Recusado";
         $("#presupMotivo").classList.toggle("hidden", !rec);
-        if(rec) $("#presupMotivo").focus();
+        $("#presupMotivoObs").classList.toggle("hidden", !rec);
       });
     });
   }
@@ -2075,7 +2091,7 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
     var res = p.resultado==="Vendido" ? '<span class="sit win">Vendido</span>' : (p.resultado==="Recusado" ? '<span class="sit late">Recusado</span>' : '');
     var rows = (p.items||[]).map(function(it){ return '<tr><td>'+esc(it.producto||"—")+'</td><td>'+esc(it.cantidad||"")+'</td><td>'+(it.precio?esc(fmtKg(it.precio)):"")+'</td></tr>'; }).join("");
     var table = rows ? '<table><thead><tr><th>Producto</th><th>Cant.</th><th>Precio</th></tr></thead><tbody>'+rows+'</tbody></table>' : '<div class="m-obs empty">Sin productos cargados.</div>';
-    var motivo = (p.resultado==="Recusado" && p.motivoRechazo) ? '<div class="m-obs" style="margin-top:8px">Motivo del rechazo: '+esc(p.motivoRechazo)+'</div>' : '';
+    var motivo = (p.resultado==="Recusado" && (p.motivoRechazo||p.motivoObs)) ? '<div class="m-obs" style="margin-top:8px">Motivo del rechazo: <b>'+esc(p.motivoRechazo||"—")+'</b>'+(p.motivoObs?' · '+esc(p.motivoObs):'')+'</div>' : '';
     return '<div class="m-presup"><div class="m-obs-label" style="display:flex;align-items:center;gap:8px">Presupuesto enviado ✓ '+res+'</div>'+table+motivo+'</div>';
   }
   function openModal(r){
