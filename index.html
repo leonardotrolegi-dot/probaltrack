@@ -461,6 +461,12 @@
   .pdone{background:var(--accent);color:#fff}
   .pcancel{background:var(--surface-2);color:var(--ink-soft);border:1px solid var(--line)}
   .pdone svg,.pcancel svg{width:14px;height:14px}
+  .pcard.done{cursor:pointer;opacity:.92}
+  .pcard.done:hover{border-color:var(--accent)}
+  .pcard.done .bar{opacity:.5}
+  .pcard.done .chevr{align-self:center;color:var(--ink-faint);flex:none}
+  .pcard.done .chevr svg{width:18px;height:18px}
+  .pcard.done .ev-note svg{vertical-align:-2px;margin-right:2px}
 
   /* ---------- FILTER BAR ---------- */
   .filterbar{
@@ -794,6 +800,35 @@
   }
   .auth-input:focus{outline:none;border-color:var(--accent)}
 
+  /* nuevo prospecto + motivo de pérdida */
+  .np-toggle{margin-top:8px;background:none;border:none;color:var(--prospecto);font-weight:700;font-size:13.5px;cursor:pointer;font-family:inherit;padding:2px}
+  .np-form{margin-top:10px;background:var(--surface-2);border:1px solid var(--line);border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:8px}
+  .np-form input{width:100%;border:1.5px solid var(--line);border-radius:10px;background:var(--surface);color:var(--ink);padding:11px 12px;font-size:15px;font-family:inherit}
+  .np-form input:focus{outline:none;border-color:var(--accent)}
+  .np-row{display:flex;gap:9px;margin-top:2px}
+  .np-row .btn{padding:11px}
+  .sublbl{display:block;font-size:12px;font-weight:600;color:var(--ink-soft);margin:0 0 6px}
+  .perdida-box{margin-top:10px;background:color-mix(in srgb,var(--danger) 7%,transparent);border:1px solid color-mix(in srgb,var(--danger) 35%,var(--line));border-radius:12px;padding:12px}
+  .perdida-box select,.perdida-box input{width:100%;border:1.5px solid var(--line);border-radius:10px;background:var(--surface);color:var(--ink);padding:11px 12px;font-size:15px;font-family:inherit}
+  .perdida-box input{margin-top:8px}
+  .perdida-box select{appearance:none;-webkit-appearance:none;padding-right:34px;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 24 24' fill='none' stroke='%237d887f' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 11px center}
+  .perdida-box select:focus,.perdida-box input:focus{outline:none;border-color:var(--danger)}
+
+  /* semáforo prospección */
+  .semaforo{display:flex;gap:12px;align-items:stretch;margin-bottom:16px}
+  .sem-light{width:64px;background:#22242a;border-radius:16px;padding:9px;display:flex;flex-direction:column;gap:8px;flex:none;box-shadow:inset 0 0 0 2px rgba(0,0,0,.25)}
+  .sem-dot{width:46px;height:46px;border-radius:50%;background:#3a3d44;opacity:.28;margin:0 auto}
+  .sem-dot.on-r{background:#e14b4b;opacity:1;box-shadow:0 0 12px rgba(225,75,75,.6)}
+  .sem-dot.on-y{background:#e8b53a;opacity:1;box-shadow:0 0 12px rgba(232,181,58,.55)}
+  .sem-dot.on-g{background:#3fbf5f;opacity:1;box-shadow:0 0 12px rgba(63,191,95,.55)}
+  .sem-rows{flex:1;display:flex;flex-direction:column;justify-content:center;gap:8px}
+  .sem-row{display:flex;align-items:center;gap:10px}
+  .sem-chip{width:16px;height:16px;border-radius:50%;flex:none}
+  .sem-chip.g{background:#3fbf5f}.sem-chip.y{background:#e8b53a}.sem-chip.r{background:#e14b4b}
+  .sem-n{font-family:"Fraunces",serif;font-size:22px;font-weight:600;font-variant-numeric:tabular-nums;min-width:28px}
+  .sem-t{font-size:13.5px;color:var(--ink-soft)}
+
   .hidden{display:none!important}
 </style>
 
@@ -903,6 +938,13 @@
           <label for="fCliente">Cliente</label>
           <input type="text" id="fCliente" autocomplete="off" placeholder="Escriba para buscar…">
           <div class="ac-list" id="acList"></div>
+          <button type="button" class="np-toggle hidden" id="npToggle">＋ Nuevo prospecto</button>
+          <div class="np-form hidden" id="npForm">
+            <input type="text" id="npCliente" placeholder="Nombre del cliente *">
+            <input type="text" id="npEstancia" placeholder="Estancia *">
+            <input type="text" id="npCiudad" placeholder="Ciudad *">
+            <div class="np-row"><button type="button" class="btn" id="npSave">Guardar prospecto</button><button type="button" class="btn-sec" id="npCancel">Cancelar</button></div>
+          </div>
         </div>
 
         <div class="field">
@@ -922,6 +964,19 @@
         <div class="field">
           <label for="fSituacao">Situación</label>
           <select id="fSituacao"></select>
+          <div class="perdida-box hidden" id="perdidaBox">
+            <label class="sublbl">Motivo de la pérdida</label>
+            <select id="fPerdidaMotivo">
+              <option value="">— Motivo —</option>
+              <option>Precio</option>
+              <option>Fidelidad competencia</option>
+              <option>Fidelidad vendedor competencia</option>
+              <option>No tenemos producto</option>
+              <option>Plazo de entrega</option>
+              <option>Plazo de pago</option>
+            </select>
+            <input type="text" id="fPerdidaObs" placeholder="Observación (opcional)">
+          </div>
         </div>
 
         <div class="field hidden" id="presupWrap">
@@ -1036,6 +1091,7 @@
           <h2>Prospectos</h2>
           <p>Distribución de las visitas a clientes potenciales.</p>
         </div>
+        <div id="semProsp"></div>
         <div class="kpis" id="kpiProspectos"></div>
         <div class="chart-card" id="chartProspectos"></div>
       </section>
@@ -1209,6 +1265,7 @@
           <h2>Prospectos — global</h2>
           <p>Suma de las visitas a prospectos de todo el equipo.</p>
         </div>
+        <div id="mSemProsp"></div>
         <div class="kpis" id="mKpiPro"></div>
         <div class="chart-card" id="mChartPro"></div>
         <div class="sec-label" style="margin-top:22px">Motivos de rechazo</div>
@@ -1473,11 +1530,8 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
   var CAT_CLI=[], CAT_PRO=[], KGMAP={};
   function kgFor(n){ return KGMAP[n]||0; }
   function listForMotivo(mot){
-    if(mot==="Prospecto"){
-      var arr = CAT_PRO.length ? CAT_PRO : PROSPECTOS_FALLBACK;
-      var sid = current ? current.id : null;
-      return sid ? arr.filter(function(x){ return !x.vendedor || x.vendedor===sid; }) : arr;
-    }
+    // Prospectos y clientes: lista compartida para todos los vendedores
+    if(mot==="Prospecto") return CAT_PRO.length ? CAT_PRO : PROSPECTOS_FALLBACK;
     return CAT_CLI.length ? CAT_CLI : CLIENTES_FALLBACK;
   }
   function inList(nome, mot){ return listForMotivo(mot).some(function(x){ return x.nome===nome; }); }
@@ -1485,16 +1539,18 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
   function currentMotivo(){ var r=$$("input[name=motivo]").filter(function(x){return x.checked;})[0]; return r?r.value:"Cliente"; }
 
   var CPAL = ["--c1","--c2","--c3","--c4","--c5","--c6","--c7","--c8","--c9","--c10"];
-  var SIT_OPTS = { "Cliente":["Activo","Perdido"], "Prospecto":["En prospección","Venta cerrada","Eliminado"] };
-  function defaultSit(mot){ return mot==="Cliente" ? "Activo" : "En prospección"; }
+  var SIT_OPTS = { "Cliente":["Activo","Perdido"], "Prospecto":["Activo","Congelado","Venta cerrada","Perdido"] };
+  function defaultSit(mot){ return "Activo"; }
+  // normaliza estados antiguos de prospecto a los nuevos
+  function normSit(sit){ if(sit==="En prospección") return "Activo"; if(sit==="Eliminado") return "Perdido"; return sit||""; }
   function sitClass(sit){
+    sit=normSit(sit);
     if(sit==="Venta cerrada") return "win";
     if(sit==="Perdido") return "late";
-    if(sit==="Eliminado") return "none";
-    if(sit==="En prospección") return "info";
+    if(sit==="Congelado") return "warn";
     return "ok"; // Activo
   }
-  function sitSpecial(sit){ return sit!=="Activo" && sit!=="En prospección"; }
+  function sitSpecial(sit){ sit=normSit(sit); return sit!=="Activo"; }
 
   // ---------- storage ----------
   var STORE_KEY = "ruta_vendedor_v3";
@@ -1584,7 +1640,7 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
     dbh.collection("catalog").onSnapshot(function(snap){
       var cli=[], pro=[], kg={};
       snap.docs.forEach(function(d){ var v=d.data()||{};
-        if(v.tipo==="Prospecto"){ pro.push({nome:v.nome, loc:v.estancia||"", vendedor:v.vendedor||""}); }
+        if(v.tipo==="Prospecto"){ pro.push({nome:v.nome, loc:(v.estancia||"")+(v.ciudad?(v.estancia?", ":"")+v.ciudad:""), vendedor:v.vendedor||""}); }
         else { cli.push({nome:v.nome, loc:"", kg:v.kg||0}); if(v.kg) kg[v.nome]=v.kg; }
       });
       cli.sort(function(a,b){ return (b.kg||0)-(a.kg||0); });
@@ -1867,18 +1923,51 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
     var opts = SIT_OPTS[mot];
     var sel = $("#fSituacao");
     sel.innerHTML = opts.map(function(o){ return '<option value="'+o+'">'+o+'</option>'; }).join("");
+    togglePerdida();
   }
+  function togglePerdida(){
+    var on = $("#fSituacao") && $("#fSituacao").value==="Perdido";
+    $("#perdidaBox").classList.toggle("hidden", !on);
+    if(!on){ $("#fPerdidaMotivo").value=""; $("#fPerdidaObs").value=""; }
+  }
+  $("#fSituacao").addEventListener("change", togglePerdida);
   $$("input[name=motivo]").forEach(function(r){ r.addEventListener("change", function(){
     updateSit();
     // troca de lista (cliente/prospecto): limpa o campo e fecha o autocompletar
     if($("#fCliente")){ $("#fCliente").value=""; $("#acList").classList.remove("on"); }
     togglePresup();
+    // "+ Nuevo prospecto" solo cuando el motivo es Prospecto
+    $("#npToggle").classList.toggle("hidden", currentMotivo()!=="Prospecto");
+    $("#npForm").classList.add("hidden");
   }); });
+  // ---------- NUEVO PROSPECTO (vendedor) ----------
+  function addProspecto(){
+    var cli=$("#npCliente").value.trim(), est=$("#npEstancia").value.trim(), ciu=$("#npCiudad").value.trim();
+    if(!cli||!est||!ciu){ toast("Complete cliente, estancia y ciudad.", true); return; }
+    var idNome = cli+" · "+est;
+    var dup = listForMotivo("Prospecto").some(function(x){ return norm(x.nome)===norm(idNome); })
+           || CAT_CLI.some(function(x){ return norm(x.nome)===norm(cli); });
+    if(dup){ toast("Ya existe un prospecto/cliente con ese nombre.", true); return; }
+    var body={tipo:"Prospecto", nome:idNome, cliente:cli, estancia:est, ciudad:ciu, vendedor:(current?current.id:"")};
+    if(useDB && dbh){ dbh.collection("catalog").doc("p_"+slug(idNome)).set(body).catch(noop); }
+    CAT_PRO.push({nome:idNome, loc:est+", "+ciu, vendedor:body.vendedor});
+    acInput.value=idNome;
+    $("#npForm").classList.add("hidden");
+    $("#npCliente").value=""; $("#npEstancia").value=""; $("#npCiudad").value="";
+    toast("Prospecto agregado ✓");
+  }
+  function initNewProsp(){
+    $("#npToggle").addEventListener("click", function(){ $("#npForm").classList.toggle("hidden"); if(!$("#npForm").classList.contains("hidden")) $("#npCliente").focus(); });
+    $("#npCancel").addEventListener("click", function(){ $("#npForm").classList.add("hidden"); });
+    $("#npSave").addEventListener("click", addProspecto);
+  }
 
   // ---------- PRESUPUESTO (prospecto) ----------
   function togglePresup(){
     var isPro = currentMotivo()==="Prospecto";
     $("#presupWrap").classList.toggle("hidden", !isPro);
+    $("#npToggle").classList.toggle("hidden", !isPro);
+    $("#npForm").classList.add("hidden");
     if(!isPro) resetPresup();
   }
   function presupRowHTML(){
@@ -2049,10 +2138,11 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
       proxima:$("#fProxima").value || ""
     };
     if(motivo==="Prospecto"){ var pp=readPresup(); if(pp.enviado) rec2.presupuesto=pp; }
+    if(rec2.situacao==="Perdido"){ rec2.perdida={motivo:$("#fPerdidaMotivo").value, obs:$("#fPerdidaObs").value.trim()}; }
     putVisit(rec2);
-    // se veio da rota semanal, remove o item planeado
+    // se veio da rota semanal, marca o item como realizado (mantém no histórico)
     var fromRoute = false;
-    if(pendingRoute){ removeRouteItem(pendingRoute.id); pendingRoute=null; hideBanner(); fromRoute=true; }
+    if(pendingRoute){ pendingRoute.done=true; pendingRoute.visitId=rec2.id; putRoute(pendingRoute); pendingRoute=null; hideBanner(); fromRoute=true; }
     // próxima visita agenda-se sozinha na ruta
     var agendou = false;
     if(rec2.proxima){ addRouteVisit(current.id, cli, motivo, rec2.proxima); agendou = true; }
@@ -2122,6 +2212,7 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
       '<div class="m-obs-label">Observaciones</div>'+
       '<div class="m-obs'+(r.obs?'':' empty')+'">'+(r.obs?esc(r.obs):'Sin observaciones.')+'</div>'+
       presupModalHTML(r)+
+      ((r.situacao==="Perdido" && r.perdida && (r.perdida.motivo||r.perdida.obs)) ? '<div class="m-obs" style="margin-top:8px">Motivo de la pérdida: <b>'+esc(r.perdida.motivo||"—")+'</b>'+(r.perdida.obs?' · '+esc(r.perdida.obs):'')+'</div>' : '')+
       '<div class="m-note"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg> Solo el gestor puede eliminar registros.</div>';
     $("#modal").classList.add("on");
   }
@@ -2272,15 +2363,32 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
   function adminDelete(sellerId, visitId){ delVisit(sellerId, visitId); }
 
   // ---------- SELLER CHARTS ----------
-  function prospectoKPIs(list){
-    var groups={};
-    list.filter(function(x){return x.motivo==="Prospecto";}).forEach(function(x){
-      if(!groups[x.cliente] || x.data>groups[x.cliente].data) groups[x.cliente]=x;
-    });
-    var activos=0, elim=0;
-    Object.keys(groups).forEach(function(k){ if(groups[k].situacao==="Eliminado") elim++; else activos++; });
-    return '<div class="kpi"><b>'+activos+'</b><span>prospectos activos</span></div>'+
-           '<div class="kpi"><b>'+elim+'</b><span>prospectos eliminados</span></div>';
+  // estado más reciente por cliente/prospecto (distinct)
+  function latestByName(list, motivo){
+    var g={}; list.filter(function(x){return x.motivo===motivo;}).forEach(function(x){ if(!g[x.cliente]||x.data>g[x.cliente].data) g[x.cliente]=x; });
+    return g;
+  }
+  function clienteKPIs(list){
+    var g=latestByName(list,"Cliente"), total=0, perd=0, vis={};
+    list.filter(function(x){return x.motivo==="Cliente";}).forEach(function(x){ total++; vis[x.cliente]=1; });
+    Object.keys(g).forEach(function(k){ if(g[k].situacao==="Perdido") perd++; });
+    return '<div class="kpi"><b>'+total+'</b><span>visitas totales</span></div>'+
+           '<div class="kpi"><b>'+Object.keys(vis).length+'</b><span>clientes visitados</span></div>'+
+           '<div class="kpi"><b>'+perd+'</b><span>clientes perdidos</span></div>';
+  }
+  function prospStates(list){
+    var g=latestByName(list,"Prospecto"), a=0,p=0,perd=0,vend=0;
+    Object.keys(g).forEach(function(k){ var s=normSit(g[k].situacao); if(s==="Perdido")perd++; else if(s==="Congelado")p++; else if(s==="Venta cerrada")vend++; else a++; });
+    return {activo:a, pausado:p, perdido:perd, vend:vend};
+  }
+  function semaforoHTML(st){
+    return '<div class="semaforo">'+
+      '<div class="sem-light"><div class="sem-dot on-r"></div><div class="sem-dot on-y"></div><div class="sem-dot on-g"></div></div>'+
+      '<div class="sem-rows">'+
+        '<div class="sem-row"><span class="sem-chip g"></span><span class="sem-n">'+st.activo+'</span><span class="sem-t">Prospectos activos</span></div>'+
+        '<div class="sem-row"><span class="sem-chip y"></span><span class="sem-n">'+st.pausado+'</span><span class="sem-t">Prospectos congelados</span></div>'+
+        '<div class="sem-row"><span class="sem-chip r"></span><span class="sem-n">'+st.perdido+'</span><span class="sem-t">Prospectos perdidos</span></div>'+
+      '</div></div>';
   }
   function renderSellerChart(which){
     var motivo = which==="clientes" ? "Cliente" : "Prospecto";
@@ -2289,7 +2397,8 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
     var chartEl= which==="clientes" ? $("#chartClientes") : $("#chartProspectos");
     var list = vFilt(visitsFor(current.id), fSeller);
     var opts = {label:label};
-    if(which==="prospectos") opts.kpiHTML = prospectoKPIs(list);
+    if(which==="clientes") opts.kpiHTML = clienteKPIs(list);
+    if(which==="prospectos"){ $("#semProsp").innerHTML = semaforoHTML(prospStates(list)); }
     drawDonut(aggregate(list, motivo), kpiEl, chartEl, opts);
   }
 
@@ -2448,6 +2557,14 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
       '</div>';
     }
     var a=it.motivo==="Cliente";
+    if(it.done){
+      return '<div class="pcard done" data-id="'+it.id+'" data-visit="'+(it.visitId||"")+'">'+
+        '<div class="bar '+(a?"a":"p")+'"></div>'+
+        '<div class="pbody"><div class="pl1"><b>'+esc(it.cliente)+'</b><span class="tag '+(a?"a":"p")+'">'+it.motivo+'</span></div>'+
+          '<div class="ev-note" style="color:var(--accent)"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> Realizado · toque para ver</div></div>'+
+        '<span class="chevr"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></span>'+
+      '</div>';
+    }
     return '<div class="pcard" data-id="'+it.id+'">'+
       '<div class="bar '+(a?"a":"p")+'"></div>'+
       '<div class="pbody"><div class="pl1"><b>'+esc(it.cliente)+'</b><span class="tag '+(a?"a":"p")+'">'+it.motivo+'</span></div>'+
@@ -2475,6 +2592,13 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
     $$(".pcard",$("#rotaList")).forEach(function(card){
       var item=routeFor(current.id).filter(function(x){return x.id===card.dataset.id;})[0];
       if(!item || item.kind==="evento") return;
+      if(item.done){
+        card.addEventListener("click", function(){
+          var r=(DB[current.id]||[]).filter(function(x){return x.id===card.dataset.visit;})[0];
+          if(r) openModal(r); else toast("Sin observaciones guardadas.", true);
+        });
+        return;
+      }
       card.querySelector(".pmove-date").addEventListener("change", function(e){
         var v=e.target.value; if(!v) return; item.fecha=v; putRoute(item); gotoDate(v); renderRoute(); toast("Movida al "+shortDate(v)+".");
       });
@@ -2563,14 +2687,24 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
   }
 
   // Nível 1: pizza por vendedor (nº de visitas). Clicar → pizza do vendedor por cliente.
+  function allVisitsMgr(){ var all=[]; SELLERS.forEach(function(s){ all=all.concat(vFilt(visitsFor(s.id), fMgr)); }); return all; }
   function renderMgrChart(which){
     var motivo = which==="clientes" ? "Cliente" : "Prospecto";
     var kpiEl  = which==="clientes" ? $("#mKpiCli") : $("#mKpiPro");
     var chartEl= which==="clientes" ? $("#mChartCli") : $("#mChartPro");
     var data = aggregateBySeller(motivo);
     var total = data.reduce(function(s,x){return s+x.count;},0);
-    var kpiHTML = '<div class="kpi"><b>'+total+'</b><span>visitas totales</span></div>'+
-                  '<div class="kpi"><b>'+data.length+'</b><span>vendedores activos</span></div>';
+    var kpiHTML;
+    if(which==="clientes"){
+      var gc=latestByName(allVisitsMgr(),"Cliente"), perd=0; Object.keys(gc).forEach(function(k){ if(gc[k].situacao==="Perdido") perd++; });
+      kpiHTML='<div class="kpi"><b>'+total+'</b><span>visitas totales</span></div>'+
+              '<div class="kpi"><b>'+data.length+'</b><span>vendedores</span></div>'+
+              '<div class="kpi"><b>'+perd+'</b><span>clientes perdidos</span></div>';
+    } else {
+      $("#mSemProsp").innerHTML = semaforoHTML(prospStates(allVisitsMgr()));
+      kpiHTML='<div class="kpi"><b>'+total+'</b><span>visitas totales</span></div>'+
+              '<div class="kpi"><b>'+data.length+'</b><span>vendedores activos</span></div>';
+    }
     drawDonut(data, kpiEl, chartEl, {
       label:"vendedores",
       kpiHTML:kpiHTML,
@@ -2707,16 +2841,15 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
     }).join("");
     $$(".pcard",$("#gRotaList")).forEach(function(card){
       var item=routeFor("gestion").filter(function(x){return x.id===card.dataset.id;})[0];
-      if(!item || item.kind==="evento") return;
+      if(!item || item.kind==="evento" || item.done) return;
       card.querySelector(".pmove-date").addEventListener("change", function(e){ var v=e.target.value; if(!v) return; item.fecha=v; putRoute(item); gGotoDate(v); gRenderRuta(); toast("Movida al "+shortDate(v)+"."); });
       card.querySelector(".pdone").addEventListener("click", function(){ gRealizar(item); });
       card.querySelector(".pcancel").addEventListener("click", function(){ if(!window.confirm("¿Cancelar esta visita planificada?")) return; delRoute("gestion", item.id); gRenderRuta(); toast("Visita cancelada."); });
     });
   }
   function gRealizar(item){
-    putVisit({ id:"v"+Date.now()+Math.random().toString(36).slice(2,5), sellerId:"gestion", cliente:item.cliente, motivo:"Vendedor", situacao:"Activo", data:item.fecha||todayISO(), obs:"", proxima:"" });
-    delRoute("gestion", item.id);
-    gRenderRuta(); toast("Visita realizada ✓");
+    item.done=true; putRoute(item);
+    gRenderRuta(); toast("Marcada como realizada ✓");
   }
   function gAddVisit(){
     var v=$("#gVend").value; if(!v){ toast("Elija un vendedor.", true); return; }
@@ -3150,6 +3283,7 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
   initAgenda();
   initReport();
   initImport();
+  initNewProsp();
   initPresup();
   gInit();
   makeFilter("#sPeriod","#sCustom","#sFrom","#sTo", fSeller, rerenderSeller);
