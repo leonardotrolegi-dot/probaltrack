@@ -1939,11 +1939,17 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
 
   // ---------- AUTOCOMPLETE ----------
   var acInput = $("#fCliente"), acList = $("#acList"), acHi = -1, acMatches = [];
+  function norm(s){ return String(s).toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,""); }
   function renderAC(){
-    var q = acInput.value.trim().toLowerCase();
+    var raw = acInput.value.trim();
+    var q = raw.toLowerCase();
     var src = listForMotivo(currentMotivo());
-    acMatches = src.filter(function(c){ return c.nome.toLowerCase().indexOf(q) !== -1 || c.loc.toLowerCase().indexOf(q) !== -1; });
-    if(!q){ acMatches = src.slice(); }
+    var words = norm(raw).split(/\s+/).filter(Boolean);
+    if(words.length===0){ acMatches = src.slice(); }
+    else acMatches = src.filter(function(c){
+      var hay = norm(c.nome)+" "+norm(c.loc||"");
+      return words.every(function(w){ return hay.indexOf(w)!==-1; });
+    });
     acHi = -1;
     if(acMatches.length===0){
       acList.innerHTML = '<div class="ac-empty">No está en la lista. Solo el gestor puede agregarlo.</div>';
@@ -1991,17 +1997,13 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
     if(!SR) return;
     try{
       rec = new SR();
-      rec.lang = "pt-PT";
+      rec.lang = "es-PY";
       rec.continuous = true;
       rec.interimResults = true;
       rec.onresult = function(ev){
-        var fin="", intr="";
-        for(var i=ev.resultIndex;i<ev.results.length;i++){
-          var t = ev.results[i][0].transcript;
-          if(ev.results[i].isFinal) fin += t; else intr += t;
-        }
-        if(fin) baseText = (baseText ? baseText+" " : "") + fin.trim();
-        $("#fObs").value = (baseText + (intr ? " "+intr : "")).trim();
+        var txt="";
+        for(var i=0;i<ev.results.length;i++){ txt += ev.results[i][0].transcript; }
+        $("#fObs").value = (baseText ? baseText+" " : "") + txt.trim();
       };
       rec.onerror = function(ev){
         if(ev.error==="not-allowed" || ev.error==="service-not-allowed"){
@@ -2011,7 +2013,7 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
         }
         stopRec();
       };
-      rec.onend = function(){ if(recording){ try{rec.start();}catch(e){} } };
+      rec.onend = function(){ if(recording){ baseText=$("#fObs").value.trim(); try{rec.start();}catch(e){} } };
       baseText = $("#fObs").value.trim();
       rec.start();
       recording = true;
@@ -2458,6 +2460,7 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
     '</div>';
   }
   function renderRoute(){
+    updateRouteDatalist();
     var weeks=buildRouteControls();
     var week=weeks[rWeekIdx]||weeks[0];
     var list=routeFor(current.id);
@@ -3039,9 +3042,9 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
     if(!SRx){ btn.style.display="none"; return; }
     var rec=null, on=false, base="";
     function stop(){ on=false; if(rec){ try{rec.stop();}catch(e){} rec=null; } btn.classList.remove("rec"); }
-    function start(){ try{ rec=new SRx(); rec.lang="es-ES"; rec.continuous=true; rec.interimResults=true;
-      rec.onresult=function(ev){ var fin="",it=""; for(var i=ev.resultIndex;i<ev.results.length;i++){ var t=ev.results[i][0].transcript; if(ev.results[i].isFinal) fin+=t; else it+=t; } if(fin) base=(base?base+" ":"")+fin.trim(); ta.value=(base+(it?" "+it:"")).trim(); };
-      rec.onerror=function(){ stop(); }; rec.onend=function(){ if(on){ try{rec.start();}catch(e){} } };
+    function start(){ try{ rec=new SRx(); rec.lang="es-PY"; rec.continuous=true; rec.interimResults=true;
+      rec.onresult=function(ev){ var txt=""; for(var i=0;i<ev.results.length;i++){ txt+=ev.results[i][0].transcript; } ta.value=(base?base+" ":"")+txt.trim(); };
+      rec.onerror=function(){ stop(); }; rec.onend=function(){ if(on){ base=ta.value.trim(); try{rec.start();}catch(e){} } };
       base=ta.value.trim(); rec.start(); on=true; btn.classList.add("rec");
     }catch(e){ stop(); } }
     btn.addEventListener("click", function(){ on?stop():start(); });
