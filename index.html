@@ -986,6 +986,7 @@
               <option>No tenemos producto</option>
               <option>Plazo de entrega</option>
               <option>Plazo de pago</option>
+              <option>Otros</option>
             </select>
             <input type="text" id="fPerdidaObs" placeholder="Observación (opcional)">
           </div>
@@ -1946,6 +1947,12 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
     if(!on){ $("#fPerdidaMotivo").value=""; $("#fPerdidaObs").value=""; }
   }
   $("#fSituacao").addEventListener("change", togglePerdida);
+  // "Otros" como motivo de pérdida obliga a completar la observación
+  $("#fPerdidaMotivo").addEventListener("change", function(){
+    var otros = this.value==="Otros";
+    $("#fPerdidaObs").placeholder = otros ? "Observación (obligatoria)" : "Observación (opcional)";
+    $("#fPerdidaObs").style.borderColor = otros ? "var(--danger)" : "";
+  });
   $$("input[name=motivo]").forEach(function(r){ r.addEventListener("change", function(){
     updateSit();
     // troca de lista (cliente/prospecto): limpa o campo e fecha o autocompletar
@@ -2097,38 +2104,44 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
     micBtn.style.display = "none";
     micNoteTxt.textContent = "Dictado por voz disponible en Chrome del móvil. Aquí puede escribir normalmente.";
   }
+  // Estrategia "una frase por vez": cada tramo usa un reconocimiento NUEVO
+  // (continuous=false). Así Android no re-emite las frases anteriores (no duplica).
+  // El texto ya dicho se guarda en baseText; cada tramo solo agrega lo nuevo.
   function startRec(){
     if(!SR) return;
+    baseText = $("#fObs").value.trim();
+    recording = true;
+    micBtn.classList.add("rec");
+    micNoteTxt.innerHTML = '<span class="rec-live">● Escuchando…</span> toque de nuevo para parar.';
+    recRunOne();
+  }
+  function recRunOne(){
+    if(!recording) return;
     try{
       rec = new SR();
       rec.lang = "es-PY";
-      rec.continuous = true;
+      rec.continuous = false;
       rec.interimResults = true;
-      var finalT = $("#fObs").value.trim();
       rec.onresult = function(ev){
-        var interim="";
-        for(var i=ev.resultIndex;i<ev.results.length;i++){
-          var t=ev.results[i][0].transcript;
-          if(ev.results[i].isFinal) finalT = (finalT?finalT+" ":"") + t.trim();
-          else interim += t;
-        }
-        $("#fObs").value = (finalT + (interim? " "+interim : "")).trim();
+        var txt = "";
+        for(var i=0;i<ev.results.length;i++){ txt += ev.results[i][0].transcript; }
+        txt = txt.trim();
+        $("#fObs").value = (baseText ? baseText + " " : "") + txt;
       };
       rec.onerror = function(ev){
         if(ev.error==="not-allowed" || ev.error==="service-not-allowed"){
           micNoteTxt.innerHTML = 'Micrófono bloqueado en esta vista previa. <b>Consejo:</b> toque el campo y use el micrófono 🎤 del teclado del móvil. En el sitio final este botón funciona.';
-        } else {
-          micNoteTxt.textContent = "No se pudo escuchar. Intente de nuevo, o use el micrófono del teclado del móvil.";
+          stopRec();
         }
-        stopRec();
+        // otros errores (no-speech, aborted, network): no detener; onend reinicia.
       };
-      rec.onend = function(){ if(recording){ try{rec.start();}catch(e){} } };
-      baseText = $("#fObs").value.trim();
+      rec.onend = function(){
+        // consolidar lo dicho en este tramo y arrancar un tramo nuevo
+        baseText = $("#fObs").value.trim();
+        if(recording){ try{ recRunOne(); }catch(e){} }
+      };
       rec.start();
-      recording = true;
-      micBtn.classList.add("rec");
-      micNoteTxt.innerHTML = '<span class="rec-live">● Escuchando…</span> toque de nuevo para parar.';
-    }catch(e){ stopRec(); }
+    }catch(e){ /* ya iniciado / no disponible: se reintenta en onend */ }
   }
   function stopRec(){
     recording = false;
@@ -2146,6 +2159,10 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
     if(!inList(cli, motivo)){ acInput.focus(); toast("Ese "+(motivo==="Prospecto"?"prospecto":"cliente")+" no está en la lista. Pídalo al gestor.", true); return; }
     var obs = $("#fObs").value.trim();
     if(!obs){ $("#fObs").focus(); toast("Las observaciones son obligatorias.", true); return; }
+    // Motivo de pérdida "Otros" exige observación en el motivo
+    if($("#fSituacao").value==="Perdido" && $("#fPerdidaMotivo").value==="Otros" && !$("#fPerdidaObs").value.trim()){
+      $("#fPerdidaObs").focus(); toast("Con el motivo «Otros», la observación de la pérdida es obligatoria.", true); return;
+    }
     stopRec();
     var rec2 = {
       id:"v"+Date.now()+Math.random().toString(36).slice(2,5),
@@ -2422,6 +2439,7 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
     }).sort(function(a,b){ return b.count-a.count; });
   }
   function renderProspectos(list){
+    prospFilter=null;
     $("#semProsp").innerHTML = semaforoHTML(prospStates(list));
     var clients=prospByClient(list);
     var order=["Activo","Congelado","Venta cerrada","Perdido"], data=[], colors=[];
@@ -2430,8 +2448,9 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
       data.push({name:st, count:cs.length, visits:vv}); colors.push(STATE_COLOR[st]); });
     if(!data.length){ $("#kpiProspectos").innerHTML=''; $("#chartProspectos").innerHTML='<div class="empty">Sin prospectos visitados.</div>'; $("#prospClientList").innerHTML=''; bindSemaforo(); return; }
     var totalVis=list.filter(function(x){return x.motivo==="Prospecto";}).length;
-    drawDonut(data, $("#kpiProspectos"), $("#chartProspectos"), { label:"estados", colors:colors, hint:"Prospectos por estado — toque para ver",
-      kpiHTML:'<div class="kpi"><b>'+clients.length+'</b><span>prospectos</span></div><div class="kpi"><b>'+totalVis+'</b><span>visitas totales</span></div>' });
+    drawDonut(data, $("#kpiProspectos"), $("#chartProspectos"), { label:"estados", colors:colors, hint:"Toque un estado para ver los prospectos",
+      kpiHTML:'<div class="kpi"><b>'+clients.length+'</b><span>prospectos</span></div><div class="kpi"><b>'+totalVis+'</b><span>visitas totales</span></div>',
+      onLegClick:function(i,d){ applyProspFilter(d.name); var el=$("#prospClientList"); if(el.scrollIntoView) el.scrollIntoView({behavior:"smooth",block:"nearest"}); } });
     $("#prospClientList").innerHTML = '<div class="sec-label" style="margin-top:16px">Prospectos</div>' + clients.map(function(c){
       return '<div class="pc-item" data-id="'+(c.visits[0]?c.visits[0].id:"")+'" data-state="'+esc(c.state)+'">'+
         '<span class="pc-dot" style="background:'+STATE_COLOR[c.state]+'"></span>'+
@@ -2442,16 +2461,17 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
     $$(".pc-item",$("#prospClientList")).forEach(function(el){ el.addEventListener("click", function(){ var r=(DB[current.id]||[]).filter(function(x){return x.id===el.dataset.id;})[0]; if(r) openModal(r); }); });
     bindSemaforo();
   }
+  var prospFilter=null;
+  function applyProspFilter(state){
+    if(prospFilter===state) state=null;
+    prospFilter=state;
+    $$(".sem-row",$("#semProsp")).forEach(function(r){ r.classList.toggle("sel", !!state && r.dataset.state===state); });
+    $$(".pc-item",$("#prospClientList")).forEach(function(x){ x.style.display=(!state || x.dataset.state===state)?"":"none"; });
+  }
   function bindSemaforo(){
-    var cur=null;
     $$(".sem-row",$("#semProsp")).forEach(function(row){
       row.classList.add("clickable");
-      row.addEventListener("click", function(){
-        var st=row.dataset.state;
-        if(cur===st){ cur=null; $$(".sem-row",$("#semProsp")).forEach(function(r){r.classList.remove("sel");}); $$(".pc-item",$("#prospClientList")).forEach(function(x){x.style.display="";}); return; }
-        cur=st; $$(".sem-row",$("#semProsp")).forEach(function(r){ r.classList.toggle("sel", r===row); });
-        $$(".pc-item",$("#prospClientList")).forEach(function(x){ x.style.display=(x.dataset.state===st)?"":"none"; });
-      });
+      row.addEventListener("click", function(){ applyProspFilter(row.dataset.state); });
     });
   }
   function renderSellerChart(which){
@@ -2671,13 +2691,13 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
     renderRutaSplit();
   }
   function renderRutaSplit(){
-    var vs=visitsFor(current.id), c=0, p=0;
-    vs.forEach(function(x){ if(x.motivo==="Cliente")c++; else if(x.motivo==="Prospecto")p++; });
+    var vs=visitsFor(current.id);
+    var cV=vs.filter(function(x){return x.motivo==="Cliente";}), pV=vs.filter(function(x){return x.motivo==="Prospecto";});
     var data=[], colors=[];
-    if(c){ data.push({name:"Clientes", count:c}); colors.push(cssVar("--activo")); }
-    if(p){ data.push({name:"Prospectos", count:p}); colors.push(cssVar("--prospecto")); }
+    if(cV.length){ data.push({name:"Clientes", count:cV.length, visits:cV}); colors.push(cssVar("--activo")); }
+    if(pV.length){ data.push({name:"Prospectos", count:pV.length, visits:pV}); colors.push(cssVar("--prospecto")); }
     if(!data.length){ $("#rutaSplit").innerHTML='<div class="empty">Sin visitas registradas aún.</div>'; return; }
-    drawDonut(data, null, $("#rutaSplit"), {label:"tipos", colors:colors, hint:"Proporción de visitas registradas", onLegClick:function(){}});
+    drawDonut(data, null, $("#rutaSplit"), {label:"tipos", colors:colors, hint:"Toque para ver las visitas"});
   }
 
   function realizarVisita(item){
@@ -3245,12 +3265,14 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
     if(!SRx){ btn.style.display="none"; return; }
     var rec=null, on=false, base="";
     function stop(){ on=false; if(rec){ try{rec.stop();}catch(e){} rec=null; } btn.classList.remove("rec"); }
-    function start(){ try{ rec=new SRx(); rec.lang="es-PY"; rec.continuous=true; rec.interimResults=true;
-      var finalT=ta.value.trim();
-      rec.onresult=function(ev){ var interim=""; for(var i=ev.resultIndex;i<ev.results.length;i++){ var t=ev.results[i][0].transcript; if(ev.results[i].isFinal) finalT=(finalT?finalT+" ":"")+t.trim(); else interim+=t; } ta.value=(finalT+(interim?" "+interim:"")).trim(); };
-      rec.onerror=function(){ stop(); }; rec.onend=function(){ if(on){ try{rec.start();}catch(e){} } };
-      base=ta.value.trim(); rec.start(); on=true; btn.classList.add("rec");
-    }catch(e){ stop(); } }
+    // "una frase por vez": cada tramo un reconocimiento nuevo (Android no duplica)
+    function runOne(){ if(!on) return; try{ rec=new SRx(); rec.lang="es-PY"; rec.continuous=false; rec.interimResults=true;
+      rec.onresult=function(ev){ var txt=""; for(var i=0;i<ev.results.length;i++){ txt+=ev.results[i][0].transcript; } ta.value=(base?base+" ":"")+txt.trim(); };
+      rec.onerror=function(ev){ if(ev.error==="not-allowed"||ev.error==="service-not-allowed") stop(); };
+      rec.onend=function(){ base=ta.value.trim(); if(on){ try{ runOne(); }catch(e){} } };
+      rec.start();
+    }catch(e){} }
+    function start(){ base=ta.value.trim(); on=true; btn.classList.add("rec"); runOne(); }
     btn.addEventListener("click", function(){ on?stop():start(); });
   }
 
