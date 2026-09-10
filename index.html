@@ -432,6 +432,9 @@
     background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:14px;
     margin-bottom:10px;box-shadow:var(--shadow);
   }
+  .tcard-tec{border-style:dashed;border-color:color-mix(in srgb,var(--accent) 45%,var(--line))}
+  .tec-tag{display:inline-block;font-size:9.5px;font-weight:700;color:var(--ink-faint);background:var(--surface-2);
+    border:1px solid var(--line);border-radius:20px;padding:1px 7px;vertical-align:middle;margin-left:4px}
   .tcard .thead{display:flex;align-items:center;gap:11px;margin-bottom:11px}
   .tcard .thead b{font-size:15.5px;font-weight:600;line-height:1.1}
   .tcard .thead span{font-size:12px;color:var(--ink-faint)}
@@ -1613,6 +1616,11 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
   var PROSPECTOS_FALLBACK=[];
   var NAME2ID={}; SELLERS.forEach(function(s){ NAME2ID[slug(s.name)]=s.id; });
   var GESTOR = {id:"gestion", name:"Gestión", role:"Gestión", color:"#3a3f52"};
+  // Equipo Técnica: usuario aparte (NO entra en SELLERS, así sus visitas no suman
+  // en los totales/gráficos de los vendedores). Ve todo y puede visitar a cualquiera.
+  var TECNICA = { id:"tecnica", name:"Equipo Técnica", role:"Departamento Técnico", pin:"6857", color:"#5a7d9a", tecnica:true };
+  SELLER_BY[TECNICA.id] = TECNICA;
+  var LOGIN_USERS = SELLERS.concat([TECNICA]);
 
   // Catálogo (clientes/prospectos) — vem del banco vía importación del gestor
   var CAT_CLI=[], CAT_PRO=[], KGMAP={};
@@ -1631,6 +1639,7 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
   // ¿el vendedor actual es dueño de este ítem? (puede realizarle visitas)
   function ownsItem(item, mot){
     if(!current) return false;
+    if(current.tecnica) return true; // Equipo Técnica puede visitar a cualquiera
     if(mot==="Prospecto") return !item.vendedor || item.vendedor===current.id;
     return !item.vendedor || sellerMatchName(current.name, item.vendedor);
   }
@@ -1835,7 +1844,7 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
   // ---------- LOGIN ----------
   var selSeller = null, mgrMode = false;
   var sellersEl = $("#sellers");
-  SELLERS.forEach(function(s){
+  LOGIN_USERS.forEach(function(s){
     var b = document.createElement("button");
     b.className = "seller"; b.type="button"; b.dataset.id = s.id;
     b.innerHTML = '<span class="avatar" style="background:'+s.color+'">'+initials(s.name)+'</span>'+
@@ -1913,6 +1922,8 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
     $("#topAvatar").textContent = initials(seller.name);
     $("#topName").textContent = seller.name;
     $("#topRole").textContent = seller.role;
+    // el botón Ventas es de facturación (vendedores); el técnico no lo usa
+    $("#ventasBtn").style.display = seller.tecnica ? "none" : "";
     $("#fData").value = todayISO();
     pendingRoute = null; hideBanner();
     fSeller.from=""; fSeller.to=""; $("#sPeriod").value="all"; $("#sCustom").classList.add("hidden");
@@ -2542,7 +2553,7 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
     var s=SELLER_BY[sellerId];
     var vs=vFilt(visitsFor(sellerId), fMgr).slice().sort(function(a,b){ return b.data<a.data?-1:(b.data>a.data?1:0); });
     var rows=vs.map(function(v){ return {main:v.cliente, sub:v.motivo, right:fmtDate(v.data)}; });
-    openMList("Visitas de "+firstName(s.name), rows, function(i){ openModal(vs[i], function(){ teamVisitList(sellerId); }); });
+    openMList("Visitas de "+(s.tecnica?s.name:firstName(s.name)), rows, function(i){ openModal(vs[i], function(){ teamVisitList(sellerId); }); });
   }
   function teamClientList(sellerId){
     var s=SELLER_BY[sellerId];
@@ -2550,7 +2561,7 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
     var by={}; vs.forEach(function(v){ (by[v.cliente]||(by[v.cliente]=[])).push(v); });
     var names=Object.keys(by).sort(function(a,b){ return a.localeCompare(b); });
     var rows=names.map(function(n){ return {main:n, right:by[n].length+' vis.'}; });
-    openMList("Clientes visitados — "+firstName(s.name), rows, function(i){
+    openMList("Clientes visitados — "+(s.tecnica?s.name:firstName(s.name)), rows, function(i){
       var n=names[i], list=by[n].slice().sort(function(a,b){ return b.data<a.data?-1:(b.data>a.data?1:0); });
       if(list.length===1){ openModal(list[0], function(){ teamClientList(sellerId); }); }
       else {
@@ -3068,12 +3079,12 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
       '<div class="kpi"><b>'+Object.keys(cliSet).length+'</b><span>clientes</span></div>'+
       '<div class="kpi"><b>'+Object.keys(proSet).length+'</b><span>prospectos</span></div>';
 
-    $("#mTeam").innerHTML = SELLERS.map(function(s){
+    function teamCard(s, extra){
       var vs = vFilt(visitsFor(s.id), fMgr);
       var last = vs.length ? vs.map(function(x){return x.data;}).sort().slice(-1)[0] : "";
-      return '<div class="tcard">'+
+      return '<div class="tcard'+(extra?" tcard-tec":"")+'">'+
         '<div class="thead"><div class="avatar" style="background:'+s.color+'">'+initials(s.name)+'</div>'+
-          '<div><b>'+esc(s.name)+'</b><br><span>'+esc(s.role)+'</span></div></div>'+
+          '<div><b>'+esc(s.name)+'</b>'+(extra?' <span class="tec-tag">no suma</span>':'')+'<br><span>'+esc(s.role)+'</span></div></div>'+
         '<div class="tstats">'+
           '<button class="tstat tstat-btn" data-s="'+s.id+'" data-k="visitas"><b>'+vs.length+'</b><span>visitas</span></button>'+
           '<button class="tstat tstat-btn" data-s="'+s.id+'" data-k="clientes"><b>'+distinct(vs,"Cliente")+'</b><span>clientes</span></button>'+
@@ -3081,7 +3092,8 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
         '</div>'+
         '<div class="last">Última actividad: '+(last?fmtDate(last):"—")+'</div>'+
       '</div>';
-    }).join("");
+    }
+    $("#mTeam").innerHTML = SELLERS.map(function(s){ return teamCard(s, false); }).join("") + teamCard(TECNICA, true);
     $$(".tstat-btn",$("#mTeam")).forEach(function(b){
       b.addEventListener("click", function(){
         if(b.dataset.k==="visitas") teamVisitList(b.dataset.s); else teamClientList(b.dataset.s);
