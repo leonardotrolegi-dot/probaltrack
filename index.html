@@ -310,6 +310,10 @@
   .ac-item .ac-nm{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .ac-item .ac-kg{color:var(--ink-faint);font-size:12px;white-space:nowrap;flex:none;font-variant-numeric:tabular-nums}
   .ac-item .ac-vend{color:var(--accent);font-size:12px;font-weight:600}
+  .ac-item .ac-vend.other{color:var(--ink-faint)}
+  .ac-item.disabled{opacity:.6}
+  .ac-item.disabled .ac-nm{color:var(--ink-faint)}
+  .ac-item .ac-lock{font-size:11px;filter:grayscale(.3)}
   .ac-item small{color:var(--ink-faint);display:block;font-size:12px}
   .ac-empty{padding:12px 14px;font-size:13.5px;color:var(--ink-faint)}
 
@@ -1604,7 +1608,7 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
     if(!SELLER_BY[id]){ var s={id:id, name:resp, role:"Comercial", pin:(PINS[resp]||"1234"), color:SELLER_COLORS[SELLERS.length%SELLER_COLORS.length]}; SELLERS.push(s); SELLER_BY[id]=s; KEY[id]=[]; }
     var idNome = est ? (cli+" · "+est) : cli;
     KEY[id].push({c:cli, e:est, id:idNome});
-    if(!_cliSeen[cli]){ _cliSeen[cli]=1; CLIENTES_FALLBACK.push({nome:cli, loc:est||""}); }
+    if(!_cliSeen[cli]){ _cliSeen[cli]=1; CLIENTES_FALLBACK.push({nome:cli, loc:est||"", vendedor:resp}); }
   });
   var PROSPECTOS_FALLBACK=[];
   var NAME2ID={}; SELLERS.forEach(function(s){ NAME2ID[slug(s.name)]=s.id; });
@@ -1619,6 +1623,19 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
     return CAT_CLI.length ? CAT_CLI : CLIENTES_FALLBACK;
   }
   function inList(nome, mot){ return listForMotivo(mot).some(function(x){ return x.nome===nome; }); }
+  // Nombre de quien lo creó / vendedor asignado (prospecto guarda id; cliente guarda nombre col A)
+  function creatorName(item, mot){
+    if(mot==="Prospecto") return SELLER_BY[item.vendedor] ? SELLER_BY[item.vendedor].name : (item.vendedor||"");
+    return item.vendedor || "";
+  }
+  // ¿el vendedor actual es dueño de este ítem? (puede realizarle visitas)
+  function ownsItem(item, mot){
+    if(!current) return false;
+    if(mot==="Prospecto") return !item.vendedor || item.vendedor===current.id;
+    return !item.vendedor || sellerMatchName(current.name, item.vendedor);
+  }
+  // ¿existe algún ítem con ese nombre que sea del vendedor actual?
+  function ownsByName(nome, mot){ return listForMotivo(mot).some(function(x){ return x.nome===nome && ownsItem(x,mot); }); }
   var CLI_LOC={};
   function currentMotivo(){ var r=$$("input[name=motivo]").filter(function(x){return x.checked;})[0]; return r?r.value:"Cliente"; }
 
@@ -2307,14 +2324,21 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
       acList.innerHTML = '<div class="ac-empty">No está en la lista. Solo el gestor puede agregarlo.</div>';
       acList.classList.add("on"); return;
     }
+    var mot = currentMotivo();
     acList.innerHTML = acMatches.slice(0,8).map(function(c,i){
       var right = c.kg ? fmtKg(c.kg)+' kg' : (c.loc||'');
-      var vend = c.vendedor ? ' <span class="ac-vend">('+esc(c.vendedor)+')</span>' : '';
-      return '<div class="ac-item" data-i="'+i+'"><span class="ac-nm">'+hl(c.nome,q)+vend+'</span>'+(right?'<span class="ac-kg">'+right+'</span>':'')+'</div>';
+      var cn = creatorName(c, mot), own = ownsItem(c, mot);
+      var vend = cn ? ' <span class="ac-vend'+(own?'':' other')+'">('+esc(cn)+')</span>' : '';
+      var lock = own ? '' : ' <span class="ac-lock" title="De otro vendedor">🔒</span>';
+      return '<div class="ac-item'+(own?'':' disabled')+'" data-i="'+i+'"><span class="ac-nm">'+hl(c.nome,q)+vend+lock+'</span>'+(right?'<span class="ac-kg">'+right+'</span>':'')+'</div>';
     }).join("");
     acList.classList.add("on");
     $$(".ac-item",acList).forEach(function(el){
-      el.addEventListener("mousedown", function(e){ e.preventDefault(); pick(acMatches[+el.dataset.i]); });
+      el.addEventListener("mousedown", function(e){ e.preventDefault();
+        var c=acMatches[+el.dataset.i];
+        if(!ownsItem(c, mot)){ toast('Ese '+(mot==="Prospecto"?"prospecto":"cliente")+' es de '+creatorName(c,mot)+'. Solo su vendedor puede registrarle visitas.', true); return; }
+        pick(c);
+      });
     });
   }
   function hl(txt,q){
@@ -2399,6 +2423,7 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
     if(!cli){ acInput.focus(); toast("Elija el cliente primero.", true); return; }
     var motivo = $$("input[name=motivo]").filter(function(x){return x.checked;})[0].value;
     if(!inList(cli, motivo)){ acInput.focus(); toast("Ese "+(motivo==="Prospecto"?"prospecto":"cliente")+" no está en la lista. Pídalo al gestor.", true); return; }
+    if(!ownsByName(cli, motivo)){ acInput.focus(); toast("Ese "+(motivo==="Prospecto"?"prospecto":"cliente")+" es de otro vendedor. Solo su vendedor puede registrarle visitas.", true); return; }
     var obs = $("#fObs").value.trim();
     if(!obs){ $("#fObs").focus(); toast("Las observaciones son obligatorias.", true); return; }
     // Motivo de pérdida "Otros" exige observación en el motivo
@@ -3005,6 +3030,7 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
     if(!cli){ $("#rCliente").focus(); toast("Escriba el cliente o prospecto.", true); return; }
     var rmot=$("#rMotivo").value;
     if(!inList(cli, rmot)){ $("#rCliente").focus(); toast("Ese "+(rmot==="Prospecto"?"prospecto":"cliente")+" no está en la lista. Pídalo al gestor.", true); return; }
+    if(!ownsByName(cli, rmot)){ $("#rCliente").focus(); toast("Ese "+(rmot==="Prospecto"?"prospecto":"cliente")+" es de otro vendedor. Solo su vendedor puede agregarlo a la ruta.", true); return; }
     var fecha=$("#rFecha").value || todayISO();
     addRouteVisit(current.id, cli, rmot, fecha);
     $("#rCliente").value="";
@@ -3013,7 +3039,7 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
   });
   function updateRouteDatalist(){
     var mot=$("#rMotivo") ? $("#rMotivo").value : "Cliente";
-    $("#clientesList").innerHTML = listForMotivo(mot).map(function(c){ return '<option value="'+esc(c.nome)+'">'+esc(c.loc)+'</option>'; }).join("");
+    $("#clientesList").innerHTML = listForMotivo(mot).map(function(c){ var cn=creatorName(c,mot); return '<option value="'+esc(c.nome)+'">'+(cn?"("+esc(cn)+") ":"")+esc(c.loc||"")+'</option>'; }).join("");
   }
   function initRoute(){
     updateRouteDatalist();
