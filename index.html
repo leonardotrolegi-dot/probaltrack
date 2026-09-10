@@ -693,6 +693,9 @@
   .mr-line{display:flex;align-items:center;gap:9px;padding:4px 0}
   .mr-date{flex:none;font-size:11.5px;font-weight:700;color:var(--ink-faint);min-width:56px;font-variant-numeric:tabular-nums}
   .mr-item.ev{background:color-mix(in srgb,#7a5cc0 16%,transparent);color:#7a5cc0;border-color:transparent}
+  .mr-del{margin-left:auto;flex:none;background:transparent;border:1px solid var(--line);color:var(--danger);
+    width:24px;height:24px;border-radius:7px;cursor:pointer;font-size:13px;line-height:1;display:grid;place-items:center}
+  .mr-del:hover{background:color-mix(in srgb,var(--danger) 12%,transparent);border-color:var(--danger)}
 
   /* agenda especial (gestor) */
   .btn-add{
@@ -1166,7 +1169,7 @@
       <section class="view" id="v-carteira">
         <div class="view-head">
           <h2>Cartera 80/20</h2>
-          <p>Sus clientes clave. Toque los números para ver la lista.</p>
+          <p id="carteiraSub">Sus clientes clave. Toque los números para ver la lista.</p>
         </div>
         <div class="kpis" id="kpiCarteira"></div>
         <div id="carteiraKpiDetail" class="kpi-detail hidden"></div>
@@ -2014,6 +2017,18 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
     return out;
   }
   function keySet(sellerId){ var st={}; keyClientsFor(sellerId).forEach(function(k){ st[k.id]=1; }); return st; }
+  // 80/20 GENERAL de la empresa (todos los clientes) — usado por Equipo Técnica
+  function keyClientsAll(){
+    var byName={};
+    CAT_CLI.forEach(function(c){ var k=c.nome; if(!byName[k]) byName[k]={c:k, e:"", id:k, kg:0}; byName[k].kg += (+c.kg||0); });
+    var arr=Object.keys(byName).map(function(k){return byName[k];}).filter(function(o){return o.kg>0;});
+    arr.sort(function(a,b){ return b.kg-a.kg; });
+    var total=arr.reduce(function(a,b){ return a+b.kg; }, 0);
+    if(total<=0) return [];
+    var cum=0, out=[];
+    for(var i=0;i<arr.length;i++){ out.push(arr[i]); cum+=arr[i].kg; if(cum>=0.8*total) break; }
+    return out;
+  }
   function clientsForSeller(sellerId){ var s=SELLER_BY[sellerId]; if(!s) return []; return CAT_CLI.filter(function(c){ return sellerMatchName(s.name, c.vendedor); }); }
   var VCTX="seller", VMGRSEL="__team__";
   // Pool de clientes analizado según contexto (vendedor / gestor-equipo / gestor-vendedor)
@@ -2817,7 +2832,9 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
     return {k:2, cls:"late", label:"Atrasado", days:days};
   }
   function render80(){
-    var auto = keyClientsFor(current.id);
+    var isTec = current && current.tecnica;
+    var subEl=$("#carteiraSub"); if(subEl) subEl.textContent = isTec ? "80/20 general de la empresa (todos los clientes). Toque los números para ver la lista." : "Sus clientes clave. Toque los números para ver la lista.";
+    var auto = isTec ? keyClientsAll() : keyClientsFor(current.id);
     var keys = auto.length ? auto : (KEY[current.id] || []);
     var rows = keys.map(function(k){
       var st = clientStat(current.id, k.id);
@@ -3206,7 +3223,7 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
 
   // Rutas semanales (resumo global, só leitura)
   function renderMgrRoutes(){
-    var everyone = [GESTOR].concat(SELLERS);
+    var everyone = [GESTOR].concat(SELLERS).concat([TECNICA]);
     var totalPlanned = everyone.reduce(function(s,x){ return s + routeFor(x.id).length; }, 0);
     $("#mKpiRutas").innerHTML =
       '<div class="kpi"><b>'+totalPlanned+'</b><span>ítems planificados</span></div>'+
@@ -3216,11 +3233,26 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
       var head = '<div class="thead"><div class="avatar" style="background:'+s.color+'">'+initials(s.name)+'</div>'+
         '<div><b>'+esc(s.name)+'</b><br><span>'+list.length+' ítem'+(list.length!==1?'s':'')+' planificado'+(list.length!==1?'s':'')+'</span></div></div>';
       var body = list.length ? '<div class="mr-days">'+list.map(function(it){
-        if(it.kind==="evento") return '<div class="mr-line"><span class="mr-date">'+shortDate(it.fecha)+'</span><span class="mr-item ev">'+esc(it.tipo)+(it.titulo?': '+esc(it.titulo):'')+'</span></div>';
+        if(it.kind==="evento") return '<div class="mr-line"><span class="mr-date">'+shortDate(it.fecha)+'</span><span class="mr-item ev">'+esc(it.tipo)+(it.titulo?': '+esc(it.titulo):'')+'</span>'+
+          '<button class="mr-del" title="Eliminar evento" data-agid="'+esc(it.agId||"")+'" data-sid="'+esc(s.id)+'" data-id="'+esc(it.id)+'">✕</button></div>';
         return '<div class="mr-line"><span class="mr-date">'+shortDate(it.fecha)+'</span><span class="mr-item '+(it.motivo==="Cliente"?"a":"p")+'">'+esc(it.cliente)+'</span></div>';
       }).join("")+'</div>' : '<div class="rday-empty">Sin ruta planificada.</div>';
       return '<div class="tcard">'+head+body+'</div>';
     }).join("");
+    $$(".mr-del",$("#mRutas")).forEach(function(b){
+      b.addEventListener("click", function(){
+        if(!window.confirm("¿Eliminar este evento de la agenda? Se quita de la ruta de todos los vendedores a quienes se envió.")) return;
+        if(b.dataset.agid) deleteAgenda(b.dataset.agid); else delRoute(b.dataset.sid, b.dataset.id);
+        renderMgrRoutes(); toast("Evento eliminado ✓");
+      });
+    });
+  }
+  // elimina todas las copias de un evento (mismo agId) de todas las rutas
+  function deleteAgenda(agId){
+    [GESTOR].concat(SELLERS).concat([TECNICA]).forEach(function(s){
+      routeFor(s.id).filter(function(it){ return it.kind==="evento" && it.agId===agId; })
+        .forEach(function(it){ delRoute(s.id, it.id); });
+    });
   }
 
   // ---------- MI RUTA (gestor) ----------
@@ -3280,6 +3312,7 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
     $("#agVendedores").innerHTML =
       '<label class="ag-vend ag-all"><input type="checkbox" id="agAll"><span>Todos</span></label>' +
       SELLERS.map(function(s){ return '<label class="ag-vend"><input type="checkbox" class="ag-vsel" value="'+s.id+'"><span>'+esc(s.name)+'</span></label>'; }).join("") +
+      '<label class="ag-vend"><input type="checkbox" class="ag-vsel" value="'+TECNICA.id+'"><span>'+esc(TECNICA.name)+'</span></label>' +
       '<label class="ag-vend ag-me"><input type="checkbox" class="ag-vsel" value="gestion"><span>Gestión (yo)</span></label>';
     $("#agAll").addEventListener("change", function(){
       var on=this.checked; $$(".ag-vsel",$("#agVendedores")).forEach(function(c){ c.checked=on; });
@@ -3322,9 +3355,10 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
     var targets = $$(".ag-vsel",$("#agVendedores")).filter(function(c){ return c.checked; }).map(function(c){ return c.value; });
     if(targets.length===0){ toast("Elija al menos un vendedor.", true); return; }
     var tipo=$("#agTipo").value, titulo=$("#agTitulo").value.trim();
-    targets.forEach(function(sid){
-      agDates.forEach(function(f){
-        putRoute({id:"e"+Date.now()+Math.random().toString(36).slice(2,7), sellerId:sid, kind:"evento", tipo:tipo, titulo:titulo, fecha:f});
+    agDates.forEach(function(f){
+      var agId="ag"+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+      targets.forEach(function(sid){
+        putRoute({id:"e"+Date.now()+Math.random().toString(36).slice(2,7), agId:agId, sellerId:sid, kind:"evento", tipo:tipo, titulo:titulo, fecha:f});
       });
     });
     var n = targets.length*agDates.length;
