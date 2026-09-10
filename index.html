@@ -2723,7 +2723,7 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
     chartEl.innerHTML = pre +
       '<div class="donut-wrap">'+
         '<svg class="donut" viewBox="0 0 200 200"><circle cx="100" cy="100" r="74" fill="none" stroke="var(--line-soft)" stroke-width="30"/>'+segs+'</svg>'+
-        '<div class="donut-center"><b>'+total+'</b><span>visitas</span></div>'+
+        '<div class="donut-center"><b>'+total+'</b>'+(opts.centerLabel!==undefined ? (opts.centerLabel?'<span>'+esc(opts.centerLabel)+'</span>':'') : '<span>visitas</span>')+'</div>'+
       '</div>'+
       '<div class="leg-hint"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg> '+hint+'</div>'+
       '<div class="legend">'+legend+'</div>';
@@ -2851,7 +2851,7 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
       data.push({name:st, count:cs.length, visits:vv}); colors.push(STATE_COLOR[st]); });
     if(!clients.length){ $("#kpiProspectos").innerHTML=''; $("#chartProspectos").innerHTML='<div class="empty">Sin prospectos aún.</div>'; $("#prospClientList").innerHTML=''; bindSemaforo(); return; }
     var totalVis=list.filter(function(x){return x.motivo==="Prospecto" && !x.stateChange;}).length;
-    drawDonut(data, $("#kpiProspectos"), $("#chartProspectos"), { label:"estados", colors:colors, hint:"Toque un estado para ver los prospectos",
+    drawDonut(data, $("#kpiProspectos"), $("#chartProspectos"), { label:"estados", colors:colors, centerLabel:"", hint:"Toque un estado para ver los prospectos",
       kpiHTML:'<div class="kpi"><b>'+clients.length+'</b><span>prospectos</span></div><div class="kpi"><b>'+totalVis+'</b><span>visitas totales</span></div>',
       onLegClick:function(i,d){ applyProspFilter(d.name); var el=$("#prospClientList"); if(el.scrollIntoView) el.scrollIntoView({behavior:"smooth",block:"nearest"}); } });
     $("#prospClientList").innerHTML = '<div class="sec-label" style="margin-top:16px">Prospectos · toque el nombre para ver, o cambie la etapa</div>' + clients.map(function(c){
