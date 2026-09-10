@@ -896,6 +896,9 @@
   .pc-nm{flex:1;min-width:0;font-size:14.5px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .pc-st{font-size:11.5px;font-weight:700;flex:none}
   .pc-c{font-size:12.5px;color:var(--ink-faint);flex:none;font-variant-numeric:tabular-nums}
+  .pc-mig{flex:none;font-family:inherit;font-size:12px;font-weight:700;border:1.5px solid var(--line);border-radius:9px;
+    background:var(--surface);padding:5px 6px;cursor:pointer;appearance:none;-webkit-appearance:none;text-align:center}
+  .pc-mig:focus{outline:none}
 
   .hidden{display:none!important}
 </style>
@@ -1365,6 +1368,7 @@
           <p>Suma de las visitas a prospectos de todo el equipo.</p>
         </div>
         <div id="mSemProsp"></div>
+        <div id="mProspList"></div>
         <div class="kpis" id="mKpiPro"></div>
         <div class="chart-card" id="mChartPro"></div>
         <div class="sec-label" style="margin-top:22px">Motivos de rechazo</div>
@@ -1456,13 +1460,13 @@ Francisco|VIRADOLCE S.A.|Guavirá
 Rossmaryo|VIRADOLCE S.A.|Yolanda y Sarita
 Matías|VIRADOLCE S.A.|Paso itá
 Edgar|ESTANCIA MONTANIA SA|
-Coorporativo|HILAGRO S.A.|
+PROBAL|HILAGRO S.A.|
 Edgar|CHAJHA SA|Safari
 Edgar|CHAJHA SA/CAUCE MORO|Kaaguy Pora
 Edgar|CHAJHA SA|Campo Palmar
 Edgar|CHAJHA SA|Michini
 Rossmaryo|CHAJHA SA/QUEBRACHALES|Puerto Colón
-Coorporativo|GANADERA LA CONCORDIA S.A.|
+PROBAL|GANADERA LA CONCORDIA S.A.|
 Edgar|AGROGANADERA LA HUELLA SA|
 Rossmaryo|GANADERA MARCA FLECHA S.A.|
 Matías|CRISTIAN ADOLFO ARA INSFRAN|
@@ -1537,7 +1541,7 @@ Francisco|LUIS ALBERTO DURE RABITO|
 Billie|ALTONA S.A.E.|
 Rodolfo|COMERCIAL SAN JORGE S.A.|
 Mauricio|COMERCIAL LINALU DE DOROTEO LUJAN VIVER|
-Coorporativo|MONTENEGRO SA|
+PROBAL|MONTENEGRO SA|
 Rodolfo|CESAR OVIEDO DUARTE|
 Matías|CARLOS VIDAL ZENA DUARTE|
 Mauricio|AGROPEC SAN ANTONIO DE LILIAN GIMÉNEZ|
@@ -1552,7 +1556,7 @@ Rossmaryo|FLAMINIO ROLON|
 Alessandro|AGROGANADERA PRADOS VERDES SA|
 Francisco|EL RESPLANDOR S.A|
 Patrício|JOSE CARLOS MARCELINO|
-Coorporativo|AGRO MANI S.A.|
+PROBAL|AGRO MANI S.A.|
 Matías|ESTANCIA FLORIDO DE RICARDO BARRESSI|
 Rossmaryo|LIDIO RAMÓN SCARPELLINI|
 Alessandro|JERRY BRIAN THIESSEN TOEWS BOX 3104|
@@ -1606,7 +1610,7 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
   var SELLER_COLORS = ["#2f6b43","#c07a2b","#4f7ca8","#8a6d3b","#6b8f4e","#a6544a","#3f8a7d","#9a7bb0","#b0973a","#5c6b74","#7a8b3c","#b5603f","#3d7f6a"];
   var PINS = {
     "Francisco":"7412","Rossmaryo":"3856","Matías":"2093","Edgar":"6178",
-    "Coorporativo":"5240","Mauricio":"9317","Patrício":"4085","Alessandro":"1769",
+    "PROBAL":"5240","Mauricio":"9317","Patrício":"4085","Alessandro":"1769",
     "Rodolfo":"8534","Billie":"6902","Thatyany":"3427","Martin":"5691","Pré venta":"8160"
   };
   function slug(s){ return s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/[^a-z0-9]+/g,"_").replace(/^_|_$/g,""); }
@@ -2483,7 +2487,8 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
       situacao:$("#fSituacao").value || defaultSit(motivo),
       data:$("#fData").value || todayISO(),
       obs:obs,
-      proxima:$("#fProxima").value || ""
+      proxima:$("#fProxima").value || "",
+      ts:Date.now()
     };
     if(motivo==="Prospecto"){ var pp=readPresup(); if(pp.enviado) rec2.presupuesto=pp; }
     if(rec2.situacao==="Perdido"){ rec2.perdida={motivo:$("#fPerdidaMotivo").value, obs:$("#fPerdidaObs").value.trim()}; }
@@ -2594,8 +2599,8 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
     $$(".ml-row",body).forEach(function(b){ b.addEventListener("click", function(){ onPick(+b.dataset.i); }); });
     $("#modal").classList.add("on");
   }
-  // sólo visitas REALIZADAS (fecha <= hoy); las de fecha futura son planificadas
-  function realizedVisits(list){ var t=todayISO(); return list.filter(function(x){ return !x.data || x.data<=t; }); }
+  // sólo visitas REALIZADAS: fecha <= hoy y que NO sean cambios de etapa
+  function realizedVisits(list){ var t=todayISO(); return list.filter(function(x){ return !x.stateChange && (!x.data || x.data<=t); }); }
   function teamVisitList(sellerId){
     var s=SELLER_BY[sellerId];
     var vs=realizedVisits(vFilt(visitsFor(sellerId), fMgr)).slice().sort(function(a,b){ return b.data<a.data?-1:(b.data>a.data?1:0); });
@@ -2782,7 +2787,11 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
   // ---------- SELLER CHARTS ----------
   // estado más reciente por cliente/prospecto (distinct)
   function latestByName(list, motivo){
-    var g={}; list.filter(function(x){return x.motivo===motivo;}).forEach(function(x){ if(!g[x.cliente]||x.data>g[x.cliente].data) g[x.cliente]=x; });
+    // desempate por fecha y luego por ts (la acción más reciente gana, aunque sea el mismo día)
+    var g={}; list.filter(function(x){return x.motivo===motivo;}).forEach(function(x){
+      var cur=g[x.cliente];
+      if(!cur || x.data>cur.data || (x.data===cur.data && (x.ts||0)>=(cur.ts||0))) g[x.cliente]=x;
+    });
     return g;
   }
   function clienteKPIs(list){
@@ -2793,9 +2802,16 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
            '<div class="kpi"><b>'+Object.keys(vis).length+'</b><span>clientes visitados</span></div>'+
            '<div class="kpi"><b>'+perd+'</b><span>clientes perdidos</span></div>';
   }
-  function prospStates(list){
-    var g=latestByName(list,"Prospecto"), a=0,p=0,perd=0,vend=0;
-    Object.keys(g).forEach(function(k){ var s=normSit(g[k].situacao); if(s==="Perdido")perd++; else if(s==="Congelado")p++; else if(s==="Venta cerrada")vend++; else a++; });
+  // universo de prospectos "existentes" (creados/importados) para contarlos aunque
+  // no tengan visita: recién creado => cuenta como ACTIVO hasta que una visita lo migre
+  function sellerIdSet(){ var s={}; SELLERS.forEach(function(x){ s[x.id]=1; }); return s; }
+  function prospUniverse(scope){
+    if(scope==="all"){ var ss=sellerIdSet(); return CAT_PRO.filter(function(p){ return ss[p.vendedor]; }); }
+    return CAT_PRO.filter(function(p){ return p.vendedor===scope; });
+  }
+  function prospStates(list, universe){
+    var arr=prospByClient(list, universe), a=0,p=0,perd=0,vend=0;
+    arr.forEach(function(c){ if(c.state==="Perdido")perd++; else if(c.state==="Congelado")p++; else if(c.state==="Venta cerrada")vend++; else a++; });
     return {activo:a, pausado:p, perdido:perd, vend:vend};
   }
   function semaforoHTML(st){
@@ -2809,36 +2825,58 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
       '</div></div>';
   }
   var STATE_COLOR={ "Perdido":"#e14b4b", "Congelado":"#e8b53a", "Venta cerrada":"#3fbf5f", "Activo":"#3d86e0" };
-  function prospByClient(list){
-    var g=latestByName(list,"Prospecto"), byC={};
-    list.filter(function(x){return x.motivo==="Prospecto";}).forEach(function(x){ (byC[x.cliente]||(byC[x.cliente]=[])).push(x); });
-    return Object.keys(g).map(function(cli){ var s=normSit(g[cli].situacao); var st=(s==="Perdido"||s==="Congelado"||s==="Venta cerrada")?s:"Activo";
+  function prospByClient(list, universe){
+    var g=latestByName(list,"Prospecto"), byC={}; // g incluye cambios de etapa (para el estado)
+    // sólo VISITAS reales (no los cambios de etapa) para el conteo/lista de visitas
+    list.filter(function(x){return x.motivo==="Prospecto" && !x.stateChange;}).forEach(function(x){ (byC[x.cliente]||(byC[x.cliente]=[])).push(x); });
+    var names={};
+    Object.keys(g).forEach(function(k){ names[k]=1; });
+    (universe||[]).forEach(function(p){ names[p.nome]=1; }); // creados aunque no visitados
+    return Object.keys(names).map(function(cli){
+      var latest=g[cli]; var s=latest?normSit(latest.situacao):"Activo";
+      var st=(s==="Perdido"||s==="Congelado"||s==="Venta cerrada")?s:"Activo";
       var vs=(byC[cli]||[]).slice().sort(function(a,b){return b.data<a.data?-1:1;});
-      return {cliente:cli, state:st, count:vs.length, last:g[cli].data, visits:vs};
+      return {cliente:cli, state:st, count:vs.length, last:latest?latest.data:"", visits:vs};
     }).sort(function(a,b){ return b.count-a.count; });
   }
+  var PROS_STATES=["Activo","Congelado","Venta cerrada","Perdido"];
   function renderProspectos(list){
     prospFilter=null;
-    $("#semProsp").innerHTML = semaforoHTML(prospStates(list));
-    var clients=prospByClient(list);
-    var order=["Activo","Congelado","Venta cerrada","Perdido"], data=[], colors=[];
+    var universe=prospUniverse(current.id);
+    $("#semProsp").innerHTML = semaforoHTML(prospStates(list, universe));
+    var clients=prospByClient(list, universe);
+    var order=PROS_STATES, data=[], colors=[];
     order.forEach(function(st){ var cs=clients.filter(function(c){return c.state===st;}); if(!cs.length) return;
       var vv=[]; cs.forEach(function(c){ vv=vv.concat(c.visits); });
       data.push({name:st, count:cs.length, visits:vv}); colors.push(STATE_COLOR[st]); });
-    if(!data.length){ $("#kpiProspectos").innerHTML=''; $("#chartProspectos").innerHTML='<div class="empty">Sin prospectos visitados.</div>'; $("#prospClientList").innerHTML=''; bindSemaforo(); return; }
-    var totalVis=list.filter(function(x){return x.motivo==="Prospecto";}).length;
+    if(!clients.length){ $("#kpiProspectos").innerHTML=''; $("#chartProspectos").innerHTML='<div class="empty">Sin prospectos aún.</div>'; $("#prospClientList").innerHTML=''; bindSemaforo(); return; }
+    var totalVis=list.filter(function(x){return x.motivo==="Prospecto" && !x.stateChange;}).length;
     drawDonut(data, $("#kpiProspectos"), $("#chartProspectos"), { label:"estados", colors:colors, hint:"Toque un estado para ver los prospectos",
       kpiHTML:'<div class="kpi"><b>'+clients.length+'</b><span>prospectos</span></div><div class="kpi"><b>'+totalVis+'</b><span>visitas totales</span></div>',
       onLegClick:function(i,d){ applyProspFilter(d.name); var el=$("#prospClientList"); if(el.scrollIntoView) el.scrollIntoView({behavior:"smooth",block:"nearest"}); } });
-    $("#prospClientList").innerHTML = '<div class="sec-label" style="margin-top:16px">Prospectos</div>' + clients.map(function(c){
+    $("#prospClientList").innerHTML = '<div class="sec-label" style="margin-top:16px">Prospectos · toque el nombre para ver, o cambie la etapa</div>' + clients.map(function(c){
+      var opts=PROS_STATES.map(function(st){ return '<option value="'+st+'"'+(st===c.state?' selected':'')+'>'+st+'</option>'; }).join("");
       return '<div class="pc-item" data-id="'+(c.visits[0]?c.visits[0].id:"")+'" data-state="'+esc(c.state)+'">'+
         '<span class="pc-dot" style="background:'+STATE_COLOR[c.state]+'"></span>'+
         '<span class="pc-nm">'+esc(c.cliente)+'</span>'+
-        '<span class="pc-st" style="color:'+STATE_COLOR[c.state]+'">'+c.state+'</span>'+
+        '<select class="pc-mig" data-nome="'+esc(c.cliente)+'" style="border-color:'+STATE_COLOR[c.state]+';color:'+STATE_COLOR[c.state]+'">'+opts+'</select>'+
         '<span class="pc-c">'+c.count+' vis.</span></div>';
     }).join("");
-    $$(".pc-item",$("#prospClientList")).forEach(function(el){ el.addEventListener("click", function(){ var r=(DB[current.id]||[]).filter(function(x){return x.id===el.dataset.id;})[0]; if(r) openModal(r); }); });
+    $$(".pc-mig",$("#prospClientList")).forEach(function(sel){
+      sel.addEventListener("click", function(e){ e.stopPropagation(); });
+      sel.addEventListener("change", function(){ migrateProspecto(sel.dataset.nome, sel.value); });
+    });
+    $$(".pc-item",$("#prospClientList")).forEach(function(el){ el.addEventListener("click", function(){ var r=(DB[current.id]||[]).filter(function(x){return x.id===el.dataset.id;})[0]; if(r) openModal(r); else toast("Ese prospecto aún no tiene visitas.", true); }); });
     bindSemaforo();
+  }
+  // migra un prospecto a otra etapa (registro liviano, NO cuenta como visita)
+  function migrateProspecto(nome, newState){
+    if(!nome || !newState) return;
+    var rec={ id:"s"+Date.now()+Math.random().toString(36).slice(2,6), sellerId:current.id, cliente:nome, motivo:"Prospecto",
+      situacao:newState, data:todayISO(), obs:"", proxima:"", stateChange:true, ts:Date.now() };
+    putVisit(rec);
+    toast("Prospecto → "+newState+" ✓");
+    renderSellerChart("prospectos");
   }
   var prospFilter=null;
   function applyProspFilter(state){
@@ -2851,6 +2889,46 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
     $$(".sem-row",$("#semProsp")).forEach(function(row){
       row.classList.add("clickable");
       row.addEventListener("click", function(){ applyProspFilter(row.dataset.state); });
+    });
+  }
+  // ---- Semáforo del GESTOR (clicable → nombres por estado, todo el equipo) ----
+  var mProspFilter=null;
+  var STATE_LBL={ "Perdido":"Prospectos perdidos", "Congelado":"Prospectos congelados", "Venta cerrada":"Prospectos vendidos", "Activo":"Prospectos activos" };
+  function renderMgrProspList(){
+    mProspFilter=null;
+    var all=allVisitsMgr();
+    var clients=prospByClient(all, prospUniverse("all"));
+    // guardar para abrir la visita al hacer click
+    $("#mProspList").innerHTML = clients.map(function(c){
+      var vid=c.visits[0]?c.visits[0].id:"";
+      return '<div class="pc-item" data-id="'+esc(vid)+'" data-state="'+esc(c.state)+'" style="display:none">'+
+        '<span class="pc-dot" style="background:'+STATE_COLOR[c.state]+'"></span>'+
+        '<span class="pc-nm">'+esc(c.cliente)+'</span>'+
+        '<span class="pc-st" style="color:'+STATE_COLOR[c.state]+'">'+c.state+'</span>'+
+        '<span class="pc-c">'+c.count+' vis.</span></div>';
+    }).join("");
+    $$(".pc-item",$("#mProspList")).forEach(function(el){
+      el.addEventListener("click", function(){ var r=all.filter(function(x){return x.id===el.dataset.id;})[0]; if(r) openModal(r); else toast("Ese prospecto aún no tiene visitas.", true); });
+    });
+    bindMgrSemaforo();
+  }
+  function applyMgrProspFilter(state){
+    if(mProspFilter===state) state=null;
+    mProspFilter=state;
+    $$(".sem-row",$("#mSemProsp")).forEach(function(r){ r.classList.toggle("sel", !!state && r.dataset.state===state); });
+    var any=false;
+    $$(".pc-item",$("#mProspList")).forEach(function(x){ var show=(!!state && x.dataset.state===state); x.style.display=show?"":"none"; if(show) any=true; });
+    var head=$("#mProspHead"); if(head) head.remove();
+    if(state){
+      var h=document.createElement("div"); h.id="mProspHead"; h.className="sec-label"; h.style.marginTop="14px";
+      h.textContent=(STATE_LBL[state]||state)+(any?"":" — ninguno");
+      $("#mProspList").insertBefore(h, $("#mProspList").firstChild);
+    }
+  }
+  function bindMgrSemaforo(){
+    $$(".sem-row",$("#mSemProsp")).forEach(function(row){
+      row.classList.add("clickable");
+      row.addEventListener("click", function(){ applyMgrProspFilter(row.dataset.state); });
     });
   }
   function renderSellerChart(which){
@@ -3047,7 +3125,7 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
       var items=list.filter(function(x){ return x.fecha===day.iso; });
       // agregar visitas REALIZADAS de ese día que no tengan ya un ítem "Realizado" en la ruta
       var doneIds={}; items.forEach(function(x){ if(x.done && x.visitId) doneIds[x.visitId]=1; });
-      (DB[current.id]||[]).filter(function(v){ return v.data===day.iso && !doneIds[v.id]; })
+      (DB[current.id]||[]).filter(function(v){ return !v.stateChange && v.data===day.iso && !doneIds[v.id]; })
         .forEach(function(v){ items.push({id:"vsyn-"+v.id, kind:"visita", cliente:v.cliente, motivo:v.motivo, fecha:v.data, done:true, visitId:v.id}); });
       var mName = MESES[parseInt(day.iso.slice(5,7),10)-1] || "";
       var head='<div class="rday-head"><b>'+DIA_N[day.wd]+' '+day.dayNum+' '+mName+'</b><span class="cnt">'+items.length+'</span><span class="line"></span></div>';
@@ -3078,7 +3156,7 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
     renderRutaSplit();
   }
   function renderRutaSplit(){
-    var vs=visitsFor(current.id);
+    var vs=visitsFor(current.id).filter(function(x){ return !x.stateChange; });
     var cV=vs.filter(function(x){return x.motivo==="Cliente";}), pV=vs.filter(function(x){return x.motivo==="Prospecto";});
     var data=[], colors=[];
     if(cV.length){ data.push({name:"Clientes", count:cV.length, visits:cV}); colors.push(cssVar("--activo")); }
@@ -3187,7 +3265,8 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
               '<div class="kpi"><b>'+data.length+'</b><span>vendedores</span></div>'+
               '<div class="kpi"><b>'+perd+'</b><span>clientes perdidos</span></div>';
     } else {
-      $("#mSemProsp").innerHTML = semaforoHTML(prospStates(allVisitsMgr()));
+      $("#mSemProsp").innerHTML = semaforoHTML(prospStates(allVisitsMgr(), prospUniverse("all")));
+      renderMgrProspList();
       kpiHTML='<div class="kpi"><b>'+total+'</b><span>visitas totales</span></div>'+
               '<div class="kpi"><b>'+data.length+'</b><span>vendedores activos</span></div>';
     }
