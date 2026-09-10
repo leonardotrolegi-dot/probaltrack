@@ -454,6 +454,11 @@
   .ml-main small{color:var(--ink-faint);font-size:12px;font-weight:600;margin-left:4px}
   .ml-right{color:var(--ink-faint);font-size:12.5px;flex:none;font-variant-numeric:tabular-nums}
   .m-back{background:transparent;border:0;color:var(--accent);font-weight:700;font-size:14px;cursor:pointer;padding:2px 0 8px}
+  .m-del{margin-top:14px;width:100%;display:flex;align-items:center;justify-content:center;gap:8px;
+    background:color-mix(in srgb,var(--danger) 10%,transparent);color:var(--danger);border:1.5px solid var(--danger);
+    border-radius:12px;padding:12px;font-size:14.5px;font-weight:700;font-family:inherit;cursor:pointer}
+  .m-del:hover{background:var(--danger);color:#fff}
+  .m-del svg{width:17px;height:17px}
   .tcard .last{font-size:12px;color:var(--ink-faint);margin-top:9px}
 
   /* ---------- RUTA SEMANAL ---------- */
@@ -1824,6 +1829,19 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
     if(useDB) dbh.collection("visits").doc(id).delete().catch(noop);
     else saveAll(DB);
   }
+  // elimina una visita aunque no venga con sellerId (busca en todos)
+  function delVisitAny(v){
+    var sid=v.sellerId;
+    if(!sid || !(Array.isArray(DB[sid])&&DB[sid].some(function(x){return x.id===v.id;}))){
+      Object.keys(DB).forEach(function(k){ if(Array.isArray(DB[k]) && DB[k].some(function(x){return x.id===v.id;})) sid=k; });
+    }
+    if(sid) delVisit(sid, v.id);
+    // también quitar de la ruta la marca "Realizado" que apuntaba a esa visita
+    Object.keys(ROUTES).forEach(function(k){
+      if(!Array.isArray(ROUTES[k])) return;
+      ROUTES[k].filter(function(it){ return it.done && it.visitId===v.id; }).forEach(function(it){ delRoute(k, it.id); });
+    });
+  }
   function putRoute(it){
     var sid=it.sellerId;
     if(!ROUTES[sid]) ROUTES[sid]=[];
@@ -2548,8 +2566,19 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
       '<div class="m-obs'+(r.obs?'':' empty')+'">'+(r.obs?esc(r.obs):'Sin observaciones.')+'</div>'+
       presupModalHTML(r)+
       ((r.situacao==="Perdido" && r.perdida && (r.perdida.motivo||r.perdida.obs)) ? '<div class="m-obs" style="margin-top:8px">Motivo de la pérdida: <b>'+esc(r.perdida.motivo||"—")+'</b>'+(r.perdida.obs?' · '+esc(r.perdida.obs):'')+'</div>' : '')+
-      '<div class="m-note"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg> Solo el gestor puede eliminar registros.</div>';
+      (isManager
+        ? '<button class="m-del" id="mDel"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2"/></svg> Eliminar visita</button>'
+        : '<div class="m-note"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg> Solo el gestor puede eliminar registros.</div>');
     if(back){ $("#mBack").addEventListener("click", back); }
+    if(isManager && $("#mDel")){
+      $("#mDel").addEventListener("click", function(){
+        if(!window.confirm("¿Eliminar esta visita? No se puede deshacer.")) return;
+        delVisitAny(r);
+        toast("Visita eliminada ✓");
+        rerenderMgr();
+        if(back) back(); else closeModal();
+      });
+    }
     $("#modal").classList.add("on");
   }
   // ---- listas clicables (Equipo → visitas/clientes) ----
@@ -2558,24 +2587,42 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
     body.innerHTML=(back?'<button class="m-back" id="mBack">‹ Volver</button>':'')+
       '<div class="m-head"><div class="m-title">'+esc(title)+'</div></div>'+
       (rows.length ? '<div class="ml-list">'+rows.map(function(r,i){
-        return '<button class="ml-row" data-i="'+i+'"><span class="ml-main">'+esc(r.main)+(r.sub?' <small>'+esc(r.sub)+'</small>':'')+'</span>'+(r.right?'<span class="ml-right">'+esc(r.right)+'</span>':'')+'</button>';
+        var tag = r.motivo ? ' <span class="tag '+(r.motivo==="Cliente"?"a":"p")+'">'+esc(r.motivo)+'</span>' : (r.sub?' <small>'+esc(r.sub)+'</small>':'');
+        return '<button class="ml-row" data-i="'+i+'"><span class="ml-main">'+esc(r.main)+tag+'</span>'+(r.right?'<span class="ml-right">'+esc(r.right)+'</span>':'')+'</button>';
       }).join("")+'</div>' : '<div class="m-obs empty">Nada para mostrar.</div>');
     if(back){ $("#mBack").addEventListener("click", back); }
     $$(".ml-row",body).forEach(function(b){ b.addEventListener("click", function(){ onPick(+b.dataset.i); }); });
     $("#modal").classList.add("on");
   }
+  // sólo visitas REALIZADAS (fecha <= hoy); las de fecha futura son planificadas
+  function realizedVisits(list){ var t=todayISO(); return list.filter(function(x){ return !x.data || x.data<=t; }); }
   function teamVisitList(sellerId){
     var s=SELLER_BY[sellerId];
-    var vs=vFilt(visitsFor(sellerId), fMgr).slice().sort(function(a,b){ return b.data<a.data?-1:(b.data>a.data?1:0); });
-    var rows=vs.map(function(v){ return {main:v.cliente, sub:v.motivo, right:fmtDate(v.data)}; });
+    var vs=realizedVisits(vFilt(visitsFor(sellerId), fMgr)).slice().sort(function(a,b){ return b.data<a.data?-1:(b.data>a.data?1:0); });
+    var rows=vs.map(function(v){ return {main:v.cliente, motivo:v.motivo, right:fmtDate(v.data)}; });
     openMList("Visitas de "+(s.tecnica?s.name:firstName(s.name)), rows, function(i){ openModal(vs[i], function(){ teamVisitList(sellerId); }); });
+  }
+  function teamProspectoList(sellerId){
+    var s=SELLER_BY[sellerId];
+    var vs=realizedVisits(vFilt(visitsFor(sellerId), fMgr)).filter(function(x){ return x.motivo==="Prospecto"; });
+    var by={}; vs.forEach(function(v){ (by[v.cliente]||(by[v.cliente]=[])).push(v); });
+    var names=Object.keys(by).sort(function(a,b){ return a.localeCompare(b); });
+    var rows=names.map(function(n){ return {main:n, motivo:"Prospecto", right:by[n].length+' vis.'}; });
+    openMList("Prospectos visitados — "+(s.tecnica?s.name:firstName(s.name)), rows, function(i){
+      var n=names[i], list=by[n].slice().sort(function(a,b){ return b.data<a.data?-1:(b.data>a.data?1:0); });
+      if(list.length===1){ openModal(list[0], function(){ teamProspectoList(sellerId); }); }
+      else {
+        var r2=list.map(function(v){ return {main:(v.situacao||"Prospecto"), right:fmtDate(v.data)}; });
+        openMList(n, r2, function(j){ openModal(list[j], function(){ teamProspectoList(sellerId); }); }, function(){ teamProspectoList(sellerId); });
+      }
+    });
   }
   function teamClientList(sellerId){
     var s=SELLER_BY[sellerId];
-    var vs=vFilt(visitsFor(sellerId), fMgr).filter(function(x){ return x.motivo==="Cliente"; });
+    var vs=realizedVisits(vFilt(visitsFor(sellerId), fMgr)).filter(function(x){ return x.motivo==="Cliente"; });
     var by={}; vs.forEach(function(v){ (by[v.cliente]||(by[v.cliente]=[])).push(v); });
     var names=Object.keys(by).sort(function(a,b){ return a.localeCompare(b); });
-    var rows=names.map(function(n){ return {main:n, right:by[n].length+' vis.'}; });
+    var rows=names.map(function(n){ return {main:n, motivo:"Cliente", right:by[n].length+' vis.'}; });
     openMList("Clientes visitados — "+(s.tecnica?s.name:firstName(s.name)), rows, function(i){
       var n=names[i], list=by[n].slice().sort(function(a,b){ return b.data<a.data?-1:(b.data>a.data?1:0); });
       if(list.length===1){ openModal(list[0], function(){ teamClientList(sellerId); }); }
@@ -2998,6 +3045,10 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
     var list=routeFor(current.id);
     $("#rotaList").innerHTML = week.days.map(function(day){
       var items=list.filter(function(x){ return x.fecha===day.iso; });
+      // agregar visitas REALIZADAS de ese día que no tengan ya un ítem "Realizado" en la ruta
+      var doneIds={}; items.forEach(function(x){ if(x.done && x.visitId) doneIds[x.visitId]=1; });
+      (DB[current.id]||[]).filter(function(v){ return v.data===day.iso && !doneIds[v.id]; })
+        .forEach(function(v){ items.push({id:"vsyn-"+v.id, kind:"visita", cliente:v.cliente, motivo:v.motivo, fecha:v.data, done:true, visitId:v.id}); });
       var mName = MESES[parseInt(day.iso.slice(5,7),10)-1] || "";
       var head='<div class="rday-head"><b>'+DIA_N[day.wd]+' '+day.dayNum+' '+mName+'</b><span class="cnt">'+items.length+'</span><span class="line"></span></div>';
       var body = items.length ? items.map(routeCard).join("") : '<div class="rday-empty">Sin visitas.</div>';
@@ -3005,15 +3056,16 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
     }).join("");
 
     $$(".pcard",$("#rotaList")).forEach(function(card){
-      var item=routeFor(current.id).filter(function(x){return x.id===card.dataset.id;})[0];
-      if(!item || item.kind==="evento") return;
-      if(item.done){
+      if(card.classList.contains("evento")) return;
+      if(card.classList.contains("done")){
         card.addEventListener("click", function(){
           var r=(DB[current.id]||[]).filter(function(x){return x.id===card.dataset.visit;})[0];
           if(r) openModal(r); else toast("Sin observaciones guardadas.", true);
         });
         return;
       }
+      var item=routeFor(current.id).filter(function(x){return x.id===card.dataset.id;})[0];
+      if(!item) return;
       card.querySelector(".pmove-date").addEventListener("change", function(e){
         var v=e.target.value; if(!v) return; item.fecha=v; putRoute(item); gotoDate(v); renderRoute(); toast("Movida al "+shortDate(v)+".");
       });
@@ -3086,7 +3138,7 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
     renderImpStatus();
     var totV=0, cliSet={}, proSet={};
     SELLERS.forEach(function(s){
-      vFilt(visitsFor(s.id), fMgr).forEach(function(x){
+      realizedVisits(vFilt(visitsFor(s.id), fMgr)).forEach(function(x){
         totV++;
         if(x.motivo==="Cliente") cliSet[x.cliente]=1; else proSet[x.cliente]=1;
       });
@@ -3097,7 +3149,7 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
       '<div class="kpi"><b>'+Object.keys(proSet).length+'</b><span>prospectos</span></div>';
 
     function teamCard(s, extra){
-      var vs = vFilt(visitsFor(s.id), fMgr);
+      var vs = realizedVisits(vFilt(visitsFor(s.id), fMgr));
       var last = vs.length ? vs.map(function(x){return x.data;}).sort().slice(-1)[0] : "";
       return '<div class="tcard'+(extra?" tcard-tec":"")+'">'+
         '<div class="thead"><div class="avatar" style="background:'+s.color+'">'+initials(s.name)+'</div>'+
@@ -3105,7 +3157,7 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
         '<div class="tstats">'+
           '<button class="tstat tstat-btn" data-s="'+s.id+'" data-k="visitas"><b>'+vs.length+'</b><span>visitas</span></button>'+
           '<button class="tstat tstat-btn" data-s="'+s.id+'" data-k="clientes"><b>'+distinct(vs,"Cliente")+'</b><span>clientes</span></button>'+
-          '<div class="tstat"><b>'+distinct(vs,"Prospecto")+'</b><span>prospectos</span></div>'+
+          '<button class="tstat tstat-btn" data-s="'+s.id+'" data-k="prospectos"><b>'+distinct(vs,"Prospecto")+'</b><span>prospectos</span></button>'+
         '</div>'+
         '<div class="last">Última actividad: '+(last?fmtDate(last):"—")+'</div>'+
       '</div>';
@@ -3113,7 +3165,9 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
     $("#mTeam").innerHTML = SELLERS.map(function(s){ return teamCard(s, false); }).join("") + teamCard(TECNICA, true);
     $$(".tstat-btn",$("#mTeam")).forEach(function(b){
       b.addEventListener("click", function(){
-        if(b.dataset.k==="visitas") teamVisitList(b.dataset.s); else teamClientList(b.dataset.s);
+        if(b.dataset.k==="visitas") teamVisitList(b.dataset.s);
+        else if(b.dataset.k==="clientes") teamClientList(b.dataset.s);
+        else teamProspectoList(b.dataset.s);
       });
     });
   }
