@@ -3509,29 +3509,83 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
   }
 
   // ---------- IMPORTAR BASE (gestor) ----------
+  function decodeBytes(buf){
+    // BOM: UTF-16 LE/BE o UTF-8; si no, UTF-8
+    try{
+      if(buf.length>=2 && buf[0]===0xFF && buf[1]===0xFE) return new TextDecoder("utf-16le").decode(buf);
+      if(buf.length>=2 && buf[0]===0xFE && buf[1]===0xFF) return new TextDecoder("utf-16be").decode(buf);
+      if(buf.length>=3 && buf[0]===0xEF && buf[1]===0xBB && buf[2]===0xBF) return new TextDecoder("utf-8").decode(buf.subarray(3));
+      // heurística: muchos bytes 0x00 intercalados => UTF-16LE sin BOM
+      var zeros=0, lim=Math.min(buf.length,200); for(var i=1;i<lim;i+=2) if(buf[i]===0) zeros++;
+      if(zeros>lim/4) return new TextDecoder("utf-16le").decode(buf);
+      return new TextDecoder("utf-8").decode(buf);
+    }catch(e){ return null; }
+  }
   function readSheet(file, cb){
     if(!window.XLSX){ toast("La importación funciona en el sitio publicado (Vercel).", true); return; }
     var reader=new FileReader();
-    reader.onload=function(e){ try{ cb(XLSX.read(new Uint8Array(e.target.result), {type:"array"})); }catch(err){ toast("No pude leer el archivo.", true); } };
+    var isCSV = /\.csv$/i.test(file.name||"") || /csv|text\/plain/.test(file.type||"");
+    reader.onload=function(e){
+      try{
+        var buf=new Uint8Array(e.target.result), wb;
+        if(isCSV){
+          var text=decodeBytes(buf); if(text==null) throw 0;
+          var first=(text.split(/\r?\n/)[0]||"");
+          var FS = (first.indexOf("\t")>=0) ? "\t" : (first.split(";").length>first.split(",").length ? ";" : ",");
+          wb=XLSX.read(text, {type:"string", FS:FS, raw:true});
+        } else {
+          wb=XLSX.read(buf, {type:"array"});
+        }
+        cb(wb);
+      }catch(err){ toast("No pude leer el archivo. Probá subir el .xlsx.", true); }
+    };
     reader.onerror=function(){ toast("No pude leer el archivo.", true); };
     reader.readAsArrayBuffer(file);
   }
-  function numKg(v){ var n=parseFloat((""+v).replace(/[^\d.-]/g,"")); return isNaN(n)?0:Math.round(n); }
+  // kg enteros: quita separadores de miles (punto) y todo lo no numérico; conserva signo
+  function numKg(v){ if(v==null) return 0; var s=(""+v).replace(/[^\d\-]/g,""); var n=parseInt(s,10); return isNaN(n)?0:n; }
+  function monthLabel(v){
+    if(v==null||v==="") return null;
+    if(v instanceof Date) return v.getFullYear()+"-"+(v.getMonth()+1);
+    var s=(""+v).trim(), m;
+    if((m=s.match(/^(\d{4})[\-\/.](\d{1,2})$/))) return m[1]+"-"+(+m[2]);
+    if((m=s.match(/^(\d{1,2})[\-\/.](\d{4})$/))) return m[2]+"-"+(+m[1]);
+    return null;
+  }
   var _lastMonths=null;
+  // Detecta layout: col A=vendedor, col B=cliente, cols C..=meses. Tolera meses como
+  // texto ("2026-1") o fecha; plan B = usar la fila TOTAL como ancla.
+  function detectSalesLayout(rows){
+    var hdr=-1, mCols=[], mLabels=[];
+    for(var i=0;i<Math.min(rows.length,15);i++){
+      var r=rows[i]||[], cc=[], ll=[];
+      for(var c=2;c<r.length;c++){ var lb=monthLabel(r[c]); if(lb){ cc.push(c); ll.push(lb); } }
+      if(cc.length>=2){ return {hdr:i, mCols:cc, mLabels:ll}; }
+    }
+    // plan B: localizar fila TOTAL; el encabezado es la fila de arriba
+    var tIdx=-1;
+    for(var i=0;i<Math.min(rows.length,15);i++){ var r=rows[i]||[]; var a=(""+(r[0]||"")).trim().toUpperCase(), b=(""+(r[1]||"")).trim().toUpperCase();
+      if(a==="TOTAL"||b==="TOTAL"){ tIdx=i; break; } }
+    if(tIdx>0){
+      var hr=rows[tIdx-1]||[], tr=rows[tIdx]||[], cols=[], labs=[], maxc=Math.max(hr.length,tr.length);
+      for(var c=2;c<maxc;c++){ if(numKg(tr[c])!==0 || monthLabel(hr[c])){ cols.push(c); labs.push(monthLabel(hr[c]) || (""+(hr[c]||("Mes "+cols.length)))); } }
+      if(cols.length>=2) return {hdr:tIdx, mCols:cols, mLabels:labs}; // datos empiezan tras TOTAL
+    }
+    return null;
+  }
   function importClientes(file){
     readSheet(file, function(wb){
-      var rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], {header:1, defval:""});
-      // Layout: col A = vendedor (se repite/rellena hacia abajo), col B = cliente,
-      // cols C.. = meses (encabezado tipo "2026-1"). Fila "TOTAL" se ignora.
-      var hdr=-1, mCols=[], mLabels=[];
-      for(var i=0;i<Math.min(rows.length,10);i++){
-        var r=rows[i]||[], found=[];
-        for(var c=2;c<r.length;c++){ if(/^\s*\d{4}-\d{1,2}\s*$/.test(""+r[c])) found.push(c); }
-        if(found.length>=2){ hdr=i; mCols=found; mLabels=found.map(function(c){return (""+r[c]).trim();}); break; }
+      // buscar en todas las hojas la que tenga el layout de ventas
+      var rows=null, lay=null;
+      for(var s=0;s<wb.SheetNames.length;s++){
+        var rr=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[s]], {header:1, defval:""});
+        var L=detectSalesLayout(rr);
+        if(L){ rows=rr; lay=L; break; }
       }
-      if(hdr<0){ toast("No reconocí el formato (esperaba columnas de meses: 2026-1, 2026-2…).", true); return; }
+      if(!lay){ toast("No reconocí el formato. Debe tener col. A = vendedor, col. B = cliente y columnas de meses (2026-1…). Probá subir el .xlsx.", true); return; }
+      var mCols=lay.mCols, mLabels=lay.mLabels;
       var out=[], lastSeller="";
-      for(var i=hdr+1;i<rows.length;i++){
+      for(var i=lay.hdr+1;i<rows.length;i++){
         var r=rows[i]||[];
         var sel=(""+(r[0]||"")).trim(); if(sel) lastSeller=sel;
         var cli=(""+(r[1]||"")).trim();
