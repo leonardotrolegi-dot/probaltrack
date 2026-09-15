@@ -1236,32 +1236,53 @@
       <!-- RUTA SEMANAL -->
       <section class="view" id="v-rota">
         <div class="view-head">
-          <h2>Ruta semanal</h2>
-          <p>Planifique la semana. Al visitar, toque <b>Realizar</b> — entra solo en el historial.</p>
+          <h2>Mi ruta</h2>
+          <p>Vea el mes en el calendario o planifique la semana.</p>
         </div>
 
-        <div class="route-filter">
-          <select id="rMonth" class="fb-period"></select>
-          <select id="rWeek" class="fb-period"></select>
+        <div class="rtoggle">
+          <button class="rtoggle-b on" data-sv="cal">📅 Calendario</button>
+          <button class="rtoggle-b" data-sv="week">📋 Semana</button>
         </div>
 
-        <div class="route-add">
-          <div class="ra-row">
-            <input type="text" id="rCliente" list="clientesList" placeholder="Cliente o prospecto…" autocomplete="off">
+        <div id="sCalWrap">
+          <div class="calcard">
+            <div class="mnav">
+              <button class="arw" id="sCalPrev"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg></button>
+              <b id="sCalTitle">—</b>
+              <button class="arw" id="sCalNext"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></button>
+            </div>
+            <div class="cal-wd"><span>Lun</span><span>Mar</span><span>Mié</span><span>Jue</span><span>Vie</span><span>Sáb</span><span>Dom</span></div>
+            <div class="cal-grid" id="sCalGrid"></div>
+            <div class="cal-legend"><span><i class="cl-a"></i>Realizada</span><span><i class="cl-p"></i>Pendiente</span><span><i class="cl-e"></i>Evento</span></div>
           </div>
-          <div class="ra-row two">
-            <input type="date" id="rFecha">
-            <select id="rMotivo">
-              <option value="Cliente">Cliente</option>
-              <option value="Prospecto">Prospecto</option>
-            </select>
-          </div>
-          <button class="btn" id="rAdd">+ Añadir a la ruta</button>
+          <div id="sCalDay"></div>
         </div>
 
-        <div id="rotaList"></div>
-        <div class="sec-label" style="margin-top:22px">Clientes vs Prospectos (todas mis visitas)</div>
-        <div class="chart-card" id="rutaSplit"></div>
+        <div id="sWeekWrap" class="hidden">
+          <div class="route-filter">
+            <select id="rMonth" class="fb-period"></select>
+            <select id="rWeek" class="fb-period"></select>
+          </div>
+
+          <div class="route-add">
+            <div class="ra-row">
+              <input type="text" id="rCliente" list="clientesList" placeholder="Cliente o prospecto…" autocomplete="off">
+            </div>
+            <div class="ra-row two">
+              <input type="date" id="rFecha">
+              <select id="rMotivo">
+                <option value="Cliente">Cliente</option>
+                <option value="Prospecto">Prospecto</option>
+              </select>
+            </div>
+            <button class="btn" id="rAdd">+ Añadir a la ruta</button>
+          </div>
+
+          <div id="rotaList"></div>
+          <div class="sec-label" style="margin-top:22px">Clientes vs Prospectos (todas mis visitas)</div>
+          <div class="chart-card" id="rutaSplit"></div>
+        </div>
       </section>
     </main>
 
@@ -1832,7 +1853,7 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
         if(curSView==="clientes") renderSellerChart("clientes");
         else if(curSView==="prospectos") renderSellerChart("prospectos");
         else if(curSView==="carteira") render80();
-        else if(curSView==="rota") renderRoute();
+        else if(curSView==="rota") renderSellerRuta();
       }
     }catch(e){}
   }
@@ -2065,7 +2086,7 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
     if(v==="clientes")   renderSellerChart("clientes");
     if(v==="prospectos") renderSellerChart("prospectos");
     if(v==="carteira")   render80();
-    if(v==="rota")     { gotoCurrentWeek(); renderRoute(); }
+    if(v==="rota")       renderSellerRuta();
     shell.querySelector("main").scrollTop = 0;
   }
   $$(".tab",$("#navSeller")).forEach(function(t){
@@ -3284,12 +3305,25 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
     var mot=$("#rMotivo") ? $("#rMotivo").value : "Cliente";
     $("#clientesList").innerHTML = listForMotivo(mot).map(function(c){ var cn=creatorName(c,mot); return '<option value="'+esc(c.nome)+'">'+(cn?"("+esc(cn)+") ":"")+esc(c.loc||"")+'</option>'; }).join("");
   }
+  var sRutaView="cal";
+  function renderSellerRuta(){ if(sRutaView==="cal") renderSellerCalendar(); else { gotoCurrentWeek(); renderRoute(); } }
   function initRoute(){
     updateRouteDatalist();
     $("#rFecha").value = todayISO();
     $("#rMotivo").addEventListener("change", updateRouteDatalist);
     $("#rMonth").addEventListener("change", function(e){ rMonthSel=e.target.value; rWeekIdx=0; renderRoute(); });
     $("#rWeek").addEventListener("change", function(e){ rWeekIdx=+e.target.value; renderRoute(); });
+    // calendario del vendedor (toggle + navegación de meses)
+    if($("#sCalPrev")){
+      $("#sCalPrev").addEventListener("click", function(){ calStep(calSel_,-1); });
+      $("#sCalNext").addEventListener("click", function(){ calStep(calSel_,1); });
+      $$("#v-rota .rtoggle-b").forEach(function(b){ b.addEventListener("click", function(){
+        sRutaView=b.dataset.sv; $$("#v-rota .rtoggle-b").forEach(function(x){ x.classList.toggle("on", x===b); });
+        $("#sCalWrap").classList.toggle("hidden", sRutaView!=="cal");
+        $("#sWeekWrap").classList.toggle("hidden", sRutaView!=="week");
+        renderSellerRuta();
+      }); });
+    }
   }
 
   // ---------- MANAGER ----------
@@ -3499,14 +3533,14 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
     });
   }
 
-  // ---------- CALENDARIO DE RUTAS (gestor) ----------
-  var calY=null, calM=null, calSel=null, rutaView="cal";
-  function calInitDate(){ if(calY==null){ var n=new Date(); calY=n.getFullYear(); calM=n.getMonth(); } }
+  // ---------- CALENDARIO (genérico: gestor y vendedor) ----------
+  var rutaView="cal";
   function dayInMonth(iso,y,m){ if(!iso) return null; var p=iso.split("-"); if(+p[0]!==y||(+p[1]-1)!==m) return null; return +p[2]; }
-  function monthActivities(y,m){
+  function monthActivities(users,y,m){
     var byDay={};
     function push(day,k,obj){ if(!byDay[day]) byDay[day]={a:0,p:0,e:0,items:[]}; byDay[day][k]++; obj._k=k; byDay[day].items.push(obj); }
-    [GESTOR].concat(SELLERS).concat([TECNICA]).forEach(function(s){
+    (users||[]).forEach(function(s){
+      if(!s) return;
       var realized=(DB[s.id]||[]).filter(function(v){ return !v.stateChange; });
       var byId={}, byKey={};
       realized.forEach(function(v){ byId[v.id]=v; var k=v.cliente+"|"+v.data; if(!byKey[k]||(v.ts||0)>(byKey[k].ts||0)) byKey[k]=v; });
@@ -3522,41 +3556,49 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
     });
     return byDay;
   }
-  function renderMgrCalendar(){
-    calInitDate();
-    $("#calTitle").textContent = cap(MESES[calM])+" "+calY;
-    var byDay=monthActivities(calY,calM);
-    var first=new Date(calY,calM,1), offset=(first.getDay()+6)%7, ndays=new Date(calY,calM+1,0).getDate();
+  function renderCalendar(cfg){
+    var st=cfg.state;
+    if(st.y==null){ var n=new Date(); st.y=n.getFullYear(); st.m=n.getMonth(); }
+    $("#"+cfg.titleId).textContent = cap(MESES[st.m])+" "+st.y;
+    var byDay=monthActivities(cfg.users(), st.y, st.m);
+    var first=new Date(st.y,st.m,1), offset=(first.getDay()+6)%7, ndays=new Date(st.y,st.m+1,0).getDate();
     var tISO=todayISO(), html="";
     for(var i=0;i<offset;i++) html+='<div class="cal-cell out"></div>';
     for(var d=1;d<=ndays;d++){
-      var iso=calY+"-"+("0"+(calM+1)).slice(-2)+"-"+("0"+d).slice(-2);
+      var iso=st.y+"-"+("0"+(st.m+1)).slice(-2)+"-"+("0"+d).slice(-2);
       var info=byDay[d], tot=info?info.a+info.p+info.e:0, dots="";
       if(info){ if(info.a)dots+='<span class="cal-dot cd-a"></span>'; if(info.p)dots+='<span class="cal-dot cd-p"></span>'; if(info.e)dots+='<span class="cal-dot cd-e"></span>'; }
-      var cls="cal-cell"+(iso===tISO?" today":"")+(calSel===d?" sel":"");
+      var cls="cal-cell"+(iso===tISO?" today":"")+(st.sel===d?" sel":"");
       html+='<div class="'+cls+'" data-d="'+d+'">'+(tot?'<span class="cal-cnt">'+tot+'</span>':'')+'<span class="n">'+d+'</span>'+(dots?'<span class="cal-dots">'+dots+'</span>':'')+'</div>';
     }
-    $("#calGrid").innerHTML=html;
-    $$(".cal-cell",$("#calGrid")).forEach(function(c){ if(c.classList.contains("out")) return;
-      c.addEventListener("click", function(){ calSel=+c.dataset.d; renderMgrCalendar(); }); });
-    renderCalDay(byDay);
+    $("#"+cfg.gridId).innerHTML=html;
+    $$(".cal-cell",$("#"+cfg.gridId)).forEach(function(c){ if(c.classList.contains("out")) return;
+      c.addEventListener("click", function(){ st.sel=+c.dataset.d; renderCalendar(cfg); }); });
+    renderCalDayPanel($("#"+cfg.dayId), byDay, st, cfg.showWho);
   }
-  function renderCalDay(byDay){
-    var el=$("#calDay");
-    if(calSel==null){ el.innerHTML='<div class="rday-empty" style="margin-top:14px">Toque un día para ver la actividad.</div>'; return; }
-    var info=byDay[calSel], dt=new Date(calY,calM,calSel);
-    var head='<div class="calday-head">'+cap(DIA_N[WDKEYS[dt.getDay()]])+' '+calSel+' de '+MESES[calM]+' <span class="pill">'+(info?info.items.length:0)+' actividad'+((info&&info.items.length!==1)?'es':'')+'</span></div>';
+  function renderCalDayPanel(el, byDay, st, showWho){
+    if(st.sel==null){ el.innerHTML='<div class="rday-empty" style="margin-top:14px">Toque un día para ver la actividad.</div>'; return; }
+    var info=byDay[st.sel], dt=new Date(st.y,st.m,st.sel);
+    var head='<div class="calday-head">'+cap(DIA_N[WDKEYS[dt.getDay()]])+' '+st.sel+' de '+MESES[st.m]+' <span class="pill">'+(info?info.items.length:0)+' actividad'+((info&&info.items.length!==1)?'es':'')+'</span></div>';
     if(!info || !info.items.length){ el.innerHTML=head+'<div class="rday-empty">Sin actividad este día.</div>'; return; }
     var order={a:0,e:1,p:2}, items=info.items.slice().sort(function(x,z){ return order[x._k]-order[z._k]; });
     el.innerHTML=head+items.map(function(o){
       var s=o.s;
-      if(o._k==='e') return '<div class="cact"><div class="av" style="background:'+s.color+'">'+initials(s.name)+'</div><div style="min-width:0"><div class="who">'+esc(s.name)+'</div><div class="cli">'+esc(o.ev.tipo)+(o.ev.titulo?': '+esc(o.ev.titulo):'')+'</div></div><span class="tag ev">Evento</span></div>';
+      var avatar = showWho ? '<div class="av" style="background:'+s.color+'">'+initials(s.name)+'</div>' : '';
+      var who = showWho ? '<div class="who">'+esc(s.name)+'</div>' : '';
+      if(o._k==='e') return '<div class="cact">'+avatar+'<div style="min-width:0">'+who+'<div class="cli">'+esc(o.ev.tipo)+(o.ev.titulo?': '+esc(o.ev.titulo):'')+'</div></div><span class="tag ev">Evento</span></div>';
       var a=o.motivo==="Cliente";
-      if(o._k==='a') return '<div class="cact click" data-visit="'+esc(o.visit.id)+'" data-sid="'+esc(s.id)+'"><div class="av" style="background:'+s.color+'">'+initials(s.name)+'</div><div style="min-width:0"><div class="who">'+esc(s.name)+'</div><div class="cli">'+esc(o.cliente)+'</div></div><span class="tag '+(a?"a":"p")+'">'+o.motivo+'</span><span class="cchk">✓</span></div>';
-      return '<div class="cact"><div class="av" style="background:'+s.color+'">'+initials(s.name)+'</div><div style="min-width:0"><div class="who">'+esc(s.name)+'</div><div class="cli">'+esc(o.cliente)+'</div></div><span class="tag '+(a?"a":"p")+'">'+o.motivo+'</span><span class="cpend">pendiente</span></div>';
+      if(o._k==='a') return '<div class="cact click" data-visit="'+esc(o.visit.id)+'" data-sid="'+esc(s.id)+'">'+avatar+'<div style="min-width:0">'+who+'<div class="cli">'+esc(o.cliente)+'</div></div><span class="tag '+(a?"a":"p")+'">'+o.motivo+'</span><span class="cchk">✓</span></div>';
+      return '<div class="cact">'+avatar+'<div style="min-width:0">'+who+'<div class="cli">'+esc(o.cliente)+'</div></div><span class="tag '+(a?"a":"p")+'">'+o.motivo+'</span><span class="cpend">pendiente</span></div>';
     }).join("");
     $$(".cact.click",el).forEach(function(row){ row.addEventListener("click", function(){ var v=(DB[row.dataset.sid]||[]).filter(function(x){return x.id===row.dataset.visit;})[0]; if(v) openModal(v); }); });
   }
+  // configs de cada calendario
+  var calMgr={ state:{y:null,m:null,sel:null}, gridId:"calGrid", titleId:"calTitle", dayId:"calDay", showWho:true, users:function(){ return [GESTOR].concat(SELLERS).concat([TECNICA]); } };
+  var calSel_={ state:{y:null,m:null,sel:null}, gridId:"sCalGrid", titleId:"sCalTitle", dayId:"sCalDay", showWho:false, users:function(){ return current?[current]:[]; } };
+  function renderMgrCalendar(){ renderCalendar(calMgr); }
+  function renderSellerCalendar(){ renderCalendar(calSel_); }
+  function calStep(cfg, delta){ if(cfg.state.y==null){ var n=new Date(); cfg.state.y=n.getFullYear(); cfg.state.m=n.getMonth(); } cfg.state.m+=delta; if(cfg.state.m<0){cfg.state.m=11;cfg.state.y--;} if(cfg.state.m>11){cfg.state.m=0;cfg.state.y++;} cfg.state.sel=null; renderCalendar(cfg); }
   function renderRutasView(){ if(rutaView==="cal") renderMgrCalendar(); else renderMgrRoutes(); }
 
   // ---------- MI RUTA (gestor) ----------
@@ -3619,12 +3661,12 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
       $("#mrTo").addEventListener("change", function(){ fRutas.to=this.value; renderMgrRoutes(); });
       $("#mrClear").addEventListener("click", function(){ fRutas.from=""; fRutas.to=""; $("#mrFrom").value=""; $("#mrTo").value=""; renderMgrRoutes(); });
     }
-    // toggle Calendario / Lista + navegación de meses
+    // toggle Calendario / Lista + navegación de meses (gestor)
     if($("#calPrev")){
-      $("#calPrev").addEventListener("click", function(){ calInitDate(); calM--; if(calM<0){calM=11;calY--;} calSel=null; renderMgrCalendar(); });
-      $("#calNext").addEventListener("click", function(){ calInitDate(); calM++; if(calM>11){calM=0;calY++;} calSel=null; renderMgrCalendar(); });
-      $$(".rtoggle-b").forEach(function(b){ b.addEventListener("click", function(){
-        rutaView=b.dataset.rv; $$(".rtoggle-b").forEach(function(x){ x.classList.toggle("on", x===b); });
+      $("#calPrev").addEventListener("click", function(){ calStep(calMgr,-1); });
+      $("#calNext").addEventListener("click", function(){ calStep(calMgr,1); });
+      $$("#m-rutas .rtoggle-b").forEach(function(b){ b.addEventListener("click", function(){
+        rutaView=b.dataset.rv; $$("#m-rutas .rtoggle-b").forEach(function(x){ x.classList.toggle("on", x===b); });
         $("#mCalWrap").classList.toggle("hidden", rutaView!=="cal");
         $("#mListWrap").classList.toggle("hidden", rutaView!=="list");
         renderRutasView();
