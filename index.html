@@ -703,6 +703,47 @@
   .mr-del{margin-left:auto;flex:none;background:transparent;border:1px solid var(--line);color:var(--danger);
     width:24px;height:24px;border-radius:7px;cursor:pointer;font-size:13px;line-height:1;display:grid;place-items:center}
   .mr-del:hover{background:color-mix(in srgb,var(--danger) 12%,transparent);border-color:var(--danger)}
+  .mr-done{cursor:pointer;border-radius:8px;padding:2px 4px;margin:0 -4px}
+  .mr-done:hover{background:var(--accent-soft)}
+  .mr-check{margin-left:auto;flex:none;color:#fff;background:var(--accent);width:20px;height:20px;border-radius:50%;
+    display:grid;place-items:center;font-size:12px;font-weight:800}
+  .mr-pend{margin-left:auto;flex:none;font-size:10.5px;font-weight:700;color:var(--ink-faint);text-transform:uppercase;letter-spacing:.03em}
+  /* calendario (gestor) */
+  .rtoggle{display:flex;background:var(--surface-2);border:1.5px solid var(--line);border-radius:12px;padding:4px;margin:12px 0}
+  .rtoggle-b{flex:1;border:0;background:transparent;color:var(--ink-soft);font-family:inherit;font-size:13.5px;font-weight:700;padding:8px 4px;border-radius:9px;cursor:pointer}
+  .rtoggle-b.on{background:var(--accent);color:#fff}
+  .calcard{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:12px 12px 14px;box-shadow:var(--shadow)}
+  .mnav{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+  .mnav b{font-size:15.5px;font-weight:800}
+  .arw{width:36px;height:36px;border-radius:10px;border:1px solid var(--line);background:var(--surface-2);display:grid;place-items:center;cursor:pointer;color:var(--accent)}
+  .arw svg{width:18px;height:18px}
+  .cal-wd{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-bottom:4px}
+  .cal-wd span{text-align:center;font-size:10.5px;font-weight:700;color:var(--ink-faint);text-transform:uppercase}
+  .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
+  .cal-cell{aspect-ratio:1;border-radius:10px;background:var(--surface-2);border:1.5px solid transparent;position:relative;
+    display:flex;align-items:flex-start;justify-content:center;padding-top:6px;cursor:pointer}
+  .cal-cell.out{background:transparent;cursor:default}
+  .cal-cell .n{font-size:12.5px;font-weight:600}
+  .cal-cell.today{border-color:var(--accent)}
+  .cal-cell.sel{background:var(--accent)}
+  .cal-cell.sel .n,.cal-cell.sel .cal-cnt{color:#fff}
+  .cal-dots{display:flex;gap:2px;position:absolute;bottom:6px;left:0;right:0;justify-content:center}
+  .cal-dot{width:5px;height:5px;border-radius:50%}
+  .cd-a{background:var(--activo)}.cd-p{background:#c9cfc3}.cd-e{background:#7a5cc0}
+  .cal-cell.sel .cal-dot{outline:1px solid rgba(255,255,255,.7)}
+  .cal-cnt{position:absolute;top:3px;right:5px;font-size:9px;font-weight:800;color:var(--accent-deep)}
+  .cal-legend{display:flex;gap:14px;margin:12px 2px 0;font-size:11px;color:var(--ink-soft)}
+  .cal-legend i{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:4px;vertical-align:middle}
+  .cl-a{background:var(--activo)}.cl-p{background:#c9cfc3}.cl-e{background:#7a5cc0}
+  .calday-head{font-size:13.5px;font-weight:800;margin:16px 2px 8px;display:flex;align-items:center;gap:8px}
+  .calday-head .pill{font-size:10.5px;font-weight:700;color:var(--ink-faint);background:var(--surface-2);border:1px solid var(--line);border-radius:16px;padding:2px 8px}
+  .cact{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin-bottom:8px;display:flex;align-items:center;gap:10px}
+  .cact.click{cursor:pointer}.cact.click:hover{border-color:var(--accent)}
+  .cact .av{width:26px;height:26px;border-radius:50%;flex:none;display:grid;place-items:center;color:#fff;font-size:11px;font-weight:800}
+  .cact .who{font-size:11px;color:var(--ink-faint);font-weight:700}
+  .cact .cli{font-size:13.5px;font-weight:600;line-height:1.2;min-width:0;overflow:hidden;text-overflow:ellipsis}
+  .cact .cchk{margin-left:auto;flex:none;width:20px;height:20px;border-radius:50%;background:var(--accent);color:#fff;display:grid;place-items:center;font-size:12px;font-weight:800}
+  .cact .cpend{margin-left:auto;flex:none;font-size:10px;font-weight:700;color:var(--ink-faint);text-transform:uppercase}
 
   /* agenda especial (gestor) */
   .btn-add{
@@ -1353,14 +1394,35 @@
           </div>
         </div>
 
-        <div class="route-filter" style="margin-bottom:6px">
-          <input type="date" id="mrFrom" class="fb-period" aria-label="Desde">
-          <span class="fb-sep">→</span>
-          <input type="date" id="mrTo" class="fb-period" aria-label="Hasta">
-          <button class="btn-sec" id="mrClear" type="button">Limpiar</button>
+        <div class="rtoggle">
+          <button class="rtoggle-b on" data-rv="cal">📅 Calendario</button>
+          <button class="rtoggle-b" data-rv="list">☰ Lista</button>
         </div>
-        <div class="kpis" id="mKpiRutas"></div>
-        <div id="mRutas"></div>
+
+        <div id="mCalWrap">
+          <div class="calcard">
+            <div class="mnav">
+              <button class="arw" id="calPrev"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg></button>
+              <b id="calTitle">—</b>
+              <button class="arw" id="calNext"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></button>
+            </div>
+            <div class="cal-wd"><span>Lun</span><span>Mar</span><span>Mié</span><span>Jue</span><span>Vie</span><span>Sáb</span><span>Dom</span></div>
+            <div class="cal-grid" id="calGrid"></div>
+            <div class="cal-legend"><span><i class="cl-a"></i>Realizada</span><span><i class="cl-p"></i>Pendiente</span><span><i class="cl-e"></i>Evento</span></div>
+          </div>
+          <div id="calDay"></div>
+        </div>
+
+        <div id="mListWrap" class="hidden">
+          <div class="route-filter" style="margin-bottom:6px">
+            <input type="date" id="mrFrom" class="fb-period" aria-label="Desde">
+            <span class="fb-sep">→</span>
+            <input type="date" id="mrTo" class="fb-period" aria-label="Hasta">
+            <button class="btn-sec" id="mrClear" type="button">Limpiar</button>
+          </div>
+          <div class="kpis" id="mKpiRutas"></div>
+          <div id="mRutas"></div>
+        </div>
       </section>
 
       <!-- CLIENTES GLOBAL -->
@@ -1623,7 +1685,8 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
   var PINS = {
     "Francisco":"7412","Rossmaryo":"3856","Matías":"2093","Edgar":"6178",
     "PROBAL":"5240","Mauricio":"9317","Patrício":"4085","Alessandro":"1769",
-    "Rodolfo":"8534","Billie":"6902","Thatyany":"3427","Martin":"5691","Pré venta":"8160"
+    "Rodolfo":"8534","Billie":"6902","Thatyany":"3427","Martin":"5691","Pré venta":"8160",
+    "Gabriel":"3571"
   };
   function slug(s){ return s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/[^a-z0-9]+/g,"_").replace(/^_|_$/g,""); }
   var SELLERS=[], SELLER_BY={}, KEY={}, CLIENTES_FALLBACK=[], _cliSeen={};
@@ -1637,6 +1700,8 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
     KEY[id].push({c:cli, e:est, id:idNome});
     if(!_cliSeen[cli]){ _cliSeen[cli]=1; CLIENTES_FALLBACK.push({nome:cli, loc:est||"", vendedor:resp}); }
   });
+  // Gabriel: vendedor nuevo (aún sin clientes en la base; hará prospección). Cuenta normal.
+  if(!SELLER_BY["gabriel"]){ var _gb={id:"gabriel", name:"Gabriel", role:"Comercial", pin:PINS["Gabriel"]||"3571", color:SELLER_COLORS[SELLERS.length%SELLER_COLORS.length]}; SELLERS.push(_gb); SELLER_BY["gabriel"]=_gb; KEY["gabriel"]=[]; }
   var PROSPECTOS_FALLBACK=[];
   var NAME2ID={}; SELLERS.forEach(function(s){ NAME2ID[slug(s.name)]=s.id; });
   var GESTOR = {id:"gestion", name:"Gestión", role:"Gestión", color:"#3a3f52"};
@@ -1644,7 +1709,11 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
   // en los totales/gráficos de los vendedores). Ve todo y puede visitar a cualquiera.
   var TECNICA = { id:"tecnica", name:"Equipo Técnica", role:"Departamento Técnico", pin:"6857", color:"#5a7d9a", tecnica:true };
   SELLER_BY[TECNICA.id] = TECNICA;
-  var LOGIN_USERS = SELLERS.concat([TECNICA]);
+  // TESTE: sandbox para que los gerentes prueben. Datos ficticios que NO cuentan en
+  // ningún reporte (fuera de SELLERS y fuera de las vistas del gestor). Puede visitar a cualquiera.
+  var DEMO = { id:"demo", name:"TESTE (prueba)", role:"Sandbox — no cuenta", pin:"1590", color:"#8a8f98", tecnica:true, demo:true };
+  SELLER_BY[DEMO.id] = DEMO;
+  var LOGIN_USERS = SELLERS.concat([TECNICA, DEMO]);
 
   // Catálogo (clientes/prospectos) — vem del banco vía importación del gestor
   var CAT_CLI=[], CAT_PRO=[], KGMAP={};
@@ -1757,7 +1826,7 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
   }
   function reRenderCurrent(){
     try{
-      if(isManager){ if(curMView==="rutas") renderMgrRoutes(); else rerenderMgr(); }
+      if(isManager){ if(curMView==="rutas") renderRutasView(); else rerenderMgr(); }
       else if(current){
         renderRecent();
         if(curSView==="clientes") renderSellerChart("clientes");
@@ -2205,7 +2274,7 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
     if(v==="clientes")   renderMgrChart("clientes");
     if(v==="prospectos"){ renderMgrChart("prospectos"); renderRechazos(); }
     if(v==="carteira")   renderMgr80();
-    if(v==="rutas")      renderMgrRoutes();
+    if(v==="rutas")      renderRutasView();
     if(v==="miruta")   { gGotoCurrentWeek(); gRenderRuta(); }
     shell.querySelector("main").scrollTop = 0;
   }
@@ -2217,7 +2286,7 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
     if(curMView==="clientes")   renderMgrChart("clientes");
     if(curMView==="prospectos"){ renderMgrChart("prospectos"); renderRechazos(); }
     if(curMView==="carteira")   renderMgr80();
-    if(curMView==="rutas")      renderMgrRoutes();
+    if(curMView==="rutas")      renderRutasView();
     if(curMView==="miruta")     gRenderRuta();
   }
 
@@ -2289,8 +2358,9 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
            || CAT_CLI.some(function(x){ return norm(x.nome)===norm(cli); });
     if(dup){ toast("Ya existe un prospecto/cliente con ese nombre.", true); return; }
     var body={tipo:"Prospecto", nome:idNome, cliente:cli, estancia:est, ciudad:ciu, vendedor:(current?current.id:"")};
-    if(useDB && dbh){ dbh.collection("catalog").doc("p_"+slug(idNome)).set(body).catch(noop); }
-    CAT_PRO.push({nome:idNome, loc:est+", "+ciu, vendedor:body.vendedor});
+    // TESTE (sandbox): no persiste en la base compartida, queda solo en la sesión de prueba
+    if(useDB && dbh && !(current&&current.demo)){ dbh.collection("catalog").doc("p_"+slug(idNome)).set(body).catch(noop); }
+    CAT_PRO.push({nome:idNome, loc:est+", "+ciu, vendedor:body.vendedor, demo:(current&&current.demo)||undefined});
     acInput.value=idNome;
     $("#npForm").classList.add("hidden");
     $("#npCliente").value=""; $("#npEstancia").value=""; $("#npCiudad").value="";
@@ -3379,21 +3449,45 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
       '<div class="kpi"><b>'+totalPlanned+'</b><span>ítems planificados</span></div>'+
       '<div class="kpi"><b>'+SELLERS.length+'</b><span>vendedores</span></div>';
     $("#mRutas").innerHTML = everyone.map(function(s){
-      var list = routeFor(s.id).filter(routeInRange).slice().sort(function(a,b){ return a.fecha<b.fecha?-1:(a.fecha>b.fecha?1:0); });
+      var routeItems = routeFor(s.id).filter(routeInRange);
+      // visitas realizadas del vendedor (para marcar ✓ y poder abrir observaciones)
+      var realized = (DB[s.id]||[]).filter(function(v){ return !v.stateChange && routeInRange({fecha:v.data}); });
+      var byId={}, byKey={};
+      realized.forEach(function(v){ byId[v.id]=v; var k=v.cliente+"|"+v.data; if(!byKey[k]||(v.ts||0)>(byKey[k].ts||0)) byKey[k]=v; });
+      var usedVisit={}, lines=[];
+      routeItems.forEach(function(it){
+        if(it.kind==="evento"){ lines.push({fecha:it.fecha, ev:it}); return; }
+        var v = it.visitId ? byId[it.visitId] : byKey[it.cliente+"|"+it.fecha];
+        if(v) usedVisit[v.id]=1;
+        lines.push({fecha:it.fecha, it:it, done:!!v, visit:v});
+      });
+      // visitas realizadas sin ítem de ruta (igual aparecen con ✓)
+      realized.forEach(function(v){ if(!usedVisit[v.id]) lines.push({fecha:v.data, done:true, visit:v, it:{cliente:v.cliente, motivo:v.motivo}}); });
+      lines.sort(function(a,b){ return a.fecha<b.fecha?-1:(a.fecha>b.fecha?1:0); });
+      var nDone=lines.filter(function(l){return l.done;}).length, nPend=lines.filter(function(l){return l.it && !l.done;}).length;
       var head = '<div class="thead"><div class="avatar" style="background:'+s.color+'">'+initials(s.name)+'</div>'+
-        '<div><b>'+esc(s.name)+'</b><br><span>'+list.length+' ítem'+(list.length!==1?'s':'')+' planificado'+(list.length!==1?'s':'')+'</span></div></div>';
-      var body = list.length ? '<div class="mr-days">'+list.map(function(it){
-        if(it.kind==="evento") return '<div class="mr-line"><span class="mr-date">'+shortDate(it.fecha)+'</span><span class="mr-item ev">'+esc(it.tipo)+(it.titulo?': '+esc(it.titulo):'')+'</span>'+
-          '<button class="mr-del" title="Eliminar evento" data-agid="'+esc(it.agId||"")+'" data-sid="'+esc(s.id)+'" data-id="'+esc(it.id)+'">✕</button></div>';
-        return '<div class="mr-line"><span class="mr-date">'+shortDate(it.fecha)+'</span><span class="mr-item '+(it.motivo==="Cliente"?"a":"p")+'">'+esc(it.cliente)+'</span></div>';
+        '<div><b>'+esc(s.name)+'</b><br><span>'+nDone+' realizada'+(nDone!==1?'s':'')+' · '+nPend+' pendiente'+(nPend!==1?'s':'')+'</span></div></div>';
+      var body = lines.length ? '<div class="mr-days">'+lines.map(function(l){
+        if(l.ev) return '<div class="mr-line"><span class="mr-date">'+shortDate(l.ev.fecha)+'</span><span class="mr-item ev">'+esc(l.ev.tipo)+(l.ev.titulo?': '+esc(l.ev.titulo):'')+'</span>'+
+          '<button class="mr-del" title="Eliminar evento" data-agid="'+esc(l.ev.agId||"")+'" data-sid="'+esc(s.id)+'" data-id="'+esc(l.ev.id)+'">✕</button></div>';
+        var a=l.it.motivo==="Cliente";
+        if(l.done) return '<div class="mr-line mr-done" data-visit="'+esc(l.visit.id)+'" data-sid="'+esc(s.id)+'"><span class="mr-date">'+shortDate(l.fecha)+'</span><span class="mr-item '+(a?"a":"p")+'">'+esc(l.it.cliente)+'</span><span class="mr-check" title="Realizada — toque para ver">✓</span></div>';
+        return '<div class="mr-line"><span class="mr-date">'+shortDate(l.fecha)+'</span><span class="mr-item '+(a?"a":"p")+'">'+esc(l.it.cliente)+'</span><span class="mr-pend">pendiente</span></div>';
       }).join("")+'</div>' : '<div class="rday-empty">Sin ruta planificada.</div>';
       return '<div class="tcard">'+head+body+'</div>';
     }).join("");
     $$(".mr-del",$("#mRutas")).forEach(function(b){
-      b.addEventListener("click", function(){
+      b.addEventListener("click", function(e){
+        e.stopPropagation();
         if(!window.confirm("¿Eliminar este evento de la agenda? Se quita de la ruta de todos los vendedores a quienes se envió.")) return;
         if(b.dataset.agid) deleteAgenda(b.dataset.agid); else delRoute(b.dataset.sid, b.dataset.id);
         renderMgrRoutes(); toast("Evento eliminado ✓");
+      });
+    });
+    $$(".mr-done",$("#mRutas")).forEach(function(row){
+      row.addEventListener("click", function(){
+        var v=(DB[row.dataset.sid]||[]).filter(function(x){return x.id===row.dataset.visit;})[0];
+        if(v) openModal(v); else toast("Sin observaciones guardadas.", true);
       });
     });
   }
@@ -3404,6 +3498,66 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
         .forEach(function(it){ delRoute(s.id, it.id); });
     });
   }
+
+  // ---------- CALENDARIO DE RUTAS (gestor) ----------
+  var calY=null, calM=null, calSel=null, rutaView="cal";
+  function calInitDate(){ if(calY==null){ var n=new Date(); calY=n.getFullYear(); calM=n.getMonth(); } }
+  function dayInMonth(iso,y,m){ if(!iso) return null; var p=iso.split("-"); if(+p[0]!==y||(+p[1]-1)!==m) return null; return +p[2]; }
+  function monthActivities(y,m){
+    var byDay={};
+    function push(day,k,obj){ if(!byDay[day]) byDay[day]={a:0,p:0,e:0,items:[]}; byDay[day][k]++; obj._k=k; byDay[day].items.push(obj); }
+    [GESTOR].concat(SELLERS).concat([TECNICA]).forEach(function(s){
+      var realized=(DB[s.id]||[]).filter(function(v){ return !v.stateChange; });
+      var byId={}, byKey={};
+      realized.forEach(function(v){ byId[v.id]=v; var k=v.cliente+"|"+v.data; if(!byKey[k]||(v.ts||0)>(byKey[k].ts||0)) byKey[k]=v; });
+      var used={};
+      routeFor(s.id).forEach(function(it){
+        var d=dayInMonth(it.fecha,y,m); if(d==null) return;
+        if(it.kind==="evento"){ push(d,'e',{s:s, ev:it}); return; }
+        var v=it.visitId?byId[it.visitId]:byKey[it.cliente+"|"+it.fecha];
+        if(v){ used[v.id]=1; push(d,'a',{s:s, visit:v, cliente:it.cliente, motivo:it.motivo}); }
+        else push(d,'p',{s:s, cliente:it.cliente, motivo:it.motivo});
+      });
+      realized.forEach(function(v){ if(used[v.id]) return; var d=dayInMonth(v.data,y,m); if(d==null) return; push(d,'a',{s:s, visit:v, cliente:v.cliente, motivo:v.motivo}); });
+    });
+    return byDay;
+  }
+  function renderMgrCalendar(){
+    calInitDate();
+    $("#calTitle").textContent = cap(MESES[calM])+" "+calY;
+    var byDay=monthActivities(calY,calM);
+    var first=new Date(calY,calM,1), offset=(first.getDay()+6)%7, ndays=new Date(calY,calM+1,0).getDate();
+    var tISO=todayISO(), html="";
+    for(var i=0;i<offset;i++) html+='<div class="cal-cell out"></div>';
+    for(var d=1;d<=ndays;d++){
+      var iso=calY+"-"+("0"+(calM+1)).slice(-2)+"-"+("0"+d).slice(-2);
+      var info=byDay[d], tot=info?info.a+info.p+info.e:0, dots="";
+      if(info){ if(info.a)dots+='<span class="cal-dot cd-a"></span>'; if(info.p)dots+='<span class="cal-dot cd-p"></span>'; if(info.e)dots+='<span class="cal-dot cd-e"></span>'; }
+      var cls="cal-cell"+(iso===tISO?" today":"")+(calSel===d?" sel":"");
+      html+='<div class="'+cls+'" data-d="'+d+'">'+(tot?'<span class="cal-cnt">'+tot+'</span>':'')+'<span class="n">'+d+'</span>'+(dots?'<span class="cal-dots">'+dots+'</span>':'')+'</div>';
+    }
+    $("#calGrid").innerHTML=html;
+    $$(".cal-cell",$("#calGrid")).forEach(function(c){ if(c.classList.contains("out")) return;
+      c.addEventListener("click", function(){ calSel=+c.dataset.d; renderMgrCalendar(); }); });
+    renderCalDay(byDay);
+  }
+  function renderCalDay(byDay){
+    var el=$("#calDay");
+    if(calSel==null){ el.innerHTML='<div class="rday-empty" style="margin-top:14px">Toque un día para ver la actividad.</div>'; return; }
+    var info=byDay[calSel], dt=new Date(calY,calM,calSel);
+    var head='<div class="calday-head">'+cap(DIA_N[WDKEYS[dt.getDay()]])+' '+calSel+' de '+MESES[calM]+' <span class="pill">'+(info?info.items.length:0)+' actividad'+((info&&info.items.length!==1)?'es':'')+'</span></div>';
+    if(!info || !info.items.length){ el.innerHTML=head+'<div class="rday-empty">Sin actividad este día.</div>'; return; }
+    var order={a:0,e:1,p:2}, items=info.items.slice().sort(function(x,z){ return order[x._k]-order[z._k]; });
+    el.innerHTML=head+items.map(function(o){
+      var s=o.s;
+      if(o._k==='e') return '<div class="cact"><div class="av" style="background:'+s.color+'">'+initials(s.name)+'</div><div style="min-width:0"><div class="who">'+esc(s.name)+'</div><div class="cli">'+esc(o.ev.tipo)+(o.ev.titulo?': '+esc(o.ev.titulo):'')+'</div></div><span class="tag ev">Evento</span></div>';
+      var a=o.motivo==="Cliente";
+      if(o._k==='a') return '<div class="cact click" data-visit="'+esc(o.visit.id)+'" data-sid="'+esc(s.id)+'"><div class="av" style="background:'+s.color+'">'+initials(s.name)+'</div><div style="min-width:0"><div class="who">'+esc(s.name)+'</div><div class="cli">'+esc(o.cliente)+'</div></div><span class="tag '+(a?"a":"p")+'">'+o.motivo+'</span><span class="cchk">✓</span></div>';
+      return '<div class="cact"><div class="av" style="background:'+s.color+'">'+initials(s.name)+'</div><div style="min-width:0"><div class="who">'+esc(s.name)+'</div><div class="cli">'+esc(o.cliente)+'</div></div><span class="tag '+(a?"a":"p")+'">'+o.motivo+'</span><span class="cpend">pendiente</span></div>';
+    }).join("");
+    $$(".cact.click",el).forEach(function(row){ row.addEventListener("click", function(){ var v=(DB[row.dataset.sid]||[]).filter(function(x){return x.id===row.dataset.visit;})[0]; if(v) openModal(v); }); });
+  }
+  function renderRutasView(){ if(rutaView==="cal") renderMgrCalendar(); else renderMgrRoutes(); }
 
   // ---------- MI RUTA (gestor) ----------
   var gMonthSel="", gWeekIdx=0;
@@ -3465,6 +3619,17 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
       $("#mrTo").addEventListener("change", function(){ fRutas.to=this.value; renderMgrRoutes(); });
       $("#mrClear").addEventListener("click", function(){ fRutas.from=""; fRutas.to=""; $("#mrFrom").value=""; $("#mrTo").value=""; renderMgrRoutes(); });
     }
+    // toggle Calendario / Lista + navegación de meses
+    if($("#calPrev")){
+      $("#calPrev").addEventListener("click", function(){ calInitDate(); calM--; if(calM<0){calM=11;calY--;} calSel=null; renderMgrCalendar(); });
+      $("#calNext").addEventListener("click", function(){ calInitDate(); calM++; if(calM>11){calM=0;calY++;} calSel=null; renderMgrCalendar(); });
+      $$(".rtoggle-b").forEach(function(b){ b.addEventListener("click", function(){
+        rutaView=b.dataset.rv; $$(".rtoggle-b").forEach(function(x){ x.classList.toggle("on", x===b); });
+        $("#mCalWrap").classList.toggle("hidden", rutaView!=="cal");
+        $("#mListWrap").classList.toggle("hidden", rutaView!=="list");
+        renderRutasView();
+      }); });
+    }
     $("#agVendedores").innerHTML =
       '<label class="ag-vend ag-all"><input type="checkbox" id="agAll"><span>Todos</span></label>' +
       SELLERS.map(function(s){ return '<label class="ag-vend"><input type="checkbox" class="ag-vsel" value="'+s.id+'"><span>'+esc(s.name)+'</span></label>'; }).join("") +
@@ -3519,7 +3684,7 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
     });
     var n = targets.length*agDates.length;
     resetAgenda();
-    renderMgrRoutes();
+    renderRutasView();
     toast(n+" agenda"+(n!==1?"s":"")+" enviada"+(n!==1?"s":"")+" ✓");
   }
 
