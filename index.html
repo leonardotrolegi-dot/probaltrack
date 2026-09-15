@@ -200,6 +200,7 @@
     width:100%;aspect-ratio:1;text-align:center;font-size:22px;font-weight:600;
     border:1.5px solid var(--line);border-radius:13px;background:var(--surface-2);
     color:var(--ink);
+    -webkit-text-security:disc; text-security:disc; /* oculta el número, muestra ● */
   }
   .pin input:focus{outline:none;border-color:var(--accent)}
   .hint{font-size:12.5px;color:var(--ink-faint);margin:9px 2px 0}
@@ -320,12 +321,13 @@
   /* mic */
   .obs-wrap{position:relative}
   .mic{
-    position:absolute;right:9px;bottom:9px;width:44px;height:44px;border-radius:12px;
+    position:absolute;right:8px;bottom:8px;width:30px;height:30px;border-radius:9px;
     border:none;background:var(--accent);color:#fff;display:grid;place-items:center;cursor:pointer;
-    box-shadow:var(--shadow);
+    box-shadow:var(--shadow);opacity:.9;transition:width .12s,height .12s,border-radius .12s;
   }
-  .mic svg{width:21px;height:21px}
-  .mic.rec{background:var(--danger);animation:pulse 1.2s infinite}
+  .mic svg{width:16px;height:16px}
+  .mic.rec{width:44px;height:44px;border-radius:12px;opacity:1;background:var(--danger);animation:pulse 1.2s infinite}
+  .mic.rec svg{width:21px;height:21px}
   @keyframes pulse{0%,100%{box-shadow:0 0 0 0 color-mix(in srgb,var(--danger) 55%,transparent)}50%{box-shadow:0 0 0 9px transparent}}
   .mic-note{font-size:12px;color:var(--ink-faint);margin-top:7px;display:flex;align-items:center;gap:6px}
   .rec-live{color:var(--danger);font-weight:600}
@@ -821,6 +823,10 @@
   .imp-hist{font-size:12.5px;color:var(--ink-soft);padding:6px 9px;background:var(--surface-2);border:1px solid var(--line-soft);border-radius:9px;margin-bottom:6px;font-variant-numeric:tabular-nums}
   .imp-hist .ih-k{display:inline-block;font-weight:700;color:var(--accent);margin-right:7px}
   .imp-hint{font-size:12px;color:var(--ink-faint);margin-top:8px;line-height:1.45}
+  .imp-ok,.imp-err,.imp-run{font-size:13px;font-weight:600;padding:10px 12px;border-radius:10px;margin-bottom:10px;line-height:1.4}
+  .imp-ok{background:color-mix(in srgb,var(--accent) 14%,transparent);color:var(--accent-deep);border:1px solid color-mix(in srgb,var(--accent) 40%,transparent)}
+  .imp-err{background:color-mix(in srgb,var(--danger) 12%,transparent);color:var(--danger);border:1px solid color-mix(in srgb,var(--danger) 40%,transparent)}
+  .imp-run{background:var(--surface-2);color:var(--ink-soft);border:1px solid var(--line)}
 
   .presup-check{display:flex;align-items:center;gap:10px;font-size:15px;font-weight:600;color:var(--ink);cursor:pointer;padding:12px 13px;border:1.5px solid var(--line);border-radius:12px;background:var(--surface)}
   .presup-check input{width:19px;height:19px;flex:none;accent-color:var(--prospecto)}
@@ -1347,6 +1353,12 @@
           </div>
         </div>
 
+        <div class="route-filter" style="margin-bottom:6px">
+          <input type="date" id="mrFrom" class="fb-period" aria-label="Desde">
+          <span class="fb-sep">→</span>
+          <input type="date" id="mrTo" class="fb-period" aria-label="Hasta">
+          <button class="btn-sec" id="mrClear" type="button">Limpiar</button>
+        </div>
         <div class="kpis" id="mKpiRutas"></div>
         <div id="mRutas"></div>
       </section>
@@ -2466,7 +2478,9 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
   micBtn.addEventListener("click", function(){ recording ? stopRec() : startRec(); });
 
   // ---------- SAVE ----------
+  var _savingLock=false;
   $("#saveBtn").addEventListener("click", function(){
+    if(_savingLock) return; // evita doble registro por doble toque
     var cli = acInput.value.trim();
     if(!cli){ acInput.focus(); toast("Elija el cliente primero.", true); return; }
     var motivo = $$("input[name=motivo]").filter(function(x){return x.checked;})[0].value;
@@ -2492,6 +2506,7 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
     };
     if(motivo==="Prospecto"){ var pp=readPresup(); if(pp.enviado) rec2.presupuesto=pp; }
     if(rec2.situacao==="Perdido"){ rec2.perdida={motivo:$("#fPerdidaMotivo").value, obs:$("#fPerdidaObs").value.trim()}; }
+    _savingLock=true; setTimeout(function(){ _savingLock=false; }, 1000);
     putVisit(rec2);
     // se veio da rota semanal, marca o item como realizado (mantém no histórico)
     var fromRoute = false;
@@ -3354,15 +3369,17 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
     });
   }
 
-  // Rutas semanales (resumo global, só leitura)
+  // Rutas semanales (resumo global, só leitura) — con filtro de fechas
+  var fRutas={from:"",to:""};
+  function routeInRange(it){ var f=it.fecha||""; if(fRutas.from && f<fRutas.from) return false; if(fRutas.to && f>fRutas.to) return false; return true; }
   function renderMgrRoutes(){
     var everyone = [GESTOR].concat(SELLERS).concat([TECNICA]);
-    var totalPlanned = everyone.reduce(function(s,x){ return s + routeFor(x.id).length; }, 0);
+    var totalPlanned = everyone.reduce(function(s,x){ return s + routeFor(x.id).filter(routeInRange).length; }, 0);
     $("#mKpiRutas").innerHTML =
       '<div class="kpi"><b>'+totalPlanned+'</b><span>ítems planificados</span></div>'+
       '<div class="kpi"><b>'+SELLERS.length+'</b><span>vendedores</span></div>';
     $("#mRutas").innerHTML = everyone.map(function(s){
-      var list = routeFor(s.id).slice().sort(function(a,b){ return a.fecha<b.fecha?-1:(a.fecha>b.fecha?1:0); });
+      var list = routeFor(s.id).filter(routeInRange).slice().sort(function(a,b){ return a.fecha<b.fecha?-1:(a.fecha>b.fecha?1:0); });
       var head = '<div class="thead"><div class="avatar" style="background:'+s.color+'">'+initials(s.name)+'</div>'+
         '<div><b>'+esc(s.name)+'</b><br><span>'+list.length+' ítem'+(list.length!==1?'s':'')+' planificado'+(list.length!==1?'s':'')+'</span></div></div>';
       var body = list.length ? '<div class="mr-days">'+list.map(function(it){
@@ -3442,6 +3459,12 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
   // ---------- AGENDA ESPECIAL (gestor) ----------
   var agDates = [];
   function initAgenda(){
+    // filtro de fechas de la ruta (gestor)
+    if($("#mrFrom")){
+      $("#mrFrom").addEventListener("change", function(){ fRutas.from=this.value; renderMgrRoutes(); });
+      $("#mrTo").addEventListener("change", function(){ fRutas.to=this.value; renderMgrRoutes(); });
+      $("#mrClear").addEventListener("click", function(){ fRutas.from=""; fRutas.to=""; $("#mrFrom").value=""; $("#mrTo").value=""; renderMgrRoutes(); });
+    }
     $("#agVendedores").innerHTML =
       '<label class="ag-vend ag-all"><input type="checkbox" id="agAll"><span>Todos</span></label>' +
       SELLERS.map(function(s){ return '<label class="ag-vend"><input type="checkbox" class="ag-vsel" value="'+s.id+'"><span>'+esc(s.name)+'</span></label>'; }).join("") +
@@ -3843,7 +3866,7 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
         var L=detectSalesLayout(rr);
         if(L){ rows=rr; lay=L; break; }
       }
-      if(!lay){ toast("No reconocí el formato. Debe tener col. A = vendedor, col. B = cliente y columnas de meses (2026-1…). Probá subir el .xlsx.", true); return; }
+      if(!lay){ toast("No reconocí el formato.", true); impMsg('<div class="imp-err">✗ No reconocí el formato. Debe tener col. A = vendedor, col. B = cliente y columnas de meses (2026-1…). Probá subir el .xlsx.</div>'); return; }
       var mCols=lay.mCols, mLabels=lay.mLabels;
       var out=[], lastSeller="";
       for(var i=lay.hdr+1;i<rows.length;i++){
@@ -3856,7 +3879,7 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
         for(var k=0;k<mCols.length;k++){ var v=numKg(r[mCols[k]]); meses.push(v); tot+=v; }
         out.push({tipo:"Cliente", nome:cli, kg:tot, vendedor:lastSeller, meses:meses});
       }
-      if(!out.length){ toast("No encontré datos (col. A = vendedor, col. B = cliente).", true); return; }
+      if(!out.length){ toast("No encontré datos.", true); impMsg('<div class="imp-err">✗ No encontré filas de datos (col. A = vendedor, col. B = cliente).</div>'); return; }
       _lastMonths=mLabels;
       if(!window.confirm("Importar "+out.length+" clientes (con ventas por mes)? Reemplaza la lista actual de clientes.")) return;
       commitCatalog("Cliente", out);
@@ -3879,9 +3902,12 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
   var LAST_IMPORT = {};
   function col_meta(){ return dbh.collection("meta"); }
   function fmtDateTime(iso){ if(!iso) return ""; var d=new Date(iso), p=function(n){return ("0"+n).slice(-2);}; return p(d.getDate())+"/"+p(d.getMonth()+1)+"/"+d.getFullYear()+" "+p(d.getHours())+":"+p(d.getMinutes()); }
+  var _impResult="";
+  function impMsg(html){ _impResult=html||""; renderImpStatus(); }
   function renderImpStatus(){
     var el=$("#impStatus"); if(!el) return;
     var c=LAST_IMPORT["Cliente"], p=LAST_IMPORT["Prospecto"], hist="";
+    if(_impResult) hist+=_impResult;
     if(c||p){
       hist+='<div class="imp-hist-title">Última importación</div>';
       if(c) hist+='<div class="imp-hist"><span class="ih-k">Clientes</span>'+fmtDateTime(c.at)+' · '+c.count+' clientes · '+fmtKg(c.kg||0)+' kg</div>';
@@ -3890,8 +3916,8 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
     el.innerHTML = hist + '<div class="imp-hint">Clientes: col. A = vendedor, col. B = cliente, y columnas de meses (2026-1, 2026-2…). El kg total = suma de los meses. Prospectos: nombre, estancia, vendedor.</div>';
   }
   function commitCatalog(tipo, items){
-    if(!useDB || !dbh){ toast("Base no disponible en esta vista.", true); return; }
-    $("#impStatus").textContent = "Importando… no cierre la app.";
+    if(!useDB || !dbh){ toast("Base no disponible en esta vista.", true); impMsg('<div class="imp-err">✗ La importación solo funciona en el sitio publicado (con conexión).</div>'); return; }
+    impMsg('<div class="imp-run">⏳ Importando '+items.length+' '+(tipo==="Cliente"?"clientes":"prospectos")+'… no cierre la app.</div>');
     var col = dbh.collection("catalog");
     function chunk(list, fn){ // roda em lotes de 40
       var i=0; function step(){ var ops=[]; for(;i<list.length && ops.length<40;i++){ ops.push(fn(list[i])); }
@@ -3918,9 +3944,10 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
       var meta = {tipo:tipo, at:new Date().toISOString(), count:items.length, kg:kgTot};
       if(tipo==="Cliente" && _lastMonths) meta.months=_lastMonths;
       col_meta().doc("lastImport_"+tipo).set(meta).catch(noop);
-      LAST_IMPORT[tipo]=meta; renderImpStatus();
+      LAST_IMPORT[tipo]=meta;
+      impMsg('<div class="imp-ok">✓ Importación exitosa · '+items.length+' '+(tipo==="Cliente"?"clientes":"prospectos")+(tipo==="Cliente"?" · "+fmtKg(kgTot)+" kg":"")+' · '+fmtDateTime(meta.at)+'</div>');
       toast("Base actualizada ✓");
-    }).catch(function(){ $("#impStatus").textContent="Error al importar. Intente de nuevo."; toast("Error al importar.", true); });
+    }).catch(function(){ impMsg('<div class="imp-err">✗ Error al importar. Revise el archivo e intente de nuevo.</div>'); toast("Error al importar.", true); });
   }
   function initImport(){
     var a=$("#impCli"), b=$("#impPro");
