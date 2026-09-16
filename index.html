@@ -311,6 +311,47 @@
   .hpill{flex:1;background:var(--surface-2);border:1px solid var(--line);border-radius:10px;padding:8px 3px;text-align:center}
   .hpill b{font-size:13px;font-weight:800;color:var(--accent-deep)}.hpill span{display:block;font-size:9.5px;color:var(--ink-faint);margin-top:1px}
   .hgs{color:var(--accent-deep)}
+  /* Desafío de ganancia */
+  .hsec.comp2{color:var(--prospecto)}
+  .dual{display:flex;gap:9px;margin-bottom:11px}
+  .big{border-radius:12px;padding:12px 10px;text-align:center;flex:1;min-width:0;display:flex;flex-direction:column;justify-content:center}
+  .big.green{background:var(--accent);color:#fff}
+  .big.orange{background:var(--prospecto);color:#fff}
+  .big .k{font-size:10px;opacity:.92;text-transform:uppercase;letter-spacing:.03em;font-weight:800}
+  .big .v{font-size:27px;font-weight:800;font-variant-numeric:tabular-nums;line-height:1.05;margin-top:3px}
+  .big .s{font-size:10.5px;opacity:.9;margin-top:2px}
+  .sim{flex:1;min-width:0;background:var(--surface-2);border:1.5px solid var(--line);border-radius:12px;padding:10px 11px;display:flex;flex-direction:column}
+  .sim .l{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.02em;color:var(--ink-faint)}
+  .hinp2{display:flex;align-items:center;background:var(--surface);border:1.5px solid var(--accent);border-radius:9px;padding:0 9px;margin:6px 0}
+  .hinp2 input{flex:1;border:0;background:transparent;font-size:16px;font-weight:800;padding:8px 0;color:var(--accent-deep);outline:none;min-width:0;width:100%;font-family:inherit}
+  .hinp2 .hu{font-size:10px}
+  .simr{font-size:10.5px;color:var(--ink-soft)}
+  .simr b{display:block;font-size:15px;color:var(--accent-deep);font-variant-numeric:tabular-nums}
+  .hrrow .v.good{color:var(--accent-deep)}
+  .hint{font-size:12px;color:var(--ink-soft);background:var(--accent-soft);border-radius:11px;padding:11px 13px;margin-top:10px;line-height:1.4}
+  .hint b{color:var(--accent-deep)}
+  .compmsg{font-size:12.5px;color:var(--ink);line-height:1.45;margin-top:10px}.compmsg b{color:var(--prospecto)}
+  /* ¿Engordar o no engordar? */
+  #egRes{position:relative;overflow:hidden}
+  #egRes::before{content:"";position:absolute;inset:0;background-image:var(--wm);background-repeat:no-repeat;background-position:center;background-size:74%;opacity:.06;pointer-events:none;z-index:0}
+  @media (prefers-color-scheme:dark){ :root:not([data-theme="light"]) #egRes::before{filter:invert(1) brightness(1.6);opacity:.10} }
+  :root[data-theme="dark"] #egRes::before{filter:invert(1) brightness(1.6);opacity:.10}
+  #egRes > *{position:relative;z-index:1}
+  .verdict{border-radius:12px;padding:13px;text-align:center;margin-bottom:11px;color:#fff}
+  .verdict.si{background:var(--accent)}.verdict.no{background:var(--danger)}
+  .verdict .k{font-size:10.5px;opacity:.92;text-transform:uppercase;letter-spacing:.03em;font-weight:800}
+  .verdict .v{font-size:27px;font-weight:800;font-variant-numeric:tabular-nums;line-height:1.05;margin-top:2px}
+  .verdict .s{font-size:12px;opacity:.95;margin-top:2px;font-weight:700}
+  .dboxes{display:flex;gap:9px;margin-top:12px}
+  .dbox{flex:1;background:var(--accent-soft);border:1px solid color-mix(in srgb,var(--accent) 25%,transparent);border-radius:12px;padding:10px 10px;text-align:center;display:flex;flex-direction:column;gap:2px;justify-content:center}
+  .dbox.big2{background:var(--accent);border-color:var(--accent-deep)}
+  .dbox .dk{font-size:9px;font-weight:800;letter-spacing:.02em;text-transform:uppercase;color:var(--accent-deep)}
+  .dbox b{font-size:23px;font-weight:800;color:var(--accent-deep);font-variant-numeric:tabular-nums;line-height:1}
+  .dbox .ds{font-size:9px;color:var(--ink-soft);line-height:1.3}
+  .dbox.big2 .dk{color:#d8f2dd}.dbox.big2 b{color:#fff}.dbox.big2 .ds{color:#e3efe4}
+  .epills{display:flex;gap:8px;margin-top:9px}
+  .epill{flex:1;background:var(--surface-2);border:1px solid var(--line);border-radius:10px;padding:8px 3px;text-align:center}
+  .epill b{font-size:14px;font-weight:800;color:var(--accent-deep)}.epill span{display:block;font-size:9px;color:var(--ink-faint);margin-top:1px}
 
   /* ---------- VIEWS ---------- */
   main{flex:1;overflow-y:auto;padding:18px 18px calc(96px + env(safe-area-inset-bottom))}
@@ -1394,7 +1435,16 @@
         <div class="tt"><div class="t">Viabilidad Recría a pasto <span class="hbadge">Nuevo</span></div><div class="d">Simular engorde suplementado a campo</div></div>
         <span class="chev">›</span>
       </button>
-      <div class="tool soon"><div class="ic">🌾</div><div class="tt"><div class="t">Costo de ración <span class="hbadge soon">Próximo</span></div><div class="d">Mezcla y costo por kg</div></div><span class="chev">›</span></div>
+      <button class="tool" id="toolDesafio">
+        <div class="ic">⚡</div>
+        <div class="tt"><div class="t">Desafío de ganancia <span class="hbadge">Nuevo</span></div><div class="d">Punto de equilibrio y utilidad por día</div></div>
+        <span class="chev">›</span>
+      </button>
+      <button class="tool" id="toolEngordar">
+        <div class="ic">🥩</div>
+        <div class="tt"><div class="t">¿Engordar o no engordar? <span class="hbadge">Nuevo</span></div><div class="d">Terminación a corral · rentabilidad en USD</div></div>
+        <span class="chev">›</span>
+      </button>
       <div class="tool soon"><div class="ic">📈</div><div class="tt"><div class="t">Conversión / GMD <span class="hbadge soon">Próximo</span></div><div class="d">Eficiencia de conversión</div></div><span class="chev">›</span></div>
     </div>
   </div>
@@ -1430,6 +1480,78 @@
 
       <div id="rcRes"></div>
       <button class="btn-pdf" id="rcPDF">📄 Exportar PDF (para WhatsApp)</button>
+    </div>
+  </div>
+
+  <!-- HERRAMIENTA: Desafío de ganancia -->
+  <div id="desafioPage" class="ventas-page hidden">
+    <div class="vp-top"><button class="vp-back" id="desBack">‹ HUB</button><b>⚡ Desafío de ganancia</b></div>
+    <div class="hub-body">
+      <img class="hub-logo" alt="Probal">
+      <div class="hub-h">Desafío de ganancia</div>
+      <div class="hub-s">¿Cuánto tiene que ganar el animal por día para que el suplemento se pague solo?</div>
+
+      <div class="hsec">Tu producto Probal</div>
+      <div class="two">
+        <div class="hf"><label>Precio producto</label><div class="hinp"><input id="dgPrecio" inputmode="numeric" value="2.500"><span class="hu">Gs/kg</span></div></div>
+        <div class="hf"><label>Consumo/día</label><div class="hinp"><input id="dgCons" inputmode="decimal" value="2"><span class="hu">kg/día</span></div></div>
+      </div>
+      <div class="hf"><label>Precio animal (mercado)</label><div class="hinp"><input id="dgAnimal" inputmode="numeric" value="15.000"><span class="hu">Gs/kg</span></div></div>
+
+      <div class="hres">
+        <div class="dual">
+          <div class="big green"><div class="k">Desafío de ganancia</div><div class="v" id="dgEq">—</div><div class="s">g/día · equilibrio</div></div>
+          <div class="sim">
+            <div class="l">Simulá la ganancia real</div>
+            <div class="hinp2"><input id="dgReal" inputmode="numeric" value="400"><span class="hu">g/día</span></div>
+            <div class="simr">Lucro por cabeza/día<b id="dgLucro">—</b></div>
+          </div>
+        </div>
+        <div class="hrrow"><span class="k">Costo suplemento / día</span><span class="v hgs" id="dgCostDia">—</span></div>
+        <div class="hrrow"><span class="k">Lucro por cabeza / día <small id="dgRealLbl" style="color:var(--ink-faint)"></small></span><span class="v" id="dgLucroRow">—</span></div>
+        <div class="hint" id="dgHint"></div>
+      </div>
+
+      <div class="hsec comp2">Comparar con la competencia <span class="opt">· opcional</span></div>
+      <div class="hf"><label>Precio producto competencia</label><div class="hinp"><input id="dgComp" inputmode="numeric" value=""><span class="hu">Gs/kg</span></div></div>
+      <div id="dgCompBox"></div>
+    </div>
+  </div>
+
+  <!-- HERRAMIENTA: ¿Engordar o no engordar? -->
+  <div id="engordarPage" class="ventas-page hidden">
+    <div class="vp-top"><button class="vp-back" id="engBack">‹ HUB</button><b>🥩 ¿Engordar o no engordar?</b></div>
+    <div class="hub-body">
+      <img class="hub-logo" alt="Probal">
+      <div class="hub-h">¿Engordar o no engordar?</div>
+      <div class="hub-s">Simulá la terminación a corral y decidí si conviene. Valores en USD.</div>
+
+      <div class="hsec">Animal</div>
+      <div class="two">
+        <div class="hf"><label>Peso entrada</label><div class="hinp"><input id="egPeso" inputmode="numeric" value="350"><span class="hu">kg</span></div></div>
+        <div class="hf"><label>Precio compra</label><div class="hinp"><span class="hu" style="margin:0 4px 0 0">US$</span><input id="egCompra" inputmode="decimal" value="2,00"><span class="hu">/kg</span></div></div>
+      </div>
+      <div class="two">
+        <div class="hf"><label>Ganancia PV/día</label><div class="hinp"><input id="egGan" inputmode="decimal" value="1,300"><span class="hu">kg</span></div></div>
+        <div class="hf"><label>Días de engorde</label><div class="hinp"><input id="egDias" inputmode="numeric" value="90"><span class="hu">días</span></div></div>
+      </div>
+      <div class="hf"><label>Peso salida (calculado)</label><div class="hinp ro"><input id="egSalida" readonly><span class="hu">kg</span></div></div>
+
+      <div class="hsec">Dieta y operación</div>
+      <div class="two">
+        <div class="hf"><label>Costo dieta</label><div class="hinp"><span class="hu" style="margin:0 4px 0 0">US$</span><input id="egDieta" inputmode="decimal" value="0,25"><span class="hu">/kg</span></div></div>
+        <div class="hf"><label>Consumo prom.</label><div class="hinp"><input id="egCons" inputmode="decimal" value="2,3"><span class="hu">% PV</span></div></div>
+      </div>
+      <div class="hf"><label>Costo operativo/día</label><div class="hinp"><span class="hu" style="margin:0 4px 0 0">US$</span><input id="egOper" inputmode="decimal" value="0,50"><span class="hu">/día</span></div></div>
+
+      <div class="hsec">Faena y venta</div>
+      <div class="two">
+        <div class="hf"><label>Rendimiento carcasa</label><div class="hinp"><input id="egRend" inputmode="decimal" value="54"><span class="hu">%</span></div></div>
+        <div class="hf"><label>Precio venta</label><div class="hinp"><span class="hu" style="margin:0 4px 0 0">US$</span><input id="egVenta" inputmode="decimal" value="4,50"><span class="hu">/kg carc.</span></div></div>
+      </div>
+
+      <div id="egRes" class="hres"></div>
+      <div class="hint" style="margin-top:12px">Consumo = % del peso <b>promedio</b> (entrada+salida)/2. Rentabilidad = venta de carcasa − (compra del animal + costo de engorde).</div>
     </div>
   </div>
 
@@ -4098,9 +4220,11 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
       var mc=document.createElement("canvas"); mc.width=PW*SCALE; mc.height=10; var mctx=mc.getContext("2d"); mctx.scale(SCALE,SCALE);
       var H=Math.ceil(drawRecria(mctx,d,false))+20;
       var bc=document.createElement("canvas"); bc.width=PW*SCALE; bc.height=H*SCALE; var bctx=bc.getContext("2d"); bctx.scale(SCALE,SCALE);
-      bctx.fillStyle="#ffffff"; bctx.fillRect(0,0,PW,H); drawRecria(bctx,d,true);
+      drawRecria(bctx,d,true); // fondo transparente: el contenido va SOBRE la marca de agua
       var nP=Math.max(1,Math.ceil(H/PH)), pages=[];
       for(var p=0;p<nP;p++){ var pc=document.createElement("canvas"); pc.width=PW*SCALE; pc.height=PH*SCALE; var pctx=pc.getContext("2d"); pctx.fillStyle="#fff"; pctx.fillRect(0,0,pc.width,pc.height);
+        // marca de agua: logo Probal centrado, muy tenue
+        if(_logoImg && _logoImg.complete && _logoImg.naturalWidth){ var ww=PW*SCALE*0.74, wh=_logoImg.naturalHeight*ww/_logoImg.naturalWidth; pctx.save(); pctx.globalAlpha=0.06; pctx.drawImage(_logoImg,(PW*SCALE-ww)/2,(PH*SCALE-wh)/2,ww,wh); pctx.restore(); }
         var sy=p*PH*SCALE, sh=Math.min(PH*SCALE, bc.height-sy); if(sh>0) pctx.drawImage(bc,0,sy,PW*SCALE,sh,0,0,PW*SCALE,sh);
         pages.push({jpeg:b64ToBytes(pc.toDataURL("image/jpeg",0.9)), w:pc.width, h:pc.height}); }
       var pdf=buildPDF(pages), fname="Viabilidad_Recria_"+todayISO()+".pdf";
@@ -4155,6 +4279,83 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
   }
   function roundRect(ctx,x,y,w,h,r){ ctx.beginPath(); ctx.moveTo(x+r,y); ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r); ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath(); }
   if($("#rcPDF")) $("#rcPDF").addEventListener("click", recriaPDF);
+
+  // ----- Desafío de ganancia (sin PDF) -----
+  function computeDesafio(){
+    var pp=numPY($("#dgPrecio").value), cons=numPY($("#dgCons").value), pa=numPY($("#dgAnimal").value);
+    var real=numPY($("#dgReal").value), comp=numPY($("#dgComp").value);
+    var costDia=cons*pp, eqG=pa>0?(costDia/pa*1000):0;
+    var valorReal=(real/1000)*pa, lucroDia=valorReal-costDia, extra=real-eqG;
+    $("#dgEq").textContent=fmtGs(eqG);
+    $("#dgCostDia").textContent="Gs "+fmtGs(costDia);
+    $("#dgLucro").textContent="Gs "+fmtGs(lucroDia);
+    $("#dgLucroRow").textContent="Gs "+fmtGs(lucroDia);
+    $("#dgLucroRow").className="v "+(lucroDia>=0?"good":"");
+    $("#dgRealLbl").textContent=real>0?("· con "+fmtGs(real)+" g/día"):"";
+    if(real<=0) $("#dgHint").innerHTML='Ingresá la ganancia real para simular la utilidad.';
+    else if(extra>=0) $("#dgHint").innerHTML='Con <b>'+fmtGs(real)+' g/día</b> superás el desafío por <b>'+fmtGs(extra)+' g</b>: son <b>Gs '+fmtGs(lucroDia)+'/día</b> de utilidad por cabeza. Cada gramo extra suma.';
+    else $("#dgHint").innerHTML='Con <b>'+fmtGs(real)+' g/día</b> te faltan <b>'+fmtGs(-extra)+' g</b> para el equilibrio (Gs '+fmtGs(costDia)+'/día). Recién ahí empieza la utilidad.';
+    if(comp>0){
+      var extraCost=cons*(pp-comp), extraG=(pa>0&&extraCost>0)?extraCost/pa*1000:0;
+      var vtxt=extraCost>0?('+'+fmtGs(extraG)):'0';
+      var msg = extraCost>0 ? 'Tu producto cuesta <b>Gs '+fmtGs(extraCost)+'/día</b> más. Para justificar el precio, solo tiene que hacer ganar <b>'+fmtGs(extraG)+' g/día</b> más que la competencia. Si logra más, conviene el tuyo ✅'
+              : extraCost<0 ? 'Tu producto es <b>Gs '+fmtGs(-extraCost)+'/día más barato</b> que la competencia — ya conviene el tuyo ✅'
+              : 'Mismo costo diario que la competencia.';
+      $("#dgCompBox").innerHTML='<div class="hres" style="margin-top:6px"><div class="dual"><div class="big orange"><div class="k">Desafío vs competencia</div><div class="v">'+vtxt+'</div><div class="s">g/día más que la competencia</div></div></div><div class="compmsg">'+msg+'</div></div>';
+    } else $("#dgCompBox").innerHTML='';
+  }
+  function openDesafio(){ $("#hubPage").classList.add("hidden"); $$(".hub-logo").forEach(function(i){ if(!i.src) i.src=PROBAL_LOGO; }); computeDesafio(); $("#desafioPage").classList.remove("hidden"); }
+  if($("#toolDesafio")) $("#toolDesafio").addEventListener("click", openDesafio);
+  if($("#desBack")) $("#desBack").addEventListener("click", function(){ $("#desafioPage").classList.add("hidden"); openHub(); });
+  ["dgPrecio","dgCons","dgAnimal","dgReal","dgComp"].forEach(function(id){ var el=$("#"+id); if(el) el.addEventListener("input", computeDesafio); });
+
+  // ----- ¿Engordar o no engordar? (USD, sin PDF) -----
+  function fmtUSD(n){ n=n||0; var neg=n<0; n=Math.abs(n); var s=n.toFixed(2); var p=s.split('.'); p[0]=p[0].replace(/\B(?=(\d{3})+(?!\d))/g,'.'); return (neg?'-':'')+p[0]+','+p[1]; }
+  function computeEngordar(){
+    var pe=numPY($("#egPeso").value), pc=numPY($("#egCompra").value), gan=numPY($("#egGan").value), dias=numPY($("#egDias").value);
+    var cd=numPY($("#egDieta").value), cons=numPY($("#egCons").value), oper=numPY($("#egOper").value);
+    var rend=numPY($("#egRend").value), pv=numPY($("#egVenta").value);
+    var ps=pe+gan*dias;                              // peso salida
+    $("#egSalida").value = fmtGs(ps);
+    var pprom=(pe+ps)/2;                             // peso promedio
+    var consTot=cons/100*pprom*dias;                // kg dieta consumidos
+    var costDieta=consTot*cd, costOper=oper*dias;
+    var costEng=costDieta+costOper;                 // costo engorde
+    var costAnimal=pe*pc;                            // compra del animal
+    var invTot=costAnimal+costEng;                  // inversión total
+    var carc=ps*rend/100;                           // kg carcasa
+    var ingreso=carc*pv;                            // ingreso venta
+    var rent=ingreso-invTot;                        // rentabilidad USD/animal
+    var meses=dias>0?dias/30:0;
+    var roiEng=costEng>0?rent/costEng*100:0;
+    var roiInv=invTot>0?rent/invTot*100:0;
+    var roiEngMes=meses>0?roiEng/meses:0, roiInvMes=meses>0?roiInv/meses:0;
+    var si=rent>=0;
+    var html='';
+    html+='<div class="verdict '+(si?'si':'no')+'"><div class="k">Rentabilidad por animal</div><div class="v">'+(rent>=0?'+':'−')+'US$ '+fmtUSD(Math.abs(rent))+'</div><div class="s">'+(si?'✅ SÍ conviene engordar':'❌ NO conviene engordar')+'</div></div>';
+    html+='<div class="hrrow"><span class="k">Peso salida · ganancia</span><span class="v">'+fmtGs(ps)+' kg · +'+fmtGs(ps-pe)+' kg</span></div>';
+    html+='<div class="hrrow"><span class="k">Consumo total dieta</span><span class="v">'+dec1(consTot)+' kg</span></div>';
+    html+='<div class="hrrow"><span class="k">Costo dieta</span><span class="v good">US$ '+fmtUSD(costDieta)+'</span></div>';
+    html+='<div class="hrrow"><span class="k">Costo operativo</span><span class="v good">US$ '+fmtUSD(costOper)+'</span></div>';
+    html+='<div class="hrrow"><span class="k">Costo total engorde</span><span class="v good">US$ '+fmtUSD(costEng)+'</span></div>';
+    html+='<div class="hrrow"><span class="k">Costo compra animal</span><span class="v good">US$ '+fmtUSD(costAnimal)+'</span></div>';
+    html+='<div class="hrrow"><span class="k">Inversión total</span><span class="v good">US$ '+fmtUSD(invTot)+'</span></div>';
+    html+='<div class="hrrow"><span class="k">Carcasa · Ingreso venta</span><span class="v good">'+fmtGs(Math.round(carc))+' kg · US$ '+fmtUSD(ingreso)+'</span></div>';
+    html+='<div class="dboxes">'
+        +'<div class="dbox big2"><span class="dk">Rentab. sobre engorde</span><b>'+(roiEng>=0?'+':'−')+dec1(Math.abs(roiEng))+'%</b><span class="ds">US$ '+fmtUSD(rent)+' sobre los US$ '+fmtUSD(costEng)+' del engorde</span></div>'
+        +'<div class="dbox"><span class="dk">Rentab. sobre inversión total</span><b>'+(roiInv>=0?'+':'−')+dec1(Math.abs(roiInv))+'%</b><span class="ds">sobre US$ '+fmtUSD(invTot)+' (animal + engorde)</span></div>'
+        +'</div>';
+    html+='<div class="epills">'
+        +'<div class="epill"><b>'+dec1(roiEngMes)+'%</b><span>Mensual s/engorde</span></div>'
+        +'<div class="epill"><b>'+dec1(roiInvMes)+'%</b><span>Mensual s/inv. total</span></div>'
+        +'<div class="epill"><b>'+(rent>=0?'+':'−')+fmtGs(Math.abs(Math.round(rent)))+'</b><span>US$/animal</span></div>'
+        +'</div>';
+    $("#egRes").innerHTML=html;
+  }
+  function openEngordar(){ $("#hubPage").classList.add("hidden"); $$(".hub-logo").forEach(function(i){ if(!i.src) i.src=PROBAL_LOGO; }); var r=$("#egRes"); if(r) r.style.setProperty("--wm", 'url("'+PROBAL_LOGO+'")'); computeEngordar(); $("#engordarPage").classList.remove("hidden"); }
+  if($("#toolEngordar")) $("#toolEngordar").addEventListener("click", openEngordar);
+  if($("#engBack")) $("#engBack").addEventListener("click", function(){ $("#engordarPage").classList.add("hidden"); openHub(); });
+  ["egPeso","egCompra","egGan","egDias","egDieta","egCons","egOper","egRend","egVenta"].forEach(function(id){ var el=$("#"+id); if(el) el.addEventListener("input", computeEngordar); });
 
   function renderReportCanvas(data, imgs){
     var PW=794, PH=1123, SCALE=2;
