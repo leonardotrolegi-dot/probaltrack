@@ -241,9 +241,9 @@
   .ventas-btn:active{transform:translateY(1px)}
   .ventas-page{position:fixed;inset:0;z-index:60;background:var(--bg);display:flex;flex-direction:column;
     animation:fade .18s ease}
-  .vp-top{display:flex;align-items:center;gap:10px;padding:14px 16px calc(14px);background:#0b0e08;color:#eef1ea}
+  .vp-top{display:flex;align-items:center;gap:10px;padding:calc(14px + env(safe-area-inset-top)) 16px 14px;background:#0b0e08;color:#eef1ea}
   .vp-top b{font-size:16px;font-weight:800;color:#c2f24e}
-  .vp-back{background:transparent;border:0;color:#c2f24e;font-size:15px;font-weight:700;cursor:pointer;padding:4px 4px}
+  .vp-back{background:transparent;border:0;color:#c2f24e;font-size:15px;font-weight:700;cursor:pointer;padding:8px 8px;margin:-4px 0;-webkit-tap-highlight-color:rgba(194,242,78,.25)}
   .vp-body{flex:1;overflow-y:auto;padding:16px 16px calc(24px + env(safe-area-inset-bottom))}
   .vp-sub{font-size:12.5px;color:var(--ink-faint);margin-bottom:12px;font-weight:600}
   .vp-search{width:100%;border:1.5px solid var(--accent);border-radius:12px;background:var(--surface);
@@ -1509,6 +1509,7 @@
         </div>
         <div class="hrrow"><span class="k">Costo suplemento / día</span><span class="v hgs" id="dgCostDia">—</span></div>
         <div class="hrrow"><span class="k">Lucro por cabeza / día <small id="dgRealLbl" style="color:var(--ink-faint)"></small></span><span class="v" id="dgLucroRow">—</span></div>
+        <div class="hrrow"><span class="k">ROI sobre el suplemento <small style="color:var(--ink-faint)">· lucro ÷ costo</small></span><span class="v" id="dgRoi">—</span></div>
         <div class="hint" id="dgHint"></div>
       </div>
 
@@ -4224,7 +4225,7 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
       var nP=Math.max(1,Math.ceil(H/PH)), pages=[];
       for(var p=0;p<nP;p++){ var pc=document.createElement("canvas"); pc.width=PW*SCALE; pc.height=PH*SCALE; var pctx=pc.getContext("2d"); pctx.fillStyle="#fff"; pctx.fillRect(0,0,pc.width,pc.height);
         // marca de agua: logo Probal centrado, muy tenue
-        if(_logoImg && _logoImg.complete && _logoImg.naturalWidth){ var ww=PW*SCALE*0.74, wh=_logoImg.naturalHeight*ww/_logoImg.naturalWidth; pctx.save(); pctx.globalAlpha=0.06; pctx.drawImage(_logoImg,(PW*SCALE-ww)/2,(PH*SCALE-wh)/2,ww,wh); pctx.restore(); }
+        if(_logoImg && _logoImg.complete && _logoImg.naturalWidth){ var ww=PW*SCALE*0.74, wh=_logoImg.naturalHeight*ww/_logoImg.naturalWidth; pctx.save(); pctx.globalAlpha=0.06; pctx.drawImage(_logoImg,(PW*SCALE-ww)/2,(PH*SCALE-wh)/2 + PH*SCALE*0.12,ww,wh); pctx.restore(); }
         var sy=p*PH*SCALE, sh=Math.min(PH*SCALE, bc.height-sy); if(sh>0) pctx.drawImage(bc,0,sy,PW*SCALE,sh,0,0,PW*SCALE,sh);
         pages.push({jpeg:b64ToBytes(pc.toDataURL("image/jpeg",0.9)), w:pc.width, h:pc.height}); }
       var pdf=buildPDF(pages), fname="Viabilidad_Recria_"+todayISO()+".pdf";
@@ -4291,6 +4292,9 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
     $("#dgLucro").textContent="Gs "+fmtGs(lucroDia);
     $("#dgLucroRow").textContent="Gs "+fmtGs(lucroDia);
     $("#dgLucroRow").className="v "+(lucroDia>=0?"good":"");
+    var roiSupl=costDia>0?(lucroDia/costDia*100):0;
+    $("#dgRoi").textContent=(real>0?(roiSupl>=0?"+":"")+dec1(roiSupl)+"%":"—");
+    $("#dgRoi").className="v "+(roiSupl>=0?"good":"");
     $("#dgRealLbl").textContent=real>0?("· con "+fmtGs(real)+" g/día"):"";
     if(real<=0) $("#dgHint").innerHTML='Ingresá la ganancia real para simular la utilidad.';
     else if(extra>=0) $("#dgHint").innerHTML='Con <b>'+fmtGs(real)+' g/día</b> superás el desafío por <b>'+fmtGs(extra)+' g</b>: son <b>Gs '+fmtGs(lucroDia)+'/día</b> de utilidad por cabeza. Cada gramo extra suma.';
