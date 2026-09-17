@@ -2263,7 +2263,10 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
       if(user){
         $("#authGate").classList.add("hidden");
         if(!current && !isManager){ $("#login").classList.remove("hidden"); }
-        if(!useDB){ dbh=firebase.firestore(); useDB=true; subscribeDB(); }
+        if(!useDB){ dbh=firebase.firestore(); useDB=true;
+          try{ dbh.enablePersistence({synchronizeTabs:true}).then(subscribeDB, subscribeDB); }
+          catch(e){ subscribeDB(); }
+        }
       } else {
         useDB=false; current=null; isManager=false;
         $("#shell").classList.add("hidden"); $("#mShell").classList.add("hidden"); $("#login").classList.add("hidden");
@@ -2290,8 +2293,8 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
     if(!DB[v.sellerId]) DB[v.sellerId]=[];
     DB[v.sellerId]=DB[v.sellerId].filter(function(x){return x.id!==v.id;});
     DB[v.sellerId].unshift(v);
-    if(useDB){ var o={}; for(var k in v) if(k!=="id") o[k]=v[k]; dbh.collection("visits").doc(v.id).set(o).catch(noop); }
-    else saveAll(DB);
+    if(useDB){ var o={}; for(var k in v) if(k!=="id") o[k]=v[k]; return dbh.collection("visits").doc(v.id).set(o); }
+    else { saveAll(DB); return null; }
   }
   function delVisit(sellerId, id){
     if(DB[sellerId]) DB[sellerId]=DB[sellerId].filter(function(x){return x.id!==id;});
@@ -2961,7 +2964,7 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
     if(motivo==="Prospecto"){ var pp=readPresup(); if(pp.enviado) rec2.presupuesto=pp; }
     if(rec2.situacao==="Perdido"){ rec2.perdida={motivo:$("#fPerdidaMotivo").value, obs:$("#fPerdidaObs").value.trim()}; }
     _savingLock=true; setTimeout(function(){ _savingLock=false; }, 1000);
-    putVisit(rec2);
+    var savePr = putVisit(rec2);
     // se veio da rota semanal, marca o item como realizado (mantém no histórico)
     var fromRoute = false;
     if(pendingRoute){ pendingRoute.done=true; pendingRoute.visitId=rec2.id; putRoute(pendingRoute); pendingRoute=null; hideBanner(); fromRoute=true; }
@@ -2978,7 +2981,18 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
     $$("input[name=motivo]")[0].checked = true; updateSit();
     resetReport(); resetPresup(); togglePresup();
     renderRecent();
-    toast(agendou ? "Guardada. Próxima visita agendada ✓" : (fromRoute ? "Visita realizada y guardada ✓" : "Visita guardada ✓"));
+    var okMsg = agendou ? "Guardada. Próxima visita agendada ✓" : (fromRoute ? "Visita realizada y guardada ✓" : "Visita guardada ✓");
+    if(useDB && savePr && savePr.then){
+      if(typeof navigator!=="undefined" && navigator.onLine===false){
+        toast("Sin conexión: la visita se subirá sola al reconectar ⏳", true);
+      } else {
+        toast("Guardando…");
+        savePr.then(function(){ toast(okMsg); })
+              .catch(function(){ toast("⚠ No se pudo guardar en la nube. Revisá tu conexión e intentá de nuevo.", true); });
+      }
+    } else {
+      toast(okMsg);
+    }
   });
 
   // ---------- RECENT (cards clicáveis) ----------
