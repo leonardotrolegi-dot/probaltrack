@@ -352,6 +352,55 @@
   .epills{display:flex;gap:8px;margin-top:9px}
   .epill{flex:1;background:var(--surface-2);border:1px solid var(--line);border-radius:10px;padding:8px 3px;text-align:center}
   .epill b{font-size:14px;font-weight:800;color:var(--accent-deep)}.epill span{display:block;font-size:9px;color:var(--ink-faint);margin-top:1px}
+  /* Viabilidad Recría Confinada */
+  .rcf-etapa{display:flex;align-items:center;gap:8px;margin:16px 2px 9px}
+  .rcf-etapa .n{width:20px;height:20px;border-radius:6px;background:var(--accent);color:#fff;font-size:11px;font-weight:800;display:grid;place-items:center;flex:none}
+  .rcf-etapa.usd .n{background:#2b6ca3}
+  .rcf-etapa .t{font-size:13px;font-weight:800}
+  .rcf-chip{font-size:9px;font-weight:800;letter-spacing:.03em;padding:2px 7px;border-radius:20px;margin-left:auto}
+  .rcf-chip.gs{background:var(--accent-soft);color:var(--accent-deep)}
+  .rcf-chip.usd{background:#e2eef6;color:#2b6ca3}
+  .rcf-del{margin-left:8px;background:transparent;border:0;color:var(--danger);font-size:11px;font-weight:700;cursor:pointer}
+  .rcf-add{width:100%;background:transparent;border:1.5px dashed #2b6ca3;color:#2b6ca3;border-radius:12px;padding:12px;font-size:13.5px;font-weight:800;margin:8px 0 2px;cursor:pointer}
+  .rcf-cot{background:#e2eef6;border:1.5px solid #cfe0ee;border-radius:13px;padding:11px 12px;margin-top:14px}
+  .rcf-cot .cl{font-size:11px;font-weight:700;color:#2b6ca3;margin-bottom:6px}
+  .rcf-cot .hinp{border-color:#cfe0ee}
+  :root[data-theme="dark"] .rcf-cot{background:#12303f;border-color:#1f4d66}
+  @media (prefers-color-scheme:dark){ :root:not([data-theme="light"]) .rcf-cot{background:#12303f;border-color:#1f4d66} }
+  .rcf-rt{font-size:10px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--ink-faint);margin:0 0 11px;text-align:center}
+  .rcf-stg{border:1px solid var(--line);border-radius:12px;padding:10px 11px;margin-bottom:9px;background:var(--accent-soft)}
+  .rcf-stg.usd{background:#e2eef6;border-color:#cfe0ee}
+  :root[data-theme="dark"] .rcf-stg.usd{background:#12303f;border-color:#1f4d66}
+  @media (prefers-color-scheme:dark){ :root:not([data-theme="light"]) .rcf-stg.usd{background:#12303f;border-color:#1f4d66} }
+  .rcf-sh{display:flex;align-items:center;gap:8px}
+  .rcf-sn{width:18px;height:18px;border-radius:5px;background:var(--accent);color:#fff;font-size:10px;font-weight:800;display:grid;place-items:center;flex:none}
+  .rcf-sn.usd{background:#2b6ca3}
+  .rcf-st{font-size:12px;font-weight:700}.rcf-st small{color:var(--ink-faint);font-weight:700}
+  .rcf-sv{margin-left:auto;font-size:15px;font-weight:800;font-variant-numeric:tabular-nums}
+  .rcf-sv.gs{color:var(--accent-deep)}.rcf-sv.usd{color:#1f5480}
+  :root[data-theme="dark"] .rcf-sv.usd{color:#7fb6db}
+  @media (prefers-color-scheme:dark){ :root:not([data-theme="light"]) .rcf-sv.usd{color:#7fb6db} }
+  .rcf-sp{display:flex;gap:8px;margin-top:8px}
+  .rcf-spill{flex:1;background:rgba(255,255,255,.6);border-radius:8px;padding:6px 4px;text-align:center}
+  :root[data-theme="dark"] .rcf-spill{background:rgba(255,255,255,.08)}
+  @media (prefers-color-scheme:dark){ :root:not([data-theme="light"]) .rcf-spill{background:rgba(255,255,255,.08)} }
+  .rcf-spill b{font-size:13px;font-weight:800;color:var(--accent-deep);font-variant-numeric:tabular-nums}
+  .rcf-stg.usd .rcf-spill b{color:#1f5480}
+  :root[data-theme="dark"] .rcf-stg.usd .rcf-spill b{color:#7fb6db}
+  @media (prefers-color-scheme:dark){ :root:not([data-theme="light"]) .rcf-stg.usd .rcf-spill b{color:#7fb6db} }
+  .rcf-spill span{display:block;font-size:9px;color:var(--ink-faint);margin-top:1px}
+  .rcf-sum{background:var(--accent);color:#fff;border-radius:12px;padding:13px;text-align:center;margin-top:3px}
+  .rcf-sum.no{background:var(--danger)}
+  .rcf-sum .k{font-size:11px;opacity:.92;text-transform:uppercase;letter-spacing:.04em;font-weight:800}
+  .rcf-sum .v{font-size:25px;font-weight:800;font-variant-numeric:tabular-nums;line-height:1.05;margin-top:3px}
+  .rcf-sum .s{font-size:11.5px;opacity:.95;margin-top:3px;font-weight:700;line-height:1.35}
+  #rcfRes{position:relative;overflow:hidden}
+  #rcfRes::before{content:"";position:absolute;inset:0;background-image:var(--wm);background-repeat:no-repeat;background-position:center;background-size:74%;opacity:.06;pointer-events:none;z-index:0}
+  @media (prefers-color-scheme:dark){ :root:not([data-theme="light"]) #rcfRes::before{filter:invert(1) brightness(1.6);opacity:.10} }
+  :root[data-theme="dark"] #rcfRes::before{filter:invert(1) brightness(1.6);opacity:.10}
+  #rcfRes > *{position:relative;z-index:1}
+  .hrrow .v.usdc{color:#2b6ca3}
+  :root[data-theme="dark"] .hrrow .v.usdc{color:#7fb6db}
 
   /* ---------- VIEWS ---------- */
   main{flex:1;overflow-y:auto;padding:18px 18px calc(96px + env(safe-area-inset-bottom))}
@@ -1445,7 +1494,11 @@
         <div class="tt"><div class="t">¿Engordar o no engordar? <span class="hbadge">Nuevo</span></div><div class="d">Terminación a corral · rentabilidad en USD</div></div>
         <span class="chev">›</span>
       </button>
-      <div class="tool soon"><div class="ic">📈</div><div class="tt"><div class="t">Conversión / GMD <span class="hbadge soon">Próximo</span></div><div class="d">Eficiencia de conversión</div></div><span class="chev">›</span></div>
+      <button class="tool" id="toolRecriaConf">
+        <div class="ic">🐄</div>
+        <div class="tt"><div class="t">Viabilidad Recría Confinada <span class="hbadge">Nuevo</span></div><div class="d">Recría a corral (Gs) + engorde opcional (US$)</div></div>
+        <span class="chev">›</span>
+      </button>
     </div>
   </div>
 
@@ -1553,6 +1606,83 @@
 
       <div id="egRes" class="hres"></div>
       <div class="hint" style="margin-top:12px">Consumo = % del peso <b>promedio</b> (entrada+salida)/2. Rentabilidad = venta de carcasa − (compra del animal + costo de engorde).</div>
+    </div>
+  </div>
+
+  <!-- HERRAMIENTA: Viabilidad Recría Confinada -->
+  <div id="recriaConfPage" class="ventas-page hidden">
+    <div class="vp-top"><button class="vp-back" id="rcfBack">‹ HUB</button><b>🐄 Recría Confinada</b></div>
+    <div class="hub-body">
+      <img class="hub-logo" alt="Probal">
+      <div class="hub-h">Viabilidad Recría Confinada</div>
+      <div class="hub-s">Simulá la recría a corral en Gs. Podés agregar una etapa de engorde en US$.</div>
+
+      <div class="rcf-etapa"><span class="n">1</span><span class="t">Recría Confinada</span><span class="rcf-chip gs">Guaraníes</span></div>
+      <div class="hsec">Animal</div>
+      <div class="two">
+        <div class="hf"><label>Peso entrada</label><div class="hinp"><input id="rc1Peso" inputmode="numeric" value="200"><span class="hu">kg</span></div></div>
+        <div class="hf"><label>Precio compra</label><div class="hinp"><input id="rc1Compra" inputmode="numeric" value="14.000"><span class="hu">Gs/kg</span></div></div>
+      </div>
+      <div class="two">
+        <div class="hf"><label>Ganancia PV/día</label><div class="hinp"><input id="rc1Gan" inputmode="decimal" value="1,000"><span class="hu">kg</span></div></div>
+        <div class="hf"><label>Días</label><div class="hinp"><input id="rc1Dias" inputmode="numeric" value="100"><span class="hu">días</span></div></div>
+      </div>
+      <div class="hf"><label>Peso salida (calculado)</label><div class="hinp ro"><input id="rc1Salida" readonly><span class="hu">kg</span></div></div>
+      <div class="hsec">Dieta y operación</div>
+      <div class="two">
+        <div class="hf"><label>Costo dieta</label><div class="hinp"><input id="rc1Dieta" inputmode="numeric" value="1.200"><span class="hu">Gs/kg</span></div></div>
+        <div class="hf"><label>Consumo prom.</label><div class="hinp"><input id="rc1Cons" inputmode="decimal" value="2,5"><span class="hu">% PV</span></div></div>
+      </div>
+      <div class="hf"><label>Costo operativo/día</label><div class="hinp"><input id="rc1Oper" inputmode="numeric" value="3.000"><span class="hu">Gs/día</span></div></div>
+      <div class="hsec">Costos adicionales <span class="opt">· opcional</span></div>
+      <div class="two">
+        <div class="hf"><label>Sanidad</label><div class="hinp"><input id="rc1Sani" inputmode="numeric" value="0"><span class="hu">Gs/cab</span></div></div>
+        <div class="hf"><label>Flete</label><div class="hinp"><input id="rc1Flete" inputmode="numeric" value="0"><span class="hu">Gs/cab</span></div></div>
+      </div>
+      <div class="hf"><label>Mortandad</label><div class="hinp"><input id="rc1Mort" inputmode="decimal" value="0"><span class="hu">%</span></div></div>
+      <div class="hsec">Faena y venta</div>
+      <div class="two">
+        <div class="hf"><label>Rendimiento carcasa</label><div class="hinp"><input id="rc1Rend" inputmode="decimal" value="52"><span class="hu">%</span></div></div>
+        <div class="hf"><label>Precio venta</label><div class="hinp"><input id="rc1Venta" inputmode="numeric" value="30.000"><span class="hu">Gs/kg c.</span></div></div>
+      </div>
+
+      <button class="rcf-add" id="rc2Add">＋ Agregar etapa de engorde (US$)</button>
+
+      <div id="rc2Block" class="hidden">
+        <div class="rcf-etapa usd"><span class="n">2</span><span class="t">Engorde</span><span class="rcf-chip usd">Dólares</span><button class="rcf-del" id="rc2Del">quitar ✕</button></div>
+        <div class="hsec">Animal</div>
+        <div class="hf"><label>Peso entrada <small style="color:var(--ink-faint)">· de Etapa 1</small></label><div class="hinp ro"><input id="rc2Peso" readonly><span class="hu">kg</span></div></div>
+        <div class="hf"><label>Precio compra <small style="color:var(--ink-faint)">· valor de entrada a engorde</small></label><div class="hinp"><span class="hu" style="margin:0 4px 0 0">US$</span><input id="rc2Compra" inputmode="decimal" value="2,20"><span class="hu">/kg</span></div></div>
+        <div class="two">
+          <div class="hf"><label>Ganancia PV/día</label><div class="hinp"><input id="rc2Gan" inputmode="decimal" value="1,200"><span class="hu">kg</span></div></div>
+          <div class="hf"><label>Días</label><div class="hinp"><input id="rc2Dias" inputmode="numeric" value="90"><span class="hu">días</span></div></div>
+        </div>
+        <div class="hf"><label>Peso salida (calculado)</label><div class="hinp ro"><input id="rc2Salida" readonly><span class="hu">kg</span></div></div>
+        <div class="hsec">Dieta y operación</div>
+        <div class="two">
+          <div class="hf"><label>Costo dieta</label><div class="hinp"><span class="hu" style="margin:0 4px 0 0">US$</span><input id="rc2Dieta" inputmode="decimal" value="0,28"><span class="hu">/kg</span></div></div>
+          <div class="hf"><label>Consumo prom.</label><div class="hinp"><input id="rc2Cons" inputmode="decimal" value="2,3"><span class="hu">% PV</span></div></div>
+        </div>
+        <div class="hf"><label>Costo operativo/día</label><div class="hinp"><span class="hu" style="margin:0 4px 0 0">US$</span><input id="rc2Oper" inputmode="decimal" value="0,55"><span class="hu">/día</span></div></div>
+        <div class="hsec">Costos adicionales <span class="opt">· opcional</span></div>
+        <div class="two">
+          <div class="hf"><label>Sanidad</label><div class="hinp"><span class="hu" style="margin:0 4px 0 0">US$</span><input id="rc2Sani" inputmode="decimal" value="0"><span class="hu">/cab</span></div></div>
+          <div class="hf"><label>Flete</label><div class="hinp"><span class="hu" style="margin:0 4px 0 0">US$</span><input id="rc2Flete" inputmode="decimal" value="0"><span class="hu">/cab</span></div></div>
+        </div>
+        <div class="hf"><label>Mortandad</label><div class="hinp"><input id="rc2Mort" inputmode="decimal" value="0"><span class="hu">%</span></div></div>
+        <div class="hsec">Faena y venta</div>
+        <div class="two">
+          <div class="hf"><label>Rendimiento carcasa</label><div class="hinp"><input id="rc2Rend" inputmode="decimal" value="54"><span class="hu">%</span></div></div>
+          <div class="hf"><label>Precio venta</label><div class="hinp"><span class="hu" style="margin:0 4px 0 0">US$</span><input id="rc2Venta" inputmode="decimal" value="4,60"><span class="hu">/kg c.</span></div></div>
+        </div>
+        <div class="rcf-cot">
+          <div class="cl">💱 Cotización dólar (para unir el sistema)</div>
+          <div class="hinp"><span class="hu" style="margin:0 4px 0 0">Gs</span><input id="rcCotiz" inputmode="numeric" value="7.300"><span class="hu">/ US$</span></div>
+        </div>
+      </div>
+
+      <div id="rcfRes" class="hres"></div>
+      <div class="hint" style="margin-top:12px" id="rcfNote"></div>
     </div>
   </div>
 
@@ -4360,6 +4490,64 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
   if($("#toolEngordar")) $("#toolEngordar").addEventListener("click", openEngordar);
   if($("#engBack")) $("#engBack").addEventListener("click", function(){ $("#engordarPage").classList.add("hidden"); openHub(); });
   ["egPeso","egCompra","egGan","egDias","egDieta","egCons","egOper","egRend","egVenta"].forEach(function(id){ var el=$("#"+id); if(el) el.addEventListener("input", computeEngordar); });
+
+  // ----- Viabilidad Recría Confinada (Gs + engorde opcional US$) -----
+  var rc2On=false, _rc1Salida=0;
+  function sgn(n){ return n>=0?'+':'−'; }
+  function rcEtapa(p){
+    var peso = (p==="rc2") ? _rc1Salida : numPY($("#"+p+"Peso").value);
+    var compra=numPY($("#"+p+"Compra").value), gan=numPY($("#"+p+"Gan").value), dias=numPY($("#"+p+"Dias").value);
+    var dieta=numPY($("#"+p+"Dieta").value), cons=numPY($("#"+p+"Cons").value), oper=numPY($("#"+p+"Oper").value);
+    var sani=numPY($("#"+p+"Sani").value), flete=numPY($("#"+p+"Flete").value), mort=numPY($("#"+p+"Mort").value);
+    var rend=numPY($("#"+p+"Rend").value), venta=numPY($("#"+p+"Venta").value);
+    var salida=peso+gan*dias, prom=(peso+salida)/2;
+    var consTot=cons/100*prom*dias, costDieta=consTot*dieta, costOper=oper*dias, adic=sani+flete;
+    var costEng=costDieta+costOper+adic, costAnimal=peso*compra, inv=costAnimal+costEng;
+    var carc=salida*rend/100, ingreso=carc*venta*(1-mort/100);
+    var rent=ingreso-inv, meses=dias>0?dias/30:0;
+    var roiEng=costEng>0?rent/costEng*100:0, roiInv=inv>0?rent/inv*100:0, roiInvMes=meses>0?roiInv/meses:0;
+    return {peso:peso,salida:salida,dias:dias,consTot:consTot,costEng:costEng,costAnimal:costAnimal,inv:inv,carc:carc,ingreso:ingreso,rent:rent,meses:meses,roiEng:roiEng,roiInv:roiInv,roiInvMes:roiInvMes};
+  }
+  function computeRecriaConf(){
+    var e1=rcEtapa("rc1"); _rc1Salida=e1.salida; $("#rc1Salida").value=fmtGs(e1.salida);
+    var html="", note="";
+    if(!rc2On){
+      var si=e1.rent>=0;
+      html+='<div class="verdict '+(si?'si':'no')+'"><div class="k">Rentabilidad por animal</div><div class="v">'+sgn(e1.rent)+'Gs '+fmtGs(Math.abs(e1.rent))+'</div><div class="s">'+(si?'✅ SÍ conviene':'❌ NO conviene')+'</div></div>';
+      html+='<div class="hrrow"><span class="k">Peso salida · ganancia</span><span class="v">'+fmtGs(e1.salida)+' kg · +'+fmtGs(e1.salida-e1.peso)+' kg</span></div>';
+      html+='<div class="hrrow"><span class="k">Consumo total dieta</span><span class="v">'+dec1(e1.consTot)+' kg</span></div>';
+      html+='<div class="hrrow"><span class="k">Costo total engorde</span><span class="v good">Gs '+fmtGs(e1.costEng)+'</span></div>';
+      html+='<div class="hrrow"><span class="k">Costo compra animal</span><span class="v good">Gs '+fmtGs(e1.costAnimal)+'</span></div>';
+      html+='<div class="hrrow"><span class="k">Inversión total</span><span class="v good">Gs '+fmtGs(e1.inv)+'</span></div>';
+      html+='<div class="hrrow"><span class="k">Carcasa · Ingreso venta</span><span class="v good">'+fmtGs(Math.round(e1.carc))+' kg · Gs '+fmtGs(e1.ingreso)+'</span></div>';
+      html+='<div class="dboxes"><div class="dbox big2"><span class="dk">Rentab. sobre engorde</span><b>'+sgn(e1.roiEng)+dec1(Math.abs(e1.roiEng))+'%</b><span class="ds">Gs '+fmtGs(e1.rent)+' sobre Gs '+fmtGs(e1.costEng)+'</span></div><div class="dbox"><span class="dk">Rentab. inversión total</span><b>'+sgn(e1.roiInv)+dec1(Math.abs(e1.roiInv))+'%</b><span class="ds">sobre Gs '+fmtGs(e1.inv)+'</span></div></div>';
+      html+='<div class="epills"><div class="epill"><b>'+sgn(e1.roiInvMes)+dec1(Math.abs(e1.roiInvMes))+'%</b><span>Mensual s/inv.</span></div><div class="epill"><b>'+sgn(e1.rent)+fmtGs(Math.abs(Math.round(e1.rent)))+'</b><span>Gs/animal</span></div><div class="epill"><b>'+fmtGs(e1.dias)+'</b><span>días</span></div></div>';
+      note='Consumo = % del peso <b>promedio</b> (entrada+salida)/2. Rentabilidad = venta de carcasa − (compra + engorde). Agregá una etapa de engorde para el sistema completo con conversión a US$.';
+    } else {
+      var e2=rcEtapa("rc2"); $("#rc2Peso").value=fmtGs(e1.salida); $("#rc2Salida").value=fmtGs(e2.salida);
+      var cotiz=numPY($("#rcCotiz").value);
+      var rent2Gs=e2.rent*cotiz, sysRent=e1.rent+rent2Gs, sysUSD=cotiz>0?sysRent/cotiz:0;
+      var realInv=e1.costAnimal+e1.costEng+e2.costEng*cotiz;
+      var sysRoi=realInv>0?sysRent/realInv*100:0;
+      var totDias=e1.dias+e2.dias, totMeses=totDias>0?totDias/30:0, sysRoiMes=totMeses>0?sysRoi/totMeses:0;
+      var si=sysRent>=0;
+      html+='<div class="rcf-rt">Resumen del sistema</div>';
+      html+='<div class="rcf-stg"><div class="rcf-sh"><span class="rcf-sn">1</span><div class="rcf-st">Etapa 1 · Recría <small>Gs</small></div><b class="rcf-sv gs">'+sgn(e1.rent)+'Gs '+fmtGs(Math.abs(e1.rent))+'</b></div><div class="rcf-sp"><div class="rcf-spill"><b>'+sgn(e1.roiInv)+dec1(Math.abs(e1.roiInv))+'%</b><span>rentab. total</span></div><div class="rcf-spill"><b>'+sgn(e1.roiInvMes)+dec1(Math.abs(e1.roiInvMes))+'%</b><span>mensual</span></div><div class="rcf-spill"><b>'+fmtGs(e1.dias)+'</b><span>días</span></div></div></div>';
+      html+='<div class="rcf-stg usd"><div class="rcf-sh"><span class="rcf-sn usd">2</span><div class="rcf-st">Etapa 2 · Engorde <small>US$</small></div><b class="rcf-sv usd">'+sgn(e2.rent)+'US$ '+fmtUSD(Math.abs(e2.rent))+'</b></div><div class="rcf-sp"><div class="rcf-spill"><b>'+sgn(e2.roiInv)+dec1(Math.abs(e2.roiInv))+'%</b><span>rentab. total</span></div><div class="rcf-spill"><b>'+sgn(e2.roiInvMes)+dec1(Math.abs(e2.roiInvMes))+'%</b><span>mensual</span></div><div class="rcf-spill"><b>'+fmtGs(e2.dias)+'</b><span>días</span></div></div></div>';
+      html+='<div class="hrrow"><span class="k">Peso final · ganancia total</span><span class="v">'+fmtGs(e2.salida)+' kg · +'+fmtGs(e2.salida-e1.peso)+' kg</span></div>';
+      html+='<div class="hrrow"><span class="k">Días totales</span><span class="v">'+fmtGs(totDias)+' días · '+dec1(totMeses)+' meses</span></div>';
+      html+='<div class="hrrow"><span class="k">Cotización usada</span><span class="v usdc">Gs '+fmtGs(cotiz)+' / US$</span></div>';
+      html+='<div class="rcf-sum'+(si?'':' no')+'"><div class="k">Suma de los dos sistemas</div><div class="v">'+sgn(sysRent)+'Gs '+fmtGs(Math.abs(sysRent))+'</div><div class="s">'+(si?'✅ SÍ conviene':'❌ NO conviene')+' · US$ '+fmtUSD(sysUSD)+' · '+sgn(sysRoi)+dec1(Math.abs(sysRoi))+'% total · '+sgn(sysRoiMes)+dec1(Math.abs(sysRoiMes))+'%/mes</div></div>';
+      note='<b>Sistema = suma de las dos etapas</b> (Etapa 2 convertida con la cotización). El % total y mensual se calculan sobre la inversión real (compra + engorde de ambas etapas) y los días totales.';
+    }
+    $("#rcfRes").innerHTML=html; $("#rcfNote").innerHTML=note;
+  }
+  function openRecriaConf(){ $("#hubPage").classList.add("hidden"); $$(".hub-logo").forEach(function(i){ if(!i.src) i.src=PROBAL_LOGO; }); var r=$("#rcfRes"); if(r) r.style.setProperty("--wm", 'url("'+PROBAL_LOGO+'")'); computeRecriaConf(); $("#recriaConfPage").classList.remove("hidden"); }
+  if($("#toolRecriaConf")) $("#toolRecriaConf").addEventListener("click", openRecriaConf);
+  if($("#rcfBack")) $("#rcfBack").addEventListener("click", function(){ $("#recriaConfPage").classList.add("hidden"); openHub(); });
+  if($("#rc2Add")) $("#rc2Add").addEventListener("click", function(){ rc2On=true; $("#rc2Block").classList.remove("hidden"); $("#rc2Add").classList.add("hidden"); computeRecriaConf(); });
+  if($("#rc2Del")) $("#rc2Del").addEventListener("click", function(){ rc2On=false; $("#rc2Block").classList.add("hidden"); $("#rc2Add").classList.remove("hidden"); computeRecriaConf(); });
+  ["rc1Peso","rc1Compra","rc1Gan","rc1Dias","rc1Dieta","rc1Cons","rc1Oper","rc1Sani","rc1Flete","rc1Mort","rc1Rend","rc1Venta","rc2Compra","rc2Gan","rc2Dias","rc2Dieta","rc2Cons","rc2Oper","rc2Sani","rc2Flete","rc2Mort","rc2Rend","rc2Venta","rcCotiz"].forEach(function(id){ var el=$("#"+id); if(el) el.addEventListener("input", computeRecriaConf); });
 
   function renderReportCanvas(data, imgs){
     var PW=794, PH=1123, SCALE=2;
