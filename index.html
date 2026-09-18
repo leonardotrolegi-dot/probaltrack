@@ -3786,12 +3786,30 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
     Object.keys(g).forEach(function(k){ var v=g[k]; if(normSit(v.situacao)==="Perdido"){ var m=(v.perdida&&v.perdida.motivo)?v.perdida.motivo:"Sin motivo indicado"; map[m]=(map[m]||0)+1; total++; } });
     return {map:map, total:total};
   }
+  // detalle de un motivo: propuestas rechazadas + prospectos perdidos con ese motivo
+  function rechazoItems(visits, motivo){
+    var out=[];
+    visits.forEach(function(x){ var p=x.presupuesto;
+      if(x.motivo==="Prospecto" && p && p.enviado && p.resultado==="Recusado" && p.motivoRechazo===motivo){ out.push({v:x, kind:"Propuesta rechazada"}); }
+    });
+    var g=latestByName(visits,"Prospecto");
+    Object.keys(g).forEach(function(k){ var v=g[k]; if(normSit(v.situacao)==="Perdido"){ var m=(v.perdida&&v.perdida.motivo)?v.perdida.motivo:"Sin motivo indicado"; if(m===motivo) out.push({v:v, kind:"Prospecto perdido"}); } });
+    out.sort(function(a,b){ return (b.v.data||"")<(a.v.data||"")?-1:((b.v.data||"")>(a.v.data||"")?1:0); });
+    return out;
+  }
+  function openRechazoList(visits, motivo, back){
+    var items=rechazoItems(visits, motivo);
+    var rows=items.map(function(it){ return {main:it.v.cliente, sub:it.kind, right:fmtDate(it.v.data)}; });
+    openMList("Motivo: "+motivo+" ("+items.length+")", rows, function(i){
+      openModal(items[i].v, function(){ openRechazoList(visits, motivo, back); });
+    }, back);
+  }
   function drawRechazos(visits, el){
     if(!el) return;
     var r=rechazoMap(visits);
     if(!r.total){ el.innerHTML='<div class="empty"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M21.21 15.89A10 10 0 1 1 8 2.83"/><path d="M22 12A10 10 0 0 0 12 2v10z"/></svg><div>Sin rechazos ni pérdidas en el período.</div></div>'; return; }
     var data=Object.keys(r.map).map(function(k){ return {name:k, count:r.map[k]}; }).sort(function(a,b){ return b.count-a.count; });
-    drawDonut(data, null, el, { label:"motivos", centerLabel:"", hint:"Rechazos de propuestas + prospectos perdidos", onLegClick:function(){} });
+    drawDonut(data, null, el, { label:"motivos", centerLabel:"", hint:"Rechazos de propuestas + prospectos perdidos", onLegClick:function(i,d){ openRechazoList(visits, d.name); } });
   }
   function renderRechazos(){ drawRechazos(allVisitsMgr(), $("#mChartRech")); }
   // Nível 2: pizza de um vendedor por cliente
