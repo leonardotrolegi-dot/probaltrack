@@ -399,6 +399,11 @@
   @media (prefers-color-scheme:dark){ :root:not([data-theme="light"]) #rcfRes::before{filter:invert(1) brightness(1.6);opacity:.10} }
   :root[data-theme="dark"] #rcfRes::before{filter:invert(1) brightness(1.6);opacity:.10}
   #rcfRes > *{position:relative;z-index:1}
+  #csRes{position:relative;overflow:hidden}
+  #csRes::before{content:"";position:absolute;inset:0;background-image:var(--wm);background-repeat:no-repeat;background-position:center;background-size:74%;opacity:.06;pointer-events:none;z-index:0}
+  @media (prefers-color-scheme:dark){ :root:not([data-theme="light"]) #csRes::before{filter:invert(1) brightness(1.6);opacity:.10} }
+  :root[data-theme="dark"] #csRes::before{filter:invert(1) brightness(1.6);opacity:.10}
+  #csRes > *{position:relative;z-index:1}
   .hrrow .v.usdc{color:#2b6ca3}
   :root[data-theme="dark"] .hrrow .v.usdc{color:#7fb6db}
 
@@ -1517,6 +1522,11 @@
         <div class="tt"><div class="t">Viabilidad Recría Confinada <span class="hbadge">Nuevo</span></div><div class="d">Recría a corral (Gs) + engorde opcional (US$)</div></div>
         <span class="chev">›</span>
       </button>
+      <button class="tool" id="toolConsumo">
+        <div class="ic">🌾</div>
+        <div class="tt"><div class="t">Calculadora de consumo <span class="hbadge">Nuevo</span></div><div class="d">Consumo del lote y bolsas de 25 kg</div></div>
+        <span class="chev">›</span>
+      </button>
     </div>
   </div>
 
@@ -1701,6 +1711,41 @@
 
       <div id="rcfRes" class="hres"></div>
       <div class="hint" style="margin-top:12px" id="rcfNote"></div>
+    </div>
+  </div>
+
+  <!-- HERRAMIENTA: Calculadora de consumo -->
+  <div id="consumoPage" class="ventas-page hidden">
+    <div class="vp-top"><button class="vp-back" id="csBack">‹ HUB</button><b>🌾 Calculadora de consumo</b></div>
+    <div class="hub-body">
+      <img class="hub-logo" alt="Probal">
+      <div class="hub-h">Calculadora de consumo</div>
+      <div class="hub-s">Cuánto suplemento come el lote y cuántas bolsas necesitás.</div>
+
+      <div class="hsec">Lote</div>
+      <div class="two">
+        <div class="hf"><label>Cantidad de animales</label><div class="hinp"><input id="csAnim" inputmode="numeric" value="200"><span class="hu">cab</span></div></div>
+        <div class="hf"><label>Peso medio</label><div class="hinp"><input id="csPeso" inputmode="numeric" value="320"><span class="hu">kg</span></div></div>
+      </div>
+      <div class="hf"><label>Consumo indicado</label><div class="hinp"><input id="csPct" inputmode="decimal" value="1,0"><span class="hu">% PV</span></div></div>
+
+      <div class="hsec">Período <span class="opt">· opcional (para las bolsas)</span></div>
+      <div class="hf"><label>Días de suplementación</label><div class="hinp"><input id="csDias" inputmode="numeric" value="30"><span class="hu">días</span></div></div>
+
+      <div id="csRes" class="hres">
+        <div class="dual">
+          <div class="big green"><div class="k">Por cabeza / día</div><div class="v" id="csHeroCab">—</div><div class="s">kg/día</div></div>
+          <div class="big orange"><div class="k">Bolsas de 25 kg</div><div class="v" id="csHeroBolsas">—</div><div class="s" id="csHeroBolsasLbl">—</div></div>
+        </div>
+        <div class="hrrow"><span class="k">Consumo por cabeza / día</span><span class="v good" id="csRowCab">—</span></div>
+        <div class="hrrow"><span class="k">Consumo total del lote / día</span><span class="v good" id="csRowLote">—</span></div>
+        <div id="csPerBlock">
+          <div class="hrrow"><span class="k">Consumo total del período <small id="csPerDias" style="color:var(--ink-faint)"></small></span><span class="v good" id="csRowPer">—</span></div>
+          <div class="hrrow"><span class="k">Bolsas para el período <small style="color:var(--ink-faint)">· 25 kg c/u</small></span><span class="v good" id="csRowBolsasPer">—</span></div>
+        </div>
+        <div class="hrrow"><span class="k">Bolsas por día <small style="color:var(--ink-faint)">· 25 kg c/u</small></span><span class="v good" id="csRowBolsasDia">—</span></div>
+      </div>
+      <div class="hint" style="margin-top:12px">Por cabeza/día = peso medio × % PV. Total lote/día = × animales. Bolsas = consumo ÷ 25 kg (las del período se redondean hacia arriba). Sin días, muestra solo lo diario.</div>
     </div>
   </div>
 
@@ -4681,6 +4726,35 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
   if($("#rc2Add")) $("#rc2Add").addEventListener("click", function(){ rc2On=true; $("#rc2Block").classList.remove("hidden"); $("#rc2Add").classList.add("hidden"); computeRecriaConf(); });
   if($("#rc2Del")) $("#rc2Del").addEventListener("click", function(){ rc2On=false; $("#rc2Block").classList.add("hidden"); $("#rc2Add").classList.remove("hidden"); computeRecriaConf(); });
   ["rc1Peso","rc1Compra","rc1Gan","rc1Dias","rc1Dieta","rc1Cons","rc1Oper","rc1Sani","rc1Flete","rc1Mort","rc1Rend","rc1Venta","rc2Compra","rc2Gan","rc2Dias","rc2Dieta","rc2Cons","rc2Oper","rc2Sani","rc2Flete","rc2Mort","rc2Rend","rc2Venta","rcCotiz"].forEach(function(id){ var el=$("#"+id); if(el) el.addEventListener("input", computeRecriaConf); });
+
+  // ----- Calculadora de consumo -----
+  function computeConsumo(){
+    var n=numPY($("#csAnim").value), peso=numPY($("#csPeso").value), pct=numPY($("#csPct").value), dias=numPY($("#csDias").value);
+    var cab=peso*pct/100;          // kg / cabeza / día
+    var loteDia=cab*n;             // kg / día del lote
+    var bolsasDia=loteDia/25;
+    $("#csHeroCab").textContent=dec1(cab);
+    $("#csRowCab").textContent=dec1(cab)+" kg";
+    $("#csRowLote").textContent=fmtGs(Math.round(loteDia))+" kg";
+    $("#csRowBolsasDia").textContent=dec1(bolsasDia)+" bolsas";
+    if(dias>0){
+      var totalPer=loteDia*dias, bolsasPer=Math.ceil(totalPer/25);
+      $("#csPerBlock").classList.remove("hidden");
+      $("#csPerDias").textContent="· "+fmtGs(dias)+" días";
+      $("#csRowPer").textContent=fmtGs(Math.round(totalPer))+" kg";
+      $("#csRowBolsasPer").textContent=fmtGs(bolsasPer)+" bolsas";
+      $("#csHeroBolsas").textContent=fmtGs(bolsasPer);
+      $("#csHeroBolsasLbl").textContent="para "+fmtGs(dias)+" días";
+    } else {
+      $("#csPerBlock").classList.add("hidden");
+      $("#csHeroBolsas").textContent=dec1(bolsasDia);
+      $("#csHeroBolsasLbl").textContent="por día";
+    }
+  }
+  function openConsumo(){ $("#hubPage").classList.add("hidden"); $$(".hub-logo").forEach(function(i){ if(!i.src) i.src=PROBAL_LOGO; }); var r=$("#csRes"); if(r) r.style.setProperty("--wm", 'url("'+PROBAL_LOGO+'")'); computeConsumo(); $("#consumoPage").classList.remove("hidden"); }
+  if($("#toolConsumo")) $("#toolConsumo").addEventListener("click", openConsumo);
+  if($("#csBack")) $("#csBack").addEventListener("click", function(){ $("#consumoPage").classList.add("hidden"); openHub(); });
+  ["csAnim","csPeso","csPct","csDias"].forEach(function(id){ var el=$("#"+id); if(el) el.addEventListener("input", computeConsumo); });
 
   function renderReportCanvas(data, imgs){
     var PW=794, PH=1123, SCALE=2;
