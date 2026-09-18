@@ -718,10 +718,10 @@
   }
   .tab{
     flex:1;min-width:0;background:none;border:none;cursor:pointer;color:var(--ink-faint);
-    display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 2px;border-radius:12px;
-    font-size:10.5px;font-weight:600;transition:color .15s;white-space:nowrap;
+    display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 1px;border-radius:12px;
+    font-size:10px;font-weight:600;transition:color .15s;white-space:nowrap;overflow:hidden;
   }
-  .tab svg{width:22px;height:22px}
+  .tab svg{width:21px;height:21px}
   .tab.on{color:var(--accent)}
   .tab.fab{position:relative}
   .tab.fab .fabc{
@@ -730,6 +730,23 @@
   }
   .tab.fab .fabc svg{width:25px;height:25px}
   .tab.fab.on{color:var(--accent)}
+  /* Novedades / avisos */
+  .nv-dot{position:absolute;top:-3px;right:-4px;min-width:15px;height:15px;padding:0 3px;border-radius:9px;background:var(--danger);color:#fff;font-size:9px;font-weight:800;line-height:15px;text-align:center;display:none}
+  .nv-dot.on{display:block}
+  .nv-list{display:flex;flex-direction:column;gap:8px}
+  .nv-day{font-size:10.5px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:var(--ink-faint);margin:12px 2px 2px}
+  .nv-row{display:flex;gap:11px;align-items:flex-start;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:11px 12px;box-shadow:var(--shadow);cursor:pointer;text-align:left;width:100%}
+  .nv-av{width:34px;height:34px;border-radius:10px;flex:none;display:grid;place-items:center;color:#fff;font-size:12px;font-weight:800}
+  .nv-body{flex:1;min-width:0}
+  .nv-txt{font-size:13px;color:var(--ink);line-height:1.35}.nv-txt b{font-weight:800}
+  .nv-meta{display:flex;align-items:center;gap:7px;margin-top:3px}
+  .nv-time{font-size:11px;color:var(--ink-faint)}
+  .nv-kind{font-size:9.5px;font-weight:800;letter-spacing:.03em;text-transform:uppercase;padding:2px 6px;border-radius:16px}
+  .nv-kind.nuevo{background:color-mix(in srgb,var(--prospecto) 16%,transparent);color:var(--prospecto)}
+  .nv-kind.cliente{background:var(--accent-soft);color:var(--accent)}
+  .nv-kind.prospecto{background:color-mix(in srgb,var(--prospecto) 14%,transparent);color:var(--prospecto)}
+  .nv-kind.etapa{background:var(--surface-2);color:var(--ink-soft);border:1px solid var(--line)}
+  .nv-kind.presup{background:color-mix(in srgb,#2b6ca3 16%,transparent);color:#2b6ca3}
 
   /* select styling */
   .field select{
@@ -1741,6 +1758,15 @@
         <div id="mTeam"></div>
       </section>
 
+      <!-- NOVEDADES / NOTIFICACIONES -->
+      <section class="view" id="m-novedades">
+        <div class="view-head">
+          <h2>Novedades del equipo</h2>
+          <p>Últimas actualizaciones de cada vendedor.</p>
+        </div>
+        <div id="mNovList"></div>
+      </section>
+
       <!-- RUTAS SEMANALES (global) -->
       <section class="view" id="m-rutas">
         <div class="view-head">
@@ -1868,6 +1894,10 @@
       <button class="tab on" data-mview="equipa">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
         Equipo
+      </button>
+      <button class="tab" data-mview="novedades">
+        <span class="tab-ic" style="position:relative;display:inline-flex"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg><span class="nv-dot" id="mNovDot"></span></span>
+        Avisos
       </button>
       <button class="tab" data-mview="clientes">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.21 15.89A10 10 0 1 1 8 2.83"/><path d="M22 12A10 10 0 0 0 12 2v10z"/></svg>
@@ -2228,7 +2258,7 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
     dbh.collection("catalog").onSnapshot(function(snap){
       var cli=[], pro=[], kg={};
       snap.docs.forEach(function(d){ var v=d.data()||{};
-        if(v.tipo==="Prospecto"){ pro.push({nome:v.nome, loc:(v.estancia||"")+(v.ciudad?(v.estancia?", ":"")+v.ciudad:""), vendedor:v.vendedor||""}); }
+        if(v.tipo==="Prospecto"){ pro.push({nome:v.nome, loc:(v.estancia||"")+(v.ciudad?(v.estancia?", ":"")+v.ciudad:""), vendedor:v.vendedor||"", createdBy:v.createdBy||"", createdTs:v.createdTs||0}); }
         else { cli.push({nome:v.nome, loc:"", kg:v.kg||0, vendedor:v.vendedor||"", meses:v.meses||null}); if(v.kg) kg[v.nome]=v.kg; }
       });
       cli.sort(function(a,b){ return (b.kg||0)-(a.kg||0); });
@@ -2664,6 +2694,8 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
     if(v==="carteira")   renderMgr80();
     if(v==="rutas")      renderRutasView();
     if(v==="miruta")   { gGotoCurrentWeek(); gRenderRuta(); }
+    if(v==="novedades")  renderNovedades();
+    if(v!=="novedades")  updateNovDot();
     shell.querySelector("main").scrollTop = 0;
   }
   $$(".tab",$("#navMgr")).forEach(function(t){
@@ -2676,6 +2708,8 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
     if(curMView==="carteira")   renderMgr80();
     if(curMView==="rutas")      renderRutasView();
     if(curMView==="miruta")     gRenderRuta();
+    if(curMView==="novedades")  renderNovedades();
+    updateNovDot();
   }
 
   // ---------- FILTER SETUP ----------
@@ -2745,10 +2779,10 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
     var dup = listForMotivo("Prospecto").some(function(x){ return norm(x.nome)===norm(idNome); })
            || CAT_CLI.some(function(x){ return norm(x.nome)===norm(cli); });
     if(dup){ toast("Ya existe un prospecto/cliente con ese nombre.", true); return; }
-    var body={tipo:"Prospecto", nome:idNome, cliente:cli, estancia:est, ciudad:ciu, vendedor:(current?current.id:"")};
+    var body={tipo:"Prospecto", nome:idNome, cliente:cli, estancia:est, ciudad:ciu, vendedor:(current?current.id:""), createdBy:(current?current.id:""), createdTs:Date.now()};
     // TESTE (sandbox): no persiste en la base compartida, queda solo en la sesión de prueba
     if(useDB && dbh && !(current&&current.demo)){ dbh.collection("catalog").doc("p_"+slug(idNome)).set(body).catch(noop); }
-    CAT_PRO.push({nome:idNome, loc:est+", "+ciu, vendedor:body.vendedor, demo:(current&&current.demo)||undefined});
+    CAT_PRO.push({nome:idNome, loc:est+", "+ciu, vendedor:body.vendedor, createdBy:body.createdBy, createdTs:body.createdTs, demo:(current&&current.demo)||undefined});
     acInput.value=idNome;
     $("#npForm").classList.add("hidden");
     $("#npCliente").value=""; $("#npEstancia").value=""; $("#npCiudad").value="";
@@ -3815,6 +3849,70 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
     drawDonut(data, null, el, { label:"motivos", centerLabel:"", hint:"Rechazos de propuestas + prospectos perdidos", onLegClick:function(i,d){ openRechazoList(visits, d.name); } });
   }
   function renderRechazos(){ drawRechazos(allVisitsMgr(), $("#mChartRech")); }
+
+  // ---------- NOVEDADES / AVISOS (feed del equipo) ----------
+  function dateToTs(d){ if(!d) return 0; var p=(""+d).split("-"); if(p.length<3) return 0; return new Date(+p[0],(+p[1]||1)-1,(+p[2]||1),12,0,0).getTime(); }
+  function tsToISO(ts){ try{ return new Date(ts).toISOString().slice(0,10); }catch(e){ return ""; } }
+  function agoText(ts){
+    if(!ts) return "";
+    var diff=Date.now()-ts; if(diff<0) diff=0;
+    var min=Math.floor(diff/60000);
+    if(min<1) return "recién";
+    if(min<60) return "hace "+min+" min";
+    var h=Math.floor(min/60); if(h<24) return "hace "+h+" h";
+    var d=Math.floor(h/24); if(d===1) return "ayer"; if(d<7) return "hace "+d+" días";
+    return fmtDate(tsToISO(ts));
+  }
+  function feedEvents(){
+    var evs=[], t=todayISO();
+    Object.keys(DB).forEach(function(sid){
+      var s=SELLER_BY[sid]; if(!s && sid==="gestion") s=GESTOR; if(!s || s.demo) return;
+      (DB[sid]||[]).forEach(function(v){
+        if(v.data && v.data>t && !v.stateChange) return; // ignora agendas futuras
+        var ts=v.ts || dateToTs(v.data);
+        var kind, txt;
+        if(v.stateChange){ kind="etapa"; txt="movió a <b>"+esc(v.cliente)+"</b> a <b>"+esc(v.situacao||"")+"</b>"; }
+        else if(v.motivo==="Cliente"){ kind="cliente"; txt="registró una visita a cliente <b>"+esc(v.cliente)+"</b>"; }
+        else { kind="prospecto"; txt="registró una visita a prospecto <b>"+esc(v.cliente)+"</b>"; }
+        if(v.presupuesto && v.presupuesto.enviado){ kind="presup"; var rr=v.presupuesto.resultado; txt += rr ? (" · presupuesto <b>"+esc(rr)+"</b>") : " · envió presupuesto"; }
+        evs.push({ts:ts, sname:s.name, color:s.color||"#3a3f52", kind:kind, txt:txt, rec:v, sid:sid});
+      });
+    });
+    CAT_PRO.forEach(function(p){
+      if(!p.createdBy || !p.createdTs) return;
+      var s=SELLER_BY[p.createdBy]; if(!s && p.createdBy==="gestion") s=GESTOR; if(!s || s.demo) return;
+      evs.push({ts:p.createdTs, sname:s.name, color:s.color||"#3a3f52", kind:"nuevo", txt:"creó un nuevo prospecto <b>"+esc(p.nome)+"</b>", rec:null, sid:p.createdBy});
+    });
+    evs.sort(function(a,b){ return (b.ts||0)-(a.ts||0); });
+    return evs;
+  }
+  var NOV_SEEN_KEY="pt_nov_seen";
+  function novLastSeen(){ try{ return +localStorage.getItem(NOV_SEEN_KEY)||0; }catch(e){ return 0; } }
+  function novMarkSeen(ts){ try{ localStorage.setItem(NOV_SEEN_KEY, ""+(ts||Date.now())); }catch(e){} }
+  function updateNovDot(){
+    var dot=$("#mNovDot"); if(!dot) return;
+    var seen=novLastSeen(), n=feedEvents().filter(function(e){ return (e.ts||0)>seen; }).length;
+    if(n>0){ dot.textContent=n>9?"9+":(""+n); dot.classList.add("on"); }
+    else dot.classList.remove("on");
+  }
+  function novInitials(nm){ return (nm||"?").trim().split(/\s+/).map(function(w){return w[0]||"";}).slice(0,2).join("").toUpperCase(); }
+  function renderNovedades(){
+    var wrap=$("#mNovList"); if(!wrap) return;
+    var evs=feedEvents();
+    if(!evs.length){ wrap.innerHTML='<div class="empty">Todavía no hay actividad del equipo.</div>'; novMarkSeen(Date.now()); updateNovDot(); return; }
+    var kindLabel={nuevo:"Nuevo prospecto", cliente:"Cliente", prospecto:"Prospecto", etapa:"Cambio de etapa", presup:"Presupuesto"};
+    var list=evs.slice(0,80);
+    wrap.innerHTML='<div class="nv-list">'+list.map(function(e,i){
+      return '<button class="nv-row" data-i="'+i+'">'+
+        '<span class="nv-av" style="background:'+e.color+'">'+esc(novInitials(e.sname))+'</span>'+
+        '<span class="nv-body"><span class="nv-txt"><b>'+esc(e.sname)+'</b> '+e.txt+'</span>'+
+        '<span class="nv-meta"><span class="nv-kind '+e.kind+'">'+(kindLabel[e.kind]||"")+'</span><span class="nv-time">'+esc(agoText(e.ts))+'</span></span></span>'+
+      '</button>';
+    }).join("")+'</div>';
+    $$(".nv-row",wrap).forEach(function(b){ b.addEventListener("click", function(){ var e=list[+b.dataset.i]; if(e && e.rec){ var rec={}; for(var k in e.rec) rec[k]=e.rec[k]; rec.sellerId=e.sid; openModal(rec, function(){ switchMView("novedades"); }); } }); });
+    novMarkSeen(evs[0].ts || Date.now());
+    updateNovDot();
+  }
   // Nível 2: pizza de um vendedor por cliente
   function renderMgrDrill(which, sellerId){
     var motivo = which==="clientes" ? "Cliente" : "Prospecto";
