@@ -4729,20 +4729,22 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
   ["rc1Peso","rc1Compra","rc1Gan","rc1Dias","rc1Dieta","rc1Cons","rc1Oper","rc1Sani","rc1Flete","rc1Mort","rc1Rend","rc1Venta","rc2Compra","rc2Gan","rc2Dias","rc2Dieta","rc2Cons","rc2Oper","rc2Sani","rc2Flete","rc2Mort","rc2Rend","rc2Venta","rcCotiz"].forEach(function(id){ var el=$("#"+id); if(el) el.addEventListener("input", computeRecriaConf); });
 
   // ----- Calculadora de consumo -----
+  function decT(n){ var s=(n||0).toFixed(3); s=s.replace(/0+$/,'').replace(/\.$/,''); return s.replace('.',','); } // hasta 3 decimales, sin ceros de más
+  function fmtKg(n){ n=n||0; var neg=n<0; n=Math.abs(n); var r=Math.round(n*10)/10, i=Math.floor(r), d=Math.round((r-i)*10); var s=(""+i).replace(/\B(?=(\d{3})+(?!\d))/g,'.'); if(d>0) s+=","+d; return (neg?'-':'')+s; } // miles con punto, 1 decimal si aplica
   function computeConsumo(){
     var n=numPY($("#csAnim").value), peso=numPY($("#csPeso").value), pct=numPY($("#csPct").value), dias=numPY($("#csDias").value);
     var cab=peso*pct/100;          // kg / cabeza / día
     var loteDia=cab*n;             // kg / día del lote
     var bolsasDia=loteDia/25;
-    $("#csHeroCab").textContent=dec1(cab);
-    $("#csRowCab").textContent=dec1(cab)+" kg";
-    $("#csRowLote").textContent=fmtGs(Math.round(loteDia))+" kg";
-    $("#csRowBolsasDia").textContent=dec1(bolsasDia)+" bolsas";
+    $("#csHeroCab").textContent=decT(cab);
+    $("#csRowCab").textContent=decT(cab)+" kg";
+    $("#csRowLote").textContent=fmtKg(loteDia)+" kg";
+    $("#csRowBolsasDia").textContent=decT(bolsasDia)+" bolsas";
     if(dias>0){
       var totalPer=loteDia*dias, bolsasPer=Math.ceil(totalPer/25);
       $("#csPerBlock").classList.remove("hidden");
       $("#csPerDias").textContent="· "+fmtGs(dias)+" días";
-      $("#csRowPer").textContent=fmtGs(Math.round(totalPer))+" kg";
+      $("#csRowPer").textContent=fmtKg(totalPer)+" kg";
       $("#csRowBolsasPer").textContent=fmtGs(bolsasPer)+" bolsas";
       $("#csHeroBolsas").textContent=fmtGs(bolsasPer);
       $("#csHeroBolsasLbl").textContent="para "+fmtGs(dias)+" días";
