@@ -1189,6 +1189,10 @@
           <span id="topRole">Vendedor</span>
         </div>
       </div>
+      <button class="ventas-btn hidden" id="sHubBtn" title="Herramientas de venta" style="margin-right:6px">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18v3h3l6.3-6.3a4 4 0 0 0 5.4-5.4l-2.6 2.6-2-2 2.6-2.6Z"/></svg>
+        HUB
+      </button>
       <button class="ventas-btn" id="ventasBtn" title="Ver mis ventas">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 14l3-4 3 3 5-7"/></svg>
         Ventas
@@ -1502,7 +1506,7 @@
     <div class="hub-body">
       <img class="hub-logo" alt="Probal">
       <div class="hub-h">Herramientas de venta</div>
-      <div class="hub-s">Calculadoras para ayudar a vender. (Por ahora solo Gestión)</div>
+      <div class="hub-s">Calculadoras para ayudar a vender.</div>
       <button class="tool" id="toolRecria">
         <div class="ic">🐂</div>
         <div class="tt"><div class="t">Viabilidad Recría a pasto <span class="hbadge">Nuevo</span></div><div class="d">Simular engorde suplementado a campo</div></div>
@@ -2163,6 +2167,8 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
   });
   // Gabriel: vendedor nuevo (aún sin clientes en la base; hará prospección). Cuenta normal.
   if(!SELLER_BY["gabriel"]){ var _gb={id:"gabriel", name:"Gabriel", role:"Comercial", pin:PINS["Gabriel"]||"3571", color:SELLER_COLORS[SELLERS.length%SELLER_COLORS.length]}; SELLERS.push(_gb); SELLER_BY["gabriel"]=_gb; KEY["gabriel"]=[]; }
+  // Vendedores con acceso al HUB (herramientas) además del gestor
+  if(SELLER_BY["rossmaryo"]) SELLER_BY["rossmaryo"].hub=true;
   var PROSPECTOS_FALLBACK=[];
   var NAME2ID={}; SELLERS.forEach(function(s){ NAME2ID[slug(s.name)]=s.id; });
   var GESTOR = {id:"gestion", name:"Gestión", role:"Gestión", color:"#3a3f52"};
@@ -2494,6 +2500,7 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
     $("#topRole").textContent = seller.role;
     // el botón Ventas es de facturación (vendedores); el técnico no lo usa
     $("#ventasBtn").style.display = seller.tecnica ? "none" : "";
+    if($("#sHubBtn")) $("#sHubBtn").classList.toggle("hidden", !seller.hub);
     $("#fData").value = todayISO();
     pendingRoute = null; hideBanner();
     fSeller.from=""; fSeller.to=""; $("#sPeriod").value="all"; $("#sCustom").classList.add("hidden");
@@ -4513,6 +4520,7 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
   function openHub(){ $$(".hub-logo").forEach(function(i){ if(!i.src) i.src=PROBAL_LOGO; }); $("#hubPage").classList.remove("hidden"); }
   function openRecria(){ $("#hubPage").classList.add("hidden"); renderStrats(); computeRecria(); $("#recriaPage").classList.remove("hidden"); }
   if($("#mHubBtn")) $("#mHubBtn").addEventListener("click", openHub);
+  if($("#sHubBtn")) $("#sHubBtn").addEventListener("click", openHub);
   if($("#hubBack")) $("#hubBack").addEventListener("click", function(){ $("#hubPage").classList.add("hidden"); });
   if($("#toolRecria")) $("#toolRecria").addEventListener("click", openRecria);
   if($("#recriaBack")) $("#recriaBack").addEventListener("click", function(){ $("#recriaPage").classList.add("hidden"); openHub(); });
