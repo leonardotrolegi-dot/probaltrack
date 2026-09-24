@@ -249,6 +249,14 @@
   .vp-search{width:100%;border:1.5px solid var(--accent);border-radius:12px;background:var(--surface);
     color:var(--ink);padding:12px 13px;font-size:15px;font-family:inherit}
   .vp-search:focus{outline:none;border-color:var(--accent-deep)}
+  .vp-flt-btn{width:100%;display:flex;align-items:center;justify-content:space-between;gap:8px;border:1.5px solid var(--accent);border-radius:12px;background:var(--surface);color:var(--ink);padding:12px 13px;font-size:14.5px;font-weight:600;font-family:inherit;cursor:pointer}
+  .vp-flt-cx{color:var(--accent);font-weight:800}
+  .vp-flt-panel{position:absolute;left:0;right:0;top:calc(100% + 5px);z-index:20;background:var(--surface);border:1px solid var(--line);border-radius:12px;box-shadow:0 12px 30px rgba(0,0,0,.16);padding:6px;max-height:320px;overflow-y:auto}
+  .vp-flt-row{display:flex;align-items:center;gap:10px;padding:10px 11px;border-radius:9px;cursor:pointer;font-size:14px}
+  .vp-flt-row:hover{background:var(--surface-2)}
+  .vp-flt-row.all{font-weight:800;border-bottom:1px solid var(--line);border-radius:9px 9px 0 0;margin-bottom:2px}
+  .vp-flt-row input{width:18px;height:18px;accent-color:var(--accent);flex:none;margin:0}
+  .vp-flt-row .nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .vp-list{position:relative;margin-top:6px}
   .vp-list.on{border:1.5px solid var(--line);border-radius:12px;background:var(--surface);overflow:hidden}
   .vp-item{padding:11px 13px;font-size:14px;cursor:pointer;display:flex;justify-content:space-between;
@@ -1038,6 +1046,9 @@
   .imp-ok{background:color-mix(in srgb,var(--accent) 14%,transparent);color:var(--accent-deep);border:1px solid color-mix(in srgb,var(--accent) 40%,transparent)}
   .imp-err{background:color-mix(in srgb,var(--danger) 12%,transparent);color:var(--danger);border:1px solid color-mix(in srgb,var(--danger) 40%,transparent)}
   .imp-run{background:var(--surface-2);color:var(--ink-soft);border:1px solid var(--line)}
+  .imp-run b{color:var(--accent-deep);font-variant-numeric:tabular-nums}
+  .imp-bar{height:12px;background:var(--surface);border:1px solid var(--line);border-radius:8px;overflow:hidden;margin-top:8px}
+  .imp-bar-fill{height:100%;background:var(--accent);width:0;border-radius:8px;transition:width .2s ease}
 
   .presup-check{display:flex;align-items:center;gap:10px;font-size:15px;font-weight:600;color:var(--ink);cursor:pointer;padding:12px 13px;border:1.5px solid var(--line);border-radius:12px;background:var(--surface)}
   .presup-check input{width:19px;height:19px;flex:none;accent-color:var(--prospecto)}
@@ -1494,7 +1505,10 @@
     </div>
     <div class="vp-body">
       <div class="vp-sub" id="vpSeller"></div>
-      <select id="vpMgrSeller" class="vp-search hidden" style="margin-bottom:9px;appearance:none;-webkit-appearance:none"></select>
+      <div id="vpMgrFlt" class="hidden" style="margin-bottom:9px;position:relative">
+        <button type="button" id="vpMgrFltBtn" class="vp-flt-btn"><span id="vpMgrFltLbl">Todo el equipo</span><span class="vp-flt-cx">▾</span></button>
+        <div id="vpMgrFltPanel" class="vp-flt-panel hidden"></div>
+      </div>
       <input type="text" id="vpSearch" class="vp-search" placeholder="Buscar cliente…  (o dejá vacío = Todos)" autocomplete="off">
       <div class="vp-list" id="vpList"></div>
       <div class="kpis" id="vpKpis"></div>
@@ -1538,7 +1552,7 @@
         <span class="chev">›</span>
       </button>
       <button class="tool" id="toolCreep">
-        <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9.5 12.5 C9.5 11 11 10.4 13.2 10.4 C15.8 10.4 17.6 11.1 17.6 13 C17.6 14.6 16.4 15.3 14.3 15.3 L11 15.3 C10.1 15.3 9.5 14.4 9.5 13.4 Z"/><path d="M9.5 12.8 C8 12.5 6.7 11.9 6.2 10.6 C5.9 9.7 6.5 8.9 7.4 9 C8.1 9.1 8.6 9.7 8.8 10.5"/><path d="M6.5 10.2 L5.6 9.2 M8.5 9.6 L8.7 8.4"/><path d="M11.2 15.3 L10.8 19.2 M14 15.3 L14 19.2 M16.7 15.1 L17.1 19.2"/><path d="M17.5 13.2 C18.4 13.6 18.7 14.8 18.1 16"/></svg></div>
+        <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6 L20 6"/><path d="M6 6 L6 18 M9 6 L9 18 M12 6 L12 18 M15 6 L15 18 M18 6 L18 18"/><path d="M4 12 L20 12"/><path d="M3.5 18 L20.5 18 L19 21.5 L5 21.5 Z"/></svg></div>
         <div class="tt"><div class="t">Viabilidad Creep Feeding <span class="hbadge">Nuevo</span></div><div class="d">Suplementación del ternero · rentabilidad en Gs</div></div>
         <span class="chev">›</span>
       </button>
@@ -1766,7 +1780,7 @@
 
   <!-- HERRAMIENTA: Viabilidad Creep Feeding -->
   <div id="creepPage" class="ventas-page hidden">
-    <div class="vp-top"><button class="vp-back" id="cfBack">‹ HUB</button><b><svg viewBox="0 0 24 24" width="18" height="18" style="vertical-align:-3px;margin-right:2px" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M9.5 12.5 C9.5 11 11 10.4 13.2 10.4 C15.8 10.4 17.6 11.1 17.6 13 C17.6 14.6 16.4 15.3 14.3 15.3 L11 15.3 C10.1 15.3 9.5 14.4 9.5 13.4 Z"/><path d="M9.5 12.8 C8 12.5 6.7 11.9 6.2 10.6 C5.9 9.7 6.5 8.9 7.4 9 C8.1 9.1 8.6 9.7 8.8 10.5"/><path d="M6.5 10.2 L5.6 9.2 M8.5 9.6 L8.7 8.4"/><path d="M11.2 15.3 L10.8 19.2 M14 15.3 L14 19.2 M16.7 15.1 L17.1 19.2"/><path d="M17.5 13.2 C18.4 13.6 18.7 14.8 18.1 16"/></svg>Creep Feeding</b></div>
+    <div class="vp-top"><button class="vp-back" id="cfBack">‹ HUB</button><b><svg viewBox="0 0 24 24" width="18" height="18" style="vertical-align:-3px;margin-right:3px" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6 L20 6"/><path d="M6 6 L6 18 M9 6 L9 18 M12 6 L12 18 M15 6 L15 18 M18 6 L18 18"/><path d="M4 12 L20 12"/><path d="M3.5 18 L20.5 18 L19 21.5 L5 21.5 Z"/></svg>Creep Feeding</b></div>
     <div class="hub-body">
       <img class="hub-logo" alt="Probal">
       <div class="hub-h">Viabilidad Creep Feeding</div>
@@ -2654,12 +2668,18 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
     return out;
   }
   function clientsForSeller(sellerId){ var s=SELLER_BY[sellerId]; if(!s) return []; return CAT_CLI.filter(function(c){ return sellerMatchName(s.name, c.vendedor); }); }
-  var VCTX="seller", VMGRSEL="__team__";
-  // Pool de clientes analizado según contexto (vendedor / gestor-equipo / gestor-vendedor)
+  var VCTX="seller", VMGRSEL="__team__", VMGRSET=null;
+  // Pool de clientes analizado según contexto (vendedor / gestor-equipo / gestor-selección)
   function ventasPool(){
     if(VCTX==="mgr"){
-      if(VMGRSEL==="__team__") return {list:CAT_CLI.slice(), label:"Equipo completo", team:true};
-      var s=SELLER_BY[VMGRSEL]; return {list:clientsForSeller(VMGRSEL), label:"Vendedor: "+(s?s.name:""), team:false};
+      var allIds=SELLERS.map(function(s){return s.id;});
+      var sel = VMGRSET ? VMGRSET.slice() : allIds.slice();
+      if(sel.length>=allIds.length) return {list:CAT_CLI.slice(), label:"Equipo completo", team:true, count:allIds.length};
+      if(!sel.length) return {list:[], label:"Ningún vendedor seleccionado", team:true, subset:true, count:0};
+      var list=[]; sel.forEach(function(id){ clientsForSeller(id).forEach(function(c){ list.push(c); }); });
+      var names=sel.map(function(id){ var s=SELLER_BY[id]; return s?firstName(s.name):id; });
+      var lbl=sel.length+" vendedor"+(sel.length>1?"es":"")+" · "+names.slice(0,3).join(", ")+(names.length>3?"…":"");
+      return {list:list, label:lbl, team:true, subset:true, count:sel.length};
     }
     return {list:misClientes(), label:"Vendedor: "+(current?current.name:""), team:false};
   }
@@ -2667,14 +2687,14 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
     VCTX = mgr ? "mgr" : "seller";
     if(mgr && !SELLERS.length) return;
     if(!mgr && !current) return;
-    VSEL="__todos__"; VMGRSEL="__team__";
-    var msel=$("#vpMgrSeller");
+    VSEL="__todos__";
+    var mflt=$("#vpMgrFlt");
     if(mgr){
-      msel.classList.remove("hidden");
-      msel.innerHTML = '<option value="__team__">Todo el equipo</option>' +
-        SELLERS.map(function(s){ return '<option value="'+s.id+'">'+esc(s.name)+'</option>'; }).join("");
-      msel.value="__team__";
-    } else { msel.classList.add("hidden"); }
+      VMGRSET = SELLERS.map(function(s){ return s.id; }); // todos seleccionados por defecto
+      buildMgrFilter();
+      mflt.classList.remove("hidden");
+      $("#vpMgrFltPanel").classList.add("hidden");
+    } else { VMGRSET=null; mflt.classList.add("hidden"); }
     $("#vpSearch").value="";
     $("#vpList").classList.remove("on"); $("#vpList").innerHTML="";
     $("#ventasPage").classList.remove("hidden");
@@ -2690,7 +2710,7 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
       series=[]; for(var i=0;i<n;i++) series.push(0);
       list.forEach(function(c){ if(c.meses) for(var i=0;i<n;i++) series[i]+=(+c.meses[i]||0); });
       var tot=series.reduce(function(a,b){return a+b;},0);
-      ttl = pool.team ? "Todo el equipo" : "Todos los clientes";
+      ttl = pool.team ? (pool.subset ? pool.label : "Todo el equipo") : "Todos los clientes";
       kpi='<div class="kpi"><b>'+fmtKg(tot)+'</b><span>kg vendidos (2026)</span></div>'+
           '<div class="kpi"><b>'+list.length+'</b><span>'+(pool.team?"clientes (equipo)":"clientes")+'</span></div>';
     } else {
@@ -2774,7 +2794,36 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
   $("#ventasBtn").addEventListener("click", function(){ openVentas(false); });
   $("#mVentasBtn").addEventListener("click", function(){ openVentas(true); });
   $("#ventasBack").addEventListener("click", closeVentas);
-  $("#vpMgrSeller").addEventListener("change", function(){ VMGRSEL=this.value; VSEL="__todos__"; $("#vpSearch").value=""; $("#vpList").classList.remove("on"); renderVentas(); });
+  // ---- filtro multi-vendedor (gestor) ----
+  function updateMgrFltLabel(){
+    var allIds=SELLERS.map(function(s){return s.id;}), n=VMGRSET?VMGRSET.length:allIds.length, lbl;
+    if(n>=allIds.length) lbl="Todo el equipo";
+    else if(n===0) lbl="Ningún vendedor";
+    else { var names=VMGRSET.map(function(id){var s=SELLER_BY[id];return s?firstName(s.name):id;}); lbl=n+" vend.: "+names.slice(0,2).join(", ")+(names.length>2?"…":""); }
+    if($("#vpMgrFltLbl")) $("#vpMgrFltLbl").textContent=lbl;
+  }
+  function mgrFltChanged(){ updateMgrFltLabel(); VSEL="__todos__"; $("#vpSearch").value=""; $("#vpList").classList.remove("on"); renderVentas(); }
+  function buildMgrFilter(){
+    var allIds=SELLERS.map(function(s){return s.id;}), allOn=(VMGRSET&&VMGRSET.length>=allIds.length);
+    var panel=$("#vpMgrFltPanel"); if(!panel) return;
+    panel.innerHTML='<label class="vp-flt-row all"><input type="checkbox" id="vpFltAll"'+(allOn?' checked':'')+'><span class="nm">Todos los vendedores</span></label>'+
+      SELLERS.map(function(s){ var on=VMGRSET&&VMGRSET.indexOf(s.id)>=0; return '<label class="vp-flt-row"><input type="checkbox" class="vpFltOne" value="'+s.id+'"'+(on?' checked':'')+'><span class="nm">'+esc(s.name)+'</span></label>'; }).join("");
+    $("#vpFltAll").addEventListener("change", function(){
+      var on=this.checked; VMGRSET = on ? allIds.slice() : [];
+      $$(".vpFltOne",panel).forEach(function(c){ c.checked=on; });
+      mgrFltChanged();
+    });
+    $$(".vpFltOne",panel).forEach(function(c){ c.addEventListener("change", function(){
+      if(!VMGRSET) VMGRSET=[];
+      var ix=VMGRSET.indexOf(c.value);
+      if(c.checked){ if(ix<0) VMGRSET.push(c.value); } else if(ix>=0) VMGRSET.splice(ix,1);
+      var all=$("#vpFltAll"); if(all) all.checked=(VMGRSET.length>=allIds.length);
+      mgrFltChanged();
+    }); });
+    updateMgrFltLabel();
+  }
+  if($("#vpMgrFltBtn")) $("#vpMgrFltBtn").addEventListener("click", function(e){ e.stopPropagation(); $("#vpMgrFltPanel").classList.toggle("hidden"); });
+  document.addEventListener("click", function(e){ var f=$("#vpMgrFlt"); if(f && !f.classList.contains("hidden") && !f.contains(e.target)) $("#vpMgrFltPanel").classList.add("hidden"); });
   $("#vpSearch").addEventListener("focus", ventasSearch);
   $("#vpSearch").addEventListener("input", ventasSearch);
   document.addEventListener("click", function(e){
@@ -5081,18 +5130,29 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
   }
   function commitCatalog(tipo, items){
     if(!useDB || !dbh){ toast("Base no disponible en esta vista.", true); impMsg('<div class="imp-err">✗ La importación solo funciona en el sitio publicado (con conexión).</div>'); return; }
-    impMsg('<div class="imp-run">⏳ Importando '+items.length+' '+(tipo==="Cliente"?"clientes":"prospectos")+'… no cierre la app.</div>');
+    var _tipoTxt = (tipo==="Cliente"?"clientes":"prospectos");
+    function impProgress(pct, phase, done, total){
+      pct=Math.max(0, Math.min(100, Math.round(pct)));
+      impMsg('<div class="imp-run">⏳ Importando '+_tipoTxt+' — <b>'+pct+'%</b>'+
+        '<div style="font-size:11.5px;color:var(--ink-faint);margin-top:2px">'+phase+' · '+done+'/'+total+' · no cierre la app</div>'+
+        '<div class="imp-bar"><div class="imp-bar-fill" style="width:'+pct+'%"></div></div></div>');
+    }
+    impProgress(0, "preparando", 0, items.length);
     var col = dbh.collection("catalog");
-    function chunk(list, fn){ // roda em lotes de 40
+    function chunk(list, fn, onProg){ // roda em lotes de 40
       var i=0; function step(){ var ops=[]; for(;i<list.length && ops.length<40;i++){ ops.push(fn(list[i])); }
         if(!ops.length) return Promise.resolve();
-        return Promise.all(ops).then(function(){ return i<list.length ? step() : null; }); }
+        return Promise.all(ops).then(function(){ if(onProg) onProg(i); return i<list.length ? step() : null; }); }
       return step();
     }
     Promise.resolve(col.where("tipo","==",tipo).get()).then(function(snap){
       var olds = snap.docs.map(function(d){ return d.id; });
-      return chunk(olds, function(id){ return col.doc(id).delete().catch(noop); });
+      var total = olds.length + items.length; if(total<1) total=1;
+      commitCatalog._ctx = {total:total, delN:olds.length};
+      return chunk(olds, function(id){ return col.doc(id).delete().catch(noop); },
+        function(done){ impProgress(done/total*100, "limpiando base anterior", done, total); });
     }).then(function(){
+      var ctx = commitCatalog._ctx || {total:items.length, delN:0};
       var seen={};
       return chunk(items, function(it){
         var base=(tipo==="Prospecto"?"p_":"c_")+slug(it.nome); var id=base, n=1; while(seen[id]){ id=base+"_"+(n++); } seen[id]=1;
@@ -5102,7 +5162,7 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
         if(it.vendedor!=null) body.vendedor=it.vendedor;
         if(it.meses!=null) body.meses=it.meses;
         return col.doc(id).set(body).catch(noop);
-      });
+      }, function(done){ impProgress((ctx.delN+done)/ctx.total*100, "guardando "+_tipoTxt, ctx.delN+done, ctx.total); });
     }).then(function(){
       var kgTot = tipo==="Cliente" ? items.reduce(function(a,b){ return a+(b.kg||0); }, 0) : 0;
       var meta = {tipo:tipo, at:new Date().toISOString(), count:items.length, kg:kgTot};
