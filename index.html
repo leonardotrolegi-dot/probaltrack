@@ -1801,6 +1801,7 @@
         <div class="hf"><label>Consumo</label><div class="hinp"><input id="cfCons" inputmode="decimal" value="1,0"><span class="hu">% PV</span></div></div>
         <div class="hf"><label>Precio suplemento</label><div class="hinp"><input id="cfSupl" inputmode="numeric" value="2.500"><span class="hu">Gs/kg</span></div></div>
       </div>
+      <div class="hf"><label>Otros costos <small style="color:var(--ink-faint)">· sanidad, mano de obra, etc.</small></label><div class="hinp"><input id="cfOtros" inputmode="numeric" value="0"><span class="hu">Gs/animal/día</span></div></div>
 
       <div class="hsec">Precios del animal</div>
       <div class="two">
@@ -4870,11 +4871,11 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
   function compactGs(v){ v=v||0; var a=Math.abs(v), s=v<0?"-":""; if(a>=1e6) return s+(a/1e6).toFixed(2).replace('.',',')+" M"; if(a>=1000) return s+Math.round(a/1000)+"k"; return s+Math.round(a); }
   function computeCreep(){
     var peso=numPY($("#cfPeso").value), gan=numPY($("#cfGan").value), dias=numPY($("#cfDias").value);
-    var cons=numPY($("#cfCons").value), supl=numPY($("#cfSupl").value);
+    var cons=numPY($("#cfCons").value), supl=numPY($("#cfSupl").value), otros=numPY($("#cfOtros").value);
     var pagado=numPY($("#cfPagado").value), venta=numPY($("#cfVenta").value), anim=numPY($("#cfAnim").value)||1;
     var pf=peso+gan*dias; $("#cfPesoFin").value=fmtGs(pf);
-    var prom=(peso+pf)/2, consTot=cons/100*prom*dias, costSupl=consTot*supl;
-    var costAnimal=peso*pagado, inv=costAnimal+costSupl, ingreso=pf*venta, rent=ingreso-inv;
+    var prom=(peso+pf)/2, consTot=cons/100*prom*dias, costSupl=consTot*supl, costOtros=otros*dias;
+    var costAnimal=peso*pagado, inv=costAnimal+costSupl+costOtros, ingreso=pf*venta, rent=ingreso-inv;
     var meses=dias>0?dias/30:0, roi=inv>0?rent/inv*100:0, roiMes=meses>0?roi/meses:0, gsTotal=rent*anim;
     var si=rent>=0, sgn=rent>=0?'+':'−';
     var html='';
@@ -4882,6 +4883,7 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
     html+='<div class="hrrow"><span class="k">Peso final · ganancia</span><span class="v">'+fmtGs(pf)+' kg · +'+fmtGs(pf-peso)+' kg</span></div>';
     html+='<div class="hrrow"><span class="k">Consumo total suplemento</span><span class="v">'+dec1(consTot)+' kg</span></div>';
     html+='<div class="hrrow"><span class="k">Costo suplemento</span><span class="v good">Gs '+fmtGs(costSupl)+'</span></div>';
+    if(costOtros>0) html+='<div class="hrrow"><span class="k">Otros costos <small style="color:var(--ink-faint)">· '+fmtGs(otros)+'/día × '+fmtGs(dias)+'</small></span><span class="v good">Gs '+fmtGs(costOtros)+'</span></div>';
     html+='<div class="hrrow"><span class="k">Costo animal <small style="color:var(--ink-faint)">· '+fmtGs(peso)+' kg × '+fmtGs(pagado)+'</small></span><span class="v good">Gs '+fmtGs(costAnimal)+'</span></div>';
     html+='<div class="hrrow"><span class="k">Inversión total</span><span class="v good">Gs '+fmtGs(inv)+'</span></div>';
     html+='<div class="hrrow"><span class="k">Ingreso venta <small style="color:var(--ink-faint)">· '+fmtGs(pf)+' kg × '+fmtGs(venta)+'</small></span><span class="v good">Gs '+fmtGs(ingreso)+'</span></div>';
@@ -4892,7 +4894,7 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
   function openCreep(){ $("#hubPage").classList.add("hidden"); $$(".hub-logo").forEach(function(i){ if(!i.src) i.src=PROBAL_LOGO; }); var r=$("#creepRes"); if(r) r.style.setProperty("--wm", 'url("'+PROBAL_LOGO+'")'); computeCreep(); $("#creepPage").classList.remove("hidden"); }
   if($("#toolCreep")) $("#toolCreep").addEventListener("click", openCreep);
   if($("#cfBack")) $("#cfBack").addEventListener("click", function(){ $("#creepPage").classList.add("hidden"); openHub(); });
-  ["cfPeso","cfGan","cfDias","cfCons","cfSupl","cfPagado","cfVenta","cfAnim"].forEach(function(id){ var el=$("#"+id); if(el) el.addEventListener("input", computeCreep); });
+  ["cfPeso","cfGan","cfDias","cfCons","cfSupl","cfOtros","cfPagado","cfVenta","cfAnim"].forEach(function(id){ var el=$("#"+id); if(el) el.addEventListener("input", computeCreep); });
 
   function renderReportCanvas(data, imgs){
     var PW=794, PH=1123, SCALE=2;
