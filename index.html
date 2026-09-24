@@ -1644,7 +1644,7 @@
 
   <!-- HERRAMIENTA: Viabilidad Recría Confinada -->
   <div id="recriaConfPage" class="ventas-page hidden">
-    <div class="vp-top"><button class="vp-back" id="rcfBack">‹ HUB</button><b>🐄 Recría Confinada</b></div>
+    <div class="vp-top"><button class="vp-back" id="rcfBack">‹ HUB</button><b><svg viewBox="0 0 24 24" width="18" height="18" style="vertical-align:-3px;margin-right:3px" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8.5 L21 8.5 L19.4 15.5 C19.1 16.9 17.9 17.8 16.5 17.8 L7.5 17.8 C6.1 17.8 4.9 16.9 4.6 15.5 Z"/><path d="M5.6 11.4 C7.5 10.2 9 11.6 11 10.8 C13.2 9.9 15 11.4 17 10.6 C17.7 10.3 18 10 18.4 11.2"/><path d="M7 17.8 L6 21 M17 17.8 L18 21"/></svg>Recría Confinada</b></div>
     <div class="hub-body">
       <img class="hub-logo" alt="Probal">
       <div class="hub-h">Viabilidad Recría Confinada</div>
@@ -2167,8 +2167,6 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
   });
   // Gabriel: vendedor nuevo (aún sin clientes en la base; hará prospección). Cuenta normal.
   if(!SELLER_BY["gabriel"]){ var _gb={id:"gabriel", name:"Gabriel", role:"Comercial", pin:PINS["Gabriel"]||"3571", color:SELLER_COLORS[SELLERS.length%SELLER_COLORS.length]}; SELLERS.push(_gb); SELLER_BY["gabriel"]=_gb; KEY["gabriel"]=[]; }
-  // Vendedores con acceso al HUB (herramientas) además del gestor
-  if(SELLER_BY["rossmaryo"]) SELLER_BY["rossmaryo"].hub=true;
   var PROSPECTOS_FALLBACK=[];
   var NAME2ID={}; SELLERS.forEach(function(s){ NAME2ID[slug(s.name)]=s.id; });
   var GESTOR = {id:"gestion", name:"Gestión", role:"Gestión", color:"#3a3f52"};
@@ -2500,7 +2498,7 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
     $("#topRole").textContent = seller.role;
     // el botón Ventas es de facturación (vendedores); el técnico no lo usa
     $("#ventasBtn").style.display = seller.tecnica ? "none" : "";
-    if($("#sHubBtn")) $("#sHubBtn").classList.toggle("hidden", !seller.hub);
+    if($("#sHubBtn")) $("#sHubBtn").classList.remove("hidden"); // HUB liberado para todos
     $("#fData").value = todayISO();
     pendingRoute = null; hideBanner();
     fSeller.from=""; fSeller.to=""; $("#sPeriod").value="all"; $("#sCustom").classList.add("hidden");
