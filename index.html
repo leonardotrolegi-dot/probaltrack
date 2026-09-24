@@ -405,6 +405,11 @@
   @media (prefers-color-scheme:dark){ :root:not([data-theme="light"]) #csRes::before{filter:invert(1) brightness(1.6);opacity:.10} }
   :root[data-theme="dark"] #csRes::before{filter:invert(1) brightness(1.6);opacity:.10}
   #csRes > *{position:relative;z-index:1}
+  #creepRes{position:relative;overflow:hidden}
+  #creepRes::before{content:"";position:absolute;inset:0;background-image:var(--wm);background-repeat:no-repeat;background-position:center;background-size:74%;opacity:.06;pointer-events:none;z-index:0}
+  @media (prefers-color-scheme:dark){ :root:not([data-theme="light"]) #creepRes::before{filter:invert(1) brightness(1.6);opacity:.10} }
+  :root[data-theme="dark"] #creepRes::before{filter:invert(1) brightness(1.6);opacity:.10}
+  #creepRes > *{position:relative;z-index:1}
   .hrrow .v.usdc{color:#2b6ca3}
   :root[data-theme="dark"] .hrrow .v.usdc{color:#7fb6db}
 
@@ -1532,6 +1537,11 @@
         <div class="tt"><div class="t">Calculadora de consumo <span class="hbadge">Nuevo</span></div><div class="d">Consumo del lote y bolsas de 25 kg</div></div>
         <span class="chev">›</span>
       </button>
+      <button class="tool" id="toolCreep">
+        <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9.5 12.5 C9.5 11 11 10.4 13.2 10.4 C15.8 10.4 17.6 11.1 17.6 13 C17.6 14.6 16.4 15.3 14.3 15.3 L11 15.3 C10.1 15.3 9.5 14.4 9.5 13.4 Z"/><path d="M9.5 12.8 C8 12.5 6.7 11.9 6.2 10.6 C5.9 9.7 6.5 8.9 7.4 9 C8.1 9.1 8.6 9.7 8.8 10.5"/><path d="M6.5 10.2 L5.6 9.2 M8.5 9.6 L8.7 8.4"/><path d="M11.2 15.3 L10.8 19.2 M14 15.3 L14 19.2 M16.7 15.1 L17.1 19.2"/><path d="M17.5 13.2 C18.4 13.6 18.7 14.8 18.1 16"/></svg></div>
+        <div class="tt"><div class="t">Viabilidad Creep Feeding <span class="hbadge">Nuevo</span></div><div class="d">Suplementación del ternero · rentabilidad en Gs</div></div>
+        <span class="chev">›</span>
+      </button>
     </div>
   </div>
 
@@ -1751,6 +1761,44 @@
         <div class="hrrow"><span class="k">Bolsas por día <small style="color:var(--ink-faint)">· 25 kg c/u</small></span><span class="v good" id="csRowBolsasDia">—</span></div>
       </div>
       <div class="hint" style="margin-top:12px">Por cabeza/día = peso medio × % PV. Total lote/día = × animales. Bolsas = consumo ÷ 25 kg (las del período se redondean hacia arriba). Sin días, muestra solo lo diario.</div>
+    </div>
+  </div>
+
+  <!-- HERRAMIENTA: Viabilidad Creep Feeding -->
+  <div id="creepPage" class="ventas-page hidden">
+    <div class="vp-top"><button class="vp-back" id="cfBack">‹ HUB</button><b><svg viewBox="0 0 24 24" width="18" height="18" style="vertical-align:-3px;margin-right:2px" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M9.5 12.5 C9.5 11 11 10.4 13.2 10.4 C15.8 10.4 17.6 11.1 17.6 13 C17.6 14.6 16.4 15.3 14.3 15.3 L11 15.3 C10.1 15.3 9.5 14.4 9.5 13.4 Z"/><path d="M9.5 12.8 C8 12.5 6.7 11.9 6.2 10.6 C5.9 9.7 6.5 8.9 7.4 9 C8.1 9.1 8.6 9.7 8.8 10.5"/><path d="M6.5 10.2 L5.6 9.2 M8.5 9.6 L8.7 8.4"/><path d="M11.2 15.3 L10.8 19.2 M14 15.3 L14 19.2 M16.7 15.1 L17.1 19.2"/><path d="M17.5 13.2 C18.4 13.6 18.7 14.8 18.1 16"/></svg>Creep Feeding</b></div>
+    <div class="hub-body">
+      <img class="hub-logo" alt="Probal">
+      <div class="hub-h">Viabilidad Creep Feeding</div>
+      <div class="hub-s">Suplementación del ternero al pie de la madre. Valores en Gs.</div>
+
+      <div class="hsec">Animal</div>
+      <div class="two">
+        <div class="hf"><label>Peso inicial</label><div class="hinp"><input id="cfPeso" inputmode="numeric" value="120"><span class="hu">kg</span></div></div>
+        <div class="hf"><label>Ganancia PV/día</label><div class="hinp"><input id="cfGan" inputmode="decimal" value="0,600"><span class="hu">kg</span></div></div>
+      </div>
+      <div class="two">
+        <div class="hf"><label>Días</label><div class="hinp"><input id="cfDias" inputmode="numeric" value="90"><span class="hu">días</span></div></div>
+        <div class="hf"><label>Peso final (calc.)</label><div class="hinp ro"><input id="cfPesoFin" readonly><span class="hu">kg</span></div></div>
+      </div>
+
+      <div class="hsec">Suplemento</div>
+      <div class="two">
+        <div class="hf"><label>Consumo</label><div class="hinp"><input id="cfCons" inputmode="decimal" value="1,0"><span class="hu">% PV</span></div></div>
+        <div class="hf"><label>Precio suplemento</label><div class="hinp"><input id="cfSupl" inputmode="numeric" value="2.500"><span class="hu">Gs/kg</span></div></div>
+      </div>
+
+      <div class="hsec">Precios del animal</div>
+      <div class="two">
+        <div class="hf"><label>Precio pagado</label><div class="hinp"><input id="cfPagado" inputmode="numeric" value="13.000"><span class="hu">Gs/kg</span></div></div>
+        <div class="hf"><label>Precio venta (mercado)</label><div class="hinp"><input id="cfVenta" inputmode="numeric" value="15.000"><span class="hu">Gs/kg</span></div></div>
+      </div>
+
+      <div class="hsec">Lote <span class="opt">· para el total</span></div>
+      <div class="hf"><label>Cantidad de animales</label><div class="hinp"><input id="cfAnim" inputmode="numeric" value="50"><span class="hu">cab</span></div></div>
+
+      <div id="creepRes" class="hres"></div>
+      <div class="hint" style="margin-top:12px">Peso final = inicial + ganancia × días. Consumo = % del peso <b>promedio</b> × días. Rentabilidad = venta (peso final × mercado) − (animal a precio pagado + suplemento). Gs total = por animal × cantidad.</div>
     </div>
   </div>
 
@@ -2301,7 +2349,7 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
       }
     }catch(e){}
   }
-  function localBoot(){ DB=seedIfEmpty(); ROUTES=loadRoutes(); reRenderCurrent(); }
+  function localBoot(){ DB=seedIfEmpty(); ROUTES=loadRoutes(); reRenderCurrent(); if(!current && !isManager && autoMgr()) enterManager(); }
   function subscribeDB(){
     dbh.collection("visits").onSnapshot(function(snap){ DB=groupBySeller(snap.docs); reRenderCurrent(); }, noop);
     dbh.collection("routes").onSnapshot(function(snap){ ROUTES=groupBySeller(snap.docs); reRenderCurrent(); }, noop);
@@ -2343,7 +2391,7 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
     auth.onAuthStateChanged(function(user){
       if(user){
         $("#authGate").classList.add("hidden");
-        if(!current && !isManager){ $("#login").classList.remove("hidden"); }
+        if(!current && !isManager){ if(autoMgr()) enterManager(); else $("#login").classList.remove("hidden"); }
         if(!useDB){ dbh=firebase.firestore(); useDB=true;
           try{ dbh.enablePersistence({synchronizeTabs:true}).then(subscribeDB, subscribeDB); }
           catch(e){ subscribeDB(); }
@@ -2507,8 +2555,12 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
     switchView("registo");
     renderRecent();
   }
+  // recordar sesión SOLO del gestor (no pide PIN de nuevo hasta que salga)
+  function rememberMgr(on){ try{ if(on) localStorage.setItem("pt_mgr","1"); else localStorage.removeItem("pt_mgr"); }catch(e){} }
+  function autoMgr(){ try{ return localStorage.getItem("pt_mgr")==="1"; }catch(e){ return false; } }
   function enterManager(){
     current = null; isManager = true;
+    rememberMgr(true);
     fMgr.from=""; fMgr.to=""; $("#mPeriod").value="all"; $("#mCustom").classList.add("hidden");
     $("#login").classList.add("hidden");
     $("#shell").classList.add("hidden");
@@ -2519,7 +2571,7 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
     current=null; $("#shell").classList.add("hidden"); stopRec(); resetLogin();
   });
   $("#mLogout").addEventListener("click", function(){
-    isManager=false; $("#mShell").classList.add("hidden"); resetLogin();
+    isManager=false; rememberMgr(false); $("#mShell").classList.add("hidden"); resetLogin();
   });
 
   // ---------- NAV (vendedor) ----------
@@ -4764,6 +4816,34 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
   if($("#toolConsumo")) $("#toolConsumo").addEventListener("click", openConsumo);
   if($("#csBack")) $("#csBack").addEventListener("click", function(){ $("#consumoPage").classList.add("hidden"); openHub(); });
   ["csAnim","csPeso","csPct","csDias"].forEach(function(id){ var el=$("#"+id); if(el) el.addEventListener("input", computeConsumo); });
+
+  // ----- Viabilidad Creep Feeding -----
+  function compactGs(v){ v=v||0; var a=Math.abs(v), s=v<0?"-":""; if(a>=1e6) return s+(a/1e6).toFixed(2).replace('.',',')+" M"; if(a>=1000) return s+Math.round(a/1000)+"k"; return s+Math.round(a); }
+  function computeCreep(){
+    var peso=numPY($("#cfPeso").value), gan=numPY($("#cfGan").value), dias=numPY($("#cfDias").value);
+    var cons=numPY($("#cfCons").value), supl=numPY($("#cfSupl").value);
+    var pagado=numPY($("#cfPagado").value), venta=numPY($("#cfVenta").value), anim=numPY($("#cfAnim").value)||1;
+    var pf=peso+gan*dias; $("#cfPesoFin").value=fmtGs(pf);
+    var prom=(peso+pf)/2, consTot=cons/100*prom*dias, costSupl=consTot*supl;
+    var costAnimal=peso*pagado, inv=costAnimal+costSupl, ingreso=pf*venta, rent=ingreso-inv;
+    var meses=dias>0?dias/30:0, roi=inv>0?rent/inv*100:0, roiMes=meses>0?roi/meses:0, gsTotal=rent*anim;
+    var si=rent>=0, sgn=rent>=0?'+':'−';
+    var html='';
+    html+='<div class="verdict '+(si?'si':'no')+'"><div class="k">Rentabilidad por animal</div><div class="v">'+sgn+'Gs '+fmtGs(Math.abs(rent))+'</div><div class="s">'+(si?'✅ SÍ conviene':'❌ NO conviene')+'</div></div>';
+    html+='<div class="hrrow"><span class="k">Peso final · ganancia</span><span class="v">'+fmtGs(pf)+' kg · +'+fmtGs(pf-peso)+' kg</span></div>';
+    html+='<div class="hrrow"><span class="k">Consumo total suplemento</span><span class="v">'+dec1(consTot)+' kg</span></div>';
+    html+='<div class="hrrow"><span class="k">Costo suplemento</span><span class="v good">Gs '+fmtGs(costSupl)+'</span></div>';
+    html+='<div class="hrrow"><span class="k">Costo animal <small style="color:var(--ink-faint)">· '+fmtGs(peso)+' kg × '+fmtGs(pagado)+'</small></span><span class="v good">Gs '+fmtGs(costAnimal)+'</span></div>';
+    html+='<div class="hrrow"><span class="k">Inversión total</span><span class="v good">Gs '+fmtGs(inv)+'</span></div>';
+    html+='<div class="hrrow"><span class="k">Ingreso venta <small style="color:var(--ink-faint)">· '+fmtGs(pf)+' kg × '+fmtGs(venta)+'</small></span><span class="v good">Gs '+fmtGs(ingreso)+'</span></div>';
+    html+='<div class="dboxes"><div class="dbox big2"><span class="dk">Rentab. del período</span><b>'+(roi>=0?'+':'−')+dec1(Math.abs(roi))+'%</b><span class="ds">sobre Gs '+fmtGs(inv)+'</span></div><div class="dbox"><span class="dk">Mensual</span><b>'+(roiMes>=0?'+':'−')+dec1(Math.abs(roiMes))+'%</b><span class="ds">sobre '+dec1(meses)+' meses</span></div></div>';
+    html+='<div class="epills"><div class="epill"><b>'+(roi>=0?'+':'−')+dec1(Math.abs(roi))+'%</b><span>% del período</span></div><div class="epill"><b>'+sgn+compactGs(Math.abs(rent))+'</b><span>Gs/animal</span></div><div class="epill"><b>'+(gsTotal>=0?'':'−')+compactGs(Math.abs(gsTotal))+'</b><span>Gs total · '+fmtGs(anim)+' cab</span></div></div>';
+    $("#creepRes").innerHTML=html;
+  }
+  function openCreep(){ $("#hubPage").classList.add("hidden"); $$(".hub-logo").forEach(function(i){ if(!i.src) i.src=PROBAL_LOGO; }); var r=$("#creepRes"); if(r) r.style.setProperty("--wm", 'url("'+PROBAL_LOGO+'")'); computeCreep(); $("#creepPage").classList.remove("hidden"); }
+  if($("#toolCreep")) $("#toolCreep").addEventListener("click", openCreep);
+  if($("#cfBack")) $("#cfBack").addEventListener("click", function(){ $("#creepPage").classList.add("hidden"); openHub(); });
+  ["cfPeso","cfGan","cfDias","cfCons","cfSupl","cfPagado","cfVenta","cfAnim"].forEach(function(id){ var el=$("#"+id); if(el) el.addEventListener("input", computeCreep); });
 
   function renderReportCanvas(data, imgs){
     var PW=794, PH=1123, SCALE=2;
