@@ -257,6 +257,36 @@
   .vp-flt-row.all{font-weight:800;border-bottom:1px solid var(--line);border-radius:9px 9px 0 0;margin-bottom:2px}
   .vp-flt-row input{width:18px;height:18px;accent-color:var(--accent);flex:none;margin:0}
   .vp-flt-row .nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  /* planificación de ventas */
+  .pl-open{width:100%;background:#0b0e08;color:var(--lime);border:0;border-radius:12px;padding:12px;font-size:14px;font-weight:800;margin-bottom:10px;cursor:pointer;font-family:inherit}
+  .pl-cli{width:100%;display:flex;align-items:center;gap:9px;text-align:left;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:11px 12px;margin-bottom:7px;box-shadow:var(--shadow);cursor:pointer;font-family:inherit}
+  .pl-cli .pl-nm{flex:1;min-width:0;font-size:13.5px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .pl-cli .pl-kg{font-size:12px;font-weight:800;color:var(--accent-deep);font-variant-numeric:tabular-nums;flex:none}
+  .pl-cli .pl-st{font-size:9.5px;font-weight:800;padding:3px 8px;border-radius:14px;flex:none}
+  .pl-st.ok{background:var(--accent-soft);color:var(--accent-deep)}.pl-st.no{background:var(--surface-2);color:var(--ink-faint);border:1px solid var(--line)}
+  .pl-editor{background:var(--surface);border:1.5px solid var(--accent);border-radius:14px;padding:13px;margin-bottom:8px;box-shadow:0 6px 18px rgba(0,0,0,.06)}
+  .pl-eh{display:flex;align-items:center;gap:9px;margin-bottom:10px}
+  .pl-eh .pl-enm{flex:1;font-size:14px;font-weight:800;min-width:0}
+  .pl-eh .pl-close{background:transparent;border:0;color:var(--ink-faint);font-size:12px;font-weight:700;cursor:pointer;flex:none}
+  .pl-months{display:flex;gap:5px;overflow-x:auto;margin-bottom:11px;padding-bottom:2px}
+  .pl-mchip{flex:none;font-size:11.5px;font-weight:700;padding:6px 11px;border-radius:16px;background:var(--surface-2);color:var(--ink-soft);border:1px solid var(--line);cursor:pointer;font-family:inherit;white-space:nowrap}
+  .pl-mchip.on{background:var(--accent);color:#fff;border-color:var(--accent-deep)}
+  .pl-mchip.has{border-color:var(--accent);color:var(--accent-deep)}
+  .pl-sec{font-size:10.5px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:var(--ink-faint);margin:2px 2px 8px}
+  .pl-prow{display:flex;gap:7px;margin-bottom:7px;align-items:center}
+  .pl-prow select{flex:1;min-width:0;border:1.5px solid var(--line);border-radius:10px;background:var(--surface);padding:9px 10px;font-size:13px;color:var(--ink);font-family:inherit}
+  .pl-prow .pl-kg{width:100px;border:1.5px solid var(--line);border-radius:10px;background:var(--surface);padding:9px 8px;font-size:13px;font-weight:700;color:var(--ink);text-align:right;font-family:inherit}
+  .pl-prow .pl-rm{width:32px;height:32px;flex:none;border:0;background:color-mix(in srgb,var(--prospecto) 16%,transparent);color:var(--prospecto);border-radius:9px;font-size:14px;font-weight:800;cursor:pointer}
+  .pl-add{width:100%;background:transparent;border:1.5px dashed var(--accent);color:var(--accent);border-radius:11px;padding:10px;font-size:13px;font-weight:800;margin-top:3px;cursor:pointer;font-family:inherit}
+  .pl-tot{display:flex;justify-content:space-between;align-items:center;background:var(--accent-soft);border-radius:11px;padding:10px 12px;margin-top:11px;font-size:13px;font-weight:700}
+  .pl-tot b{color:var(--accent-deep);font-size:15px;font-variant-numeric:tabular-nums}
+  .pl-legend{display:flex;gap:14px;justify-content:center;margin-top:8px;font-size:11px;color:var(--ink-soft)}
+  .pl-legend i{display:inline-block;width:11px;height:11px;border-radius:3px;margin-right:4px;vertical-align:-1px}
+  .pl-legend .li-pv{background:var(--accent)}.pl-legend .li-rz{background:#1f6091}.pl-legend .li-ob{background:var(--prospecto)}
+  .obj-row{display:flex;align-items:center;gap:9px;background:var(--surface);border:1px solid var(--line);border-radius:11px;padding:9px 11px;margin-bottom:7px}
+  .obj-row .on{flex:1;font-size:12.5px;font-weight:700;min-width:0}
+  .obj-row .of{font-size:9px;color:var(--ink-faint);font-weight:700}
+  .obj-row input{width:110px;border:1.5px solid var(--line);border-radius:9px;padding:8px;font-size:13px;font-weight:700;text-align:right;color:var(--accent-deep);font-family:inherit}
   .vp-list{position:relative;margin-top:6px}
   .vp-list.on{border:1.5px solid var(--line);border-radius:12px;background:var(--surface);overflow:hidden}
   .vp-item{padding:11px 13px;font-size:14px;cursor:pointer;display:flex;justify-content:space-between;
@@ -1512,6 +1542,7 @@
         <button type="button" id="vpMgrFltBtn" class="vp-flt-btn"><span id="vpMgrFltLbl">Todo el equipo</span><span class="vp-flt-cx">▾</span></button>
         <div id="vpMgrFltPanel" class="vp-flt-panel hidden"></div>
       </div>
+      <button class="pl-open hidden" id="vpPlanBtn">📋 Planificación de ventas</button>
       <input type="text" id="vpSearch" class="vp-search" placeholder="Buscar cliente…  (o dejá vacío = Todos)" autocomplete="off">
       <div class="vp-list" id="vpList"></div>
       <div class="kpis" id="vpKpis"></div>
@@ -1519,6 +1550,53 @@
         <div class="vp-ttl" id="vpTtl">Todos mis clientes</div>
         <div id="vpChart"></div>
       </div>
+    </div>
+  </div>
+
+  <!-- PLANIFICACIÓN DE VENTAS (por ahora solo Gestión) -->
+  <div id="planPage" class="ventas-page hidden">
+    <div class="vp-top"><button class="vp-back" id="planBack">‹ Ventas</button><b>🎯 Planificación</b></div>
+    <div class="hub-body">
+      <div class="hub-h">Planificación de ventas</div>
+      <div class="hub-s">Previsión mensual por cliente y línea de producto. Los clientes van ordenados por kg comprado.</div>
+      <button class="pl-open" id="objOpenBtn" style="background:#0b0e08;margin-bottom:8px">🎯 Objetivo por línea (equipo)</button>
+      <button class="pl-open" id="objPersOpenBtn" style="background:#0b0e08;margin-bottom:12px">💰 Objetivo Personal (comisión)</button>
+      <div class="chart-card" style="margin:0 0 12px">
+        <div class="vp-ttl">Previsto vs Realizado vs Objetivo · kg/mes</div>
+        <div id="planChart"></div>
+        <div class="pl-legend"><span><i class="li-pv"></i>Previsto</span><span><i class="li-rz"></i>Realizado</span><span><i class="li-ob"></i>Objetivo</span></div>
+      </div>
+      <input type="text" id="planSearch" class="vp-search" placeholder="Buscar cliente…" autocomplete="off" style="margin-bottom:10px">
+      <div id="planList"></div>
+    </div>
+  </div>
+
+  <!-- OBJETIVO POR LÍNEA (Gestión) -->
+  <div id="objPage" class="ventas-page hidden">
+    <div class="vp-top"><button class="vp-back" id="objBack">‹ Planificación</button><b>🎯 Objetivo por línea</b></div>
+    <div class="hub-body">
+      <div class="hub-h">Objetivo por línea de producto</div>
+      <div class="hub-s">Meta mensual del equipo por línea. Elegí el mes y cargá los kg.</div>
+      <div class="pl-months" id="objMonths"></div>
+      <div id="objRows"></div>
+      <div class="pl-tot" id="objTot"><span>Total objetivo del mes</span><b>0 kg</b></div>
+    </div>
+  </div>
+
+  <!-- OBJETIVO PERSONAL (comisión) -->
+  <div id="objPersPage" class="ventas-page hidden">
+    <div class="vp-top"><button class="vp-back" id="objPersBack">‹ Planificación</button><b>💰 Objetivo Personal</b></div>
+    <div class="hub-body">
+      <div class="hub-h">Objetivo Personal</div>
+      <div class="hub-s">¿Cuánta comisión querés ganar en el año? Simulá qué vender por línea.</div>
+      <div class="pl-sec">Vendedor</div>
+      <select id="opSeller" class="ev-inp"></select>
+      <div class="pl-sec">Comisión objetivo del año</div>
+      <div class="pl-prow"><span style="font-size:12px;color:var(--ink-faint);font-weight:700">Gs</span><input id="opComis" class="pl-kg" style="flex:1;width:auto;font-size:16px" inputmode="numeric" value="24.000.000"></div>
+      <div class="pl-sec">Mezcla por línea (%) <span style="color:var(--prospecto);font-weight:700;text-transform:none;letter-spacing:0" id="opSum">· suma 0%</span></div>
+      <div id="opMix"></div>
+      <button class="pl-add" id="opAddMix">＋ Agregar línea</button>
+      <div id="opRes"></div>
     </div>
   </div>
 
@@ -2249,6 +2327,37 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
 
   // Catálogo (clientes/prospectos) — vem del banco vía importación del gestor
   var CAT_CLI=[], CAT_PRO=[], KGMAP={};
+  var PLINES=["Balanceados","Proteicos","Concentrado","Núcleos","Sup. minerales","Balanceado ovino","Sup. minerales ovino","Proteico ovino","Sup. minerales equino","Balanceado equino","Núcleo ovino"];
+  var PLAN={}, OBJ={};
+  // familia de comisión por línea + tasas Gs/kg (base / logrado / superado%)
+  var PFAM={"Balanceados":"Balanceado","Balanceado ovino":"Balanceado","Balanceado equino":"Balanceado","Proteicos":"Proteico","Proteico ovino":"Proteico","Concentrado":"Concentrado","Núcleos":"Núcleo","Núcleo ovino":"Núcleo","Sup. minerales":"Sal","Sup. minerales ovino":"Sal","Sup. minerales equino":"Sal"};
+  var COMIS={"Balanceado":{base:7.7,logr:16.5,supPct:10,sup:22},"Proteico":{base:7.7,logr:16.5,supPct:10,sup:22},"Concentrado":{base:22,logr:33,supPct:30,sup:44},"Sal":{base:55,logr:55,supPct:0,sup:55},"Núcleo":{base:55,logr:55,supPct:0,sup:55}};
+  function comisLinea(l){ return COMIS[PFAM[l]||""]||{base:0,logr:0,supPct:0,sup:0}; }
+  // estacionalidad mensual por línea (% del año, Ene..Dic)
+  var SEASON={
+    "Balanceados":[6.0,10.3,7.4,9.7,6.9,8.4,10.4,10.5,8.7,8.2,7.1,6.4],
+    "Proteicos":[6.9,6.4,8.2,4.8,5.1,7.1,13.7,11.2,10.1,9.8,8.6,8.0],
+    "Concentrado":[4.0,3.2,3.2,5.7,2.2,3.4,12.7,19.1,16.7,18.5,6.7,4.7],
+    "Núcleos":[7.2,4.3,5.1,5.9,4.5,14.7,16.5,1.9,5.1,24.5,7.2,3.2],
+    "Sup. minerales":[6.8,8.1,6.9,7.8,5.8,7.9,11.5,10.0,9.1,12.4,7.4,6.2],
+    "Balanceado ovino":[8.1,6.6,5.4,5.7,6.6,8.4,10.4,10.0,9.8,11.0,9.2,8.8],
+    "Sup. minerales ovino":[9.2,5.3,11.1,8.2,7.0,10.4,14.0,9.9,7.7,3.9,8.9,4.3],
+    "Proteico ovino":[6.9,6.4,8.2,4.8,5.1,7.1,13.7,11.2,10.1,9.8,8.6,8.0],
+    "Sup. minerales equino":[4.6,9.3,16.2,6.9,11.6,7.4,9.7,3.2,1.9,7.4,18.1,3.7],
+    "Balanceado equino":[6.3,5.6,5.7,5.6,6.2,8.4,11.4,13.5,12.2,10.5,7.3,7.5],
+    "Núcleo ovino":[7.2,4.3,5.1,5.9,4.5,14.7,16.5,1.9,5.1,24.5,7.2,3.2]
+  };
+  function planKey(nome, vend){ return "pl_"+slug(nome||"")+"__"+slug(vend||""); }
+  var _planSaveT=null;
+  function savePlan(key){
+    var doc=PLAN[key]; if(!doc) return;
+    if(useDB && dbh){ dbh.collection("planning").doc(key).set(doc).catch(noop); }
+    else { try{ localStorage.setItem("pt_plan", JSON.stringify(PLAN)); }catch(e){} }
+  }
+  function saveObj(){
+    if(useDB && dbh){ dbh.collection("planning").doc("__obj__").set({obj:OBJ}).catch(noop); }
+    else { try{ localStorage.setItem("pt_obj", JSON.stringify(OBJ)); }catch(e){} }
+  }
   function kgFor(n){ return KGMAP[n]||0; }
   function listForMotivo(mot){
     // Prospectos y clientes: lista compartida para todos los vendedores
@@ -2368,7 +2477,7 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
       }
     }catch(e){}
   }
-  function localBoot(){ DB=seedIfEmpty(); ROUTES=loadRoutes(); reRenderCurrent(); if(!current && !isManager && autoMgr()) enterManager(); }
+  function localBoot(){ DB=seedIfEmpty(); ROUTES=loadRoutes(); try{ PLAN=JSON.parse(localStorage.getItem("pt_plan")||"{}")||{}; }catch(e){ PLAN={}; } try{ OBJ=JSON.parse(localStorage.getItem("pt_obj")||"{}")||{}; }catch(e){ OBJ={}; } reRenderCurrent(); if(!current && !isManager && autoMgr()) enterManager(); }
   function subscribeDB(){
     dbh.collection("visits").onSnapshot(function(snap){ DB=groupBySeller(snap.docs); reRenderCurrent(); }, noop);
     dbh.collection("routes").onSnapshot(function(snap){ ROUTES=groupBySeller(snap.docs); reRenderCurrent(); }, noop);
@@ -2386,6 +2495,11 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
     dbh.collection("meta").onSnapshot(function(snap){
       snap.docs.forEach(function(d){ var v=d.data()||{}; if(v.tipo) LAST_IMPORT[v.tipo]=v; });
       renderImpStatus();
+    }, noop);
+    dbh.collection("planning").onSnapshot(function(snap){
+      PLAN={}; OBJ={}; snap.docs.forEach(function(d){ if(d.id==="__obj__"){ OBJ=(d.data()||{}).obj||{}; } else { PLAN[d.id]=d.data()||{}; } });
+      if($("#planPage") && !$("#planPage").classList.contains("hidden")) renderPlan();
+      if($("#objPage") && !$("#objPage").classList.contains("hidden")) renderObj();
     }, noop);
   }
   function dbBoot(){
@@ -2700,12 +2814,185 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
       mflt.classList.remove("hidden");
       $("#vpMgrFltPanel").classList.add("hidden");
     } else { VMGRSET=null; mflt.classList.add("hidden"); }
+    if($("#vpPlanBtn")) $("#vpPlanBtn").classList.toggle("hidden", !mgr); // planificación: por ahora solo Gestión
     $("#vpSearch").value="";
     $("#vpList").classList.remove("on"); $("#vpList").innerHTML="";
     $("#ventasPage").classList.remove("hidden");
     renderVentas();
   }
   function closeVentas(){ $("#ventasPage").classList.add("hidden"); }
+
+  // ---------- PLANIFICACIÓN DE VENTAS (solo Gestión por ahora) ----------
+  var planOpenKey=null, planMonthIdx=0;
+  function planClients(){ return CAT_CLI.slice(); } // ya ordenado por kg desc
+  function planDoc(c){ var k=planKey(c.nome,c.vendedor); if(!PLAN[k]) PLAN[k]={cliente:c.nome, vendedor:c.vendedor||"", plan:{}}; if(!PLAN[k].plan) PLAN[k].plan={}; return PLAN[k]; }
+  function planMonthsWithData(doc){ var n=0, p=doc&&doc.plan||{}; for(var m in p){ if((p[m]||[]).length) n++; } return n; }
+  function openPlan(){ $("#ventasPage").classList.add("hidden"); planOpenKey=null; planMonthIdx=0; $("#planSearch").value=""; $("#planPage").classList.remove("hidden"); renderPlan(); }
+  function closePlan(){ $("#planPage").classList.add("hidden"); $("#ventasPage").classList.remove("hidden"); renderVentas(); }
+  function renderPlan(){
+    var months=salesMonths();
+    renderPlanChart(months);
+    var q=norm($("#planSearch").value||""), list=planClients().filter(function(c){ return !q || norm(c.nome).indexOf(q)!==-1; });
+    var html="";
+    list.slice(0,120).forEach(function(c){
+      var key=planKey(c.nome,c.vendedor);
+      if(key===planOpenKey){ html+=planEditorHTML(c, key, months); return; }
+      var doc=PLAN[key], nm=planMonthsWithData(doc);
+      html+='<button class="pl-cli" data-key="'+esc(key)+'"><span class="pl-nm">'+esc(c.nome)+'</span><span class="pl-kg">'+fmtKg(c.kg||0)+' kg</span><span class="pl-st '+(nm?'ok':'no')+'">'+(nm?nm+' mes'+(nm>1?'es':''):'—')+'</span></button>';
+    });
+    if(!list.length) html='<div class="rday-empty" style="margin-top:14px">Sin clientes. El gestor debe importar la base.</div>';
+    $("#planList").innerHTML=html;
+    $$(".pl-cli",$("#planList")).forEach(function(b){ b.addEventListener("click", function(){ planOpenKey=b.dataset.key; planMonthIdx=0; renderPlan(); }); });
+    wirePlanEditor(months);
+  }
+  function planEditorHTML(c, key, months){
+    var doc=planDoc(c), mLbl=months[planMonthIdx]||months[0]||"", rows=(doc.plan[mLbl]||[]);
+    var chips=months.map(function(m,i){ var has=(doc.plan[m]||[]).length; return '<button class="pl-mchip'+(i===planMonthIdx?' on':'')+(has?' has':'')+'" data-mi="'+i+'">'+esc(fmtMes(m))+'</button>'; }).join("");
+    var prows=rows.map(function(r,i){
+      return '<div class="pl-prow"><select class="pl-line" data-i="'+i+'">'+PLINES.map(function(l){ return '<option'+(l===r.l?' selected':'')+'>'+esc(l)+'</option>'; }).join("")+'</select>'+
+        '<input class="pl-kg" data-i="'+i+'" inputmode="numeric" placeholder="kg" value="'+(r.kg!=null&&r.kg!==""?esc(fmtGs(r.kg)):"")+'"><button class="pl-rm" data-i="'+i+'">✕</button></div>';
+    }).join("");
+    var tot=rows.reduce(function(a,b){ return a+(+b.kg||0); },0);
+    return '<div class="pl-editor" data-key="'+esc(key)+'">'+
+      '<div class="pl-eh"><span class="pl-enm">'+esc(c.nome)+'</span><button class="pl-close">cerrar ✕</button></div>'+
+      '<div class="pl-months">'+chips+'</div>'+
+      '<div class="pl-sec">Líneas de producto · '+esc(fmtMes(mLbl))+'</div>'+
+      '<div id="plRows">'+(prows||'')+'</div>'+
+      '<button class="pl-add">＋ Agregar línea</button>'+
+      '<div class="pl-tot"><span>Total previsto · '+esc(fmtMes(mLbl))+'</span><b id="plTot">'+fmtGs(tot)+' kg</b></div>'+
+      '</div>';
+  }
+  function wirePlanEditor(months){
+    var ed=$(".pl-editor",$("#planList")); if(!ed) return;
+    var key=ed.dataset.key, doc=PLAN[key], mLbl=months[planMonthIdx]||months[0]||"";
+    if(!doc.plan[mLbl]) doc.plan[mLbl]=[];
+    var rows=doc.plan[mLbl];
+    $(".pl-close",ed).addEventListener("click", function(){ planOpenKey=null; renderPlan(); });
+    $$(".pl-mchip",ed).forEach(function(ch){ ch.addEventListener("click", function(){ planMonthIdx=+ch.dataset.mi; renderPlan(); }); });
+    $(".pl-add",ed).addEventListener("click", function(){ rows.push({l:PLINES[0], kg:""}); savePlan(key); renderPlan(); });
+    $$(".pl-line",ed).forEach(function(sel){ sel.addEventListener("change", function(){ rows[+sel.dataset.i].l=sel.value; savePlan(key); }); });
+    $$(".pl-rm",ed).forEach(function(b){ b.addEventListener("click", function(){ rows.splice(+b.dataset.i,1); savePlan(key); renderPlan(); }); });
+    $$(".pl-kg",ed).forEach(function(inp){ inp.addEventListener("input", function(){ rows[+inp.dataset.i].kg=numKg(inp.value);
+      var t=rows.reduce(function(a,b){ return a+(+b.kg||0); },0); if($("#plTot")) $("#plTot").textContent=fmtGs(t)+" kg";
+      clearTimeout(_planSaveT); _planSaveT=setTimeout(function(){ savePlan(key); renderPlanChart(months); }, 700);
+    }); });
+  }
+  function planSeriesFor(months){
+    // suma previsto, realizado y objetivo por mes (compilado gestión)
+    var n=months.length, pv=[], rz=[], ob=[];
+    for(var i=0;i<n;i++){ pv.push(0); rz.push(0); ob.push(0); }
+    CAT_CLI.forEach(function(c){
+      var doc=PLAN[planKey(c.nome,c.vendedor)];
+      months.forEach(function(mLbl,i){ if(doc&&doc.plan&&doc.plan[mLbl]) doc.plan[mLbl].forEach(function(r){ pv[i]+=(+r.kg||0); }); });
+      if(c.meses) for(var i=0;i<n;i++) rz[i]+=(+c.meses[i]||0);
+    });
+    months.forEach(function(mLbl,i){ PLINES.forEach(function(l){ if(OBJ[l]&&OBJ[l][mLbl]) ob[i]+=(+OBJ[l][mLbl]||0); }); });
+    return {pv:pv, rz:rz, ob:ob};
+  }
+  function renderPlanChart(months){
+    var el=$("#planChart"); if(!el) return;
+    if(!months.length){ el.innerHTML='<div class="vp-empty">Importá la base (con meses) para ver el gráfico.</div>'; return; }
+    var s=planSeriesFor(months);
+    var idx=[]; for(var i=0;i<months.length;i++){ if(s.pv[i]>0 || s.rz[i]>0 || s.ob[i]>0) idx.push(i); }
+    if(!idx.length){ el.innerHTML='<div class="vp-empty">Cargá previsiones para ver el gráfico.</div>'; return; }
+    var groups=idx.map(function(i){ return {lab:fmtMes(months[i]), pv:s.pv[i], rz:s.rz[i], ob:s.ob[i]}; });
+    var tPv=0,tRz=0,tOb=0; idx.forEach(function(i){ tPv+=s.pv[i]; tRz+=s.rz[i]; tOb+=s.ob[i]; });
+    groups.push({lab:"TOTAL", pv:tPv, rz:tRz, ob:tOb, tot:true});
+    el.innerHTML=barsSVG(groups);
+  }
+  function barsSVG(groups){
+    var W=336,H=200,pL=30,pR=8,pT=12,pB=26, iw=W-pL-pR, ih=H-pT-pB;
+    var max=0; groups.forEach(function(d){ max=Math.max(max,d.pv,d.rz,d.ob||0); }); if(max<=0) max=1; max*=1.14;
+    var g=groups.length, gw=iw/g, bw=gw*0.2, gap=gw*0.055;
+    function Y(v){ return pT+ih-(v/max)*ih; }
+    var s='<svg viewBox="0 0 '+W+' '+H+'" width="100%">';
+    for(var y=0;y<=3;y++){ var yy=pT+ih*y/3; s+='<line x1="'+pL+'" y1="'+yy+'" x2="'+(W-pR)+'" y2="'+yy+'" stroke="#e2e6dd"/>'; }
+    groups.forEach(function(d,i){ var cx=pL+gw*i+gw/2, x0=cx-(bw*3+gap*2)/2;
+      [["#c07a2b",d.ob||0],["#2f6b43",d.pv],["#1f6091",d.rz]].forEach(function(o,j){ var x=x0+j*(bw+gap), h=(o[1]/max)*ih, yy=Y(o[1]);
+        s+='<rect x="'+x.toFixed(1)+'" y="'+yy.toFixed(1)+'" width="'+bw.toFixed(1)+'" height="'+Math.max(0,h).toFixed(1)+'" rx="1.5" fill="'+o[0]+'"/>'; });
+      s+='<text x="'+cx.toFixed(1)+'" y="'+(H-9)+'" fill="'+(d.tot?"#245334":"#7d887f")+'" font-size="9.5" font-weight="'+(d.tot?"800":"600")+'" text-anchor="middle">'+esc(d.lab)+'</text>';
+    });
+    for(var y=0;y<=3;y++){ var val=max*(3-y)/3, yy=pT+ih*y/3; s+='<text x="'+(pL-4)+'" y="'+(yy+3)+'" fill="#9aa39a" font-size="8" text-anchor="end">'+(val>=1e6?(val/1e6).toFixed(val>=1e7?0:1)+"M":(val>=1000?Math.round(val/1000)+"k":Math.round(val)))+'</text>'; }
+    return s+'</svg>';
+  }
+  // ---- Objetivo por línea (Gestión) ----
+  var objMonthIdx=0;
+  function openObj(){ $("#planPage").classList.add("hidden"); objMonthIdx=0; $("#objPage").classList.remove("hidden"); renderObj(); }
+  function closeObj(){ $("#objPage").classList.add("hidden"); $("#planPage").classList.remove("hidden"); renderPlan(); }
+  function renderObj(){
+    var months=salesMonths();
+    if(!months.length){ $("#objMonths").innerHTML=''; $("#objRows").innerHTML='<div class="rday-empty">Importá la base (con meses) primero.</div>'; return; }
+    var mLbl=months[objMonthIdx]||months[0];
+    $("#objMonths").innerHTML=months.map(function(m,i){ var has=false; PLINES.forEach(function(l){ if(OBJ[l]&&OBJ[l][m]) has=true; }); return '<button class="pl-mchip'+(i===objMonthIdx?' on':'')+(has?' has':'')+'" data-mi="'+i+'">'+esc(fmtMes(m))+'</button>'; }).join("");
+    $("#objRows").innerHTML=PLINES.map(function(l){ var v=(OBJ[l]&&OBJ[l][mLbl]!=null)?OBJ[l][mLbl]:""; var f=comisLinea(l);
+      return '<div class="obj-row"><div class="on">'+esc(l)+' <span class="of">'+PFAM[l]+' · base '+dec1(f.base)+' Gs/kg</span></div><input class="obj-in" data-l="'+esc(l)+'" inputmode="numeric" placeholder="0" value="'+(v!==""?esc(fmtGs(v)):"")+'"><span style="font-size:10px;color:var(--ink-faint)">kg</span></div>'; }).join("");
+    updateObjTot(mLbl);
+    $$(".pl-mchip",$("#objMonths")).forEach(function(ch){ ch.addEventListener("click", function(){ objMonthIdx=+ch.dataset.mi; renderObj(); }); });
+    $$(".obj-in",$("#objRows")).forEach(function(inp){ inp.addEventListener("input", function(){ var l=inp.dataset.l; if(!OBJ[l]) OBJ[l]={}; OBJ[l][mLbl]=numKg(inp.value); updateObjTot(mLbl); clearTimeout(_planSaveT); _planSaveT=setTimeout(saveObj, 700); }); });
+  }
+  function updateObjTot(mLbl){ var t=0; PLINES.forEach(function(l){ if(OBJ[l]&&OBJ[l][mLbl]) t+=(+OBJ[l][mLbl]||0); }); $("#objTot").querySelector("b").textContent=fmtGs(t)+" kg"; }
+  if($("#objOpenBtn")) $("#objOpenBtn").addEventListener("click", openObj);
+  if($("#objBack")) $("#objBack").addEventListener("click", closeObj);
+
+  // ---- Objetivo Personal (comisión) ----
+  var opMix=[{l:"Balanceados",pct:40},{l:"Proteicos",pct:25},{l:"Concentrado",pct:15},{l:"Sup. minerales",pct:20}];
+  function opSumPct(){ return opMix.reduce(function(a,b){ return a+(+b.pct||0); },0); }
+  function updateOpSum(){ var s=opSumPct(), el=$("#opSum"); if(!el) return; el.textContent="· suma "+dec1(s)+"%"; el.style.color=Math.abs(s-100)<0.5?"var(--accent)":"var(--prospecto)"; }
+  function openObjPers(){ $("#planPage").classList.add("hidden");
+    $("#opSeller").innerHTML='<option value="__all__">Todo el equipo</option>'+SELLERS.map(function(s){ return '<option value="'+s.id+'">'+esc(s.name)+'</option>'; }).join("");
+    $("#objPersPage").classList.remove("hidden"); renderObjPers(); }
+  function closeObjPers(){ $("#objPersPage").classList.add("hidden"); $("#planPage").classList.remove("hidden"); renderPlan(); }
+  function renderObjPers(){
+    var months=salesMonths();
+    $("#opMix").innerHTML=opMix.map(function(r,i){
+      return '<div class="pl-prow"><select class="op-line" data-i="'+i+'">'+PLINES.map(function(l){ return '<option'+(l===r.l?' selected':'')+'>'+esc(l)+'</option>'; }).join("")+'</select>'+
+        '<input class="op-pct pl-kg" data-i="'+i+'" style="width:72px" inputmode="numeric" value="'+esc(r.pct)+'"><span style="font-size:11px;color:var(--ink-faint);font-weight:700">%</span><button class="pl-rm op-rm" data-i="'+i+'">✕</button></div>';
+    }).join("");
+    updateOpSum();
+    $$(".op-line",$("#opMix")).forEach(function(sel){ sel.addEventListener("change", function(){ opMix[+sel.dataset.i].l=sel.value; renderObjPers(); }); });
+    $$(".op-pct",$("#opMix")).forEach(function(inp){ inp.addEventListener("input", function(){ opMix[+inp.dataset.i].pct=numPY(inp.value); updateOpSum(); renderOpResult(months); }); });
+    $$(".op-rm",$("#opMix")).forEach(function(b){ b.addEventListener("click", function(){ opMix.splice(+b.dataset.i,1); renderObjPers(); }); });
+    renderOpResult(months);
+  }
+  function renderOpResult(months){
+    var el=$("#opRes"); if(!el) return;
+    if(!months.length){ el.innerHTML='<div class="hint" style="margin-top:12px">Importá la base (con meses) para simular.</div>'; return; }
+    var comis=numKg($("#opComis").value);
+    var sellerId=$("#opSeller").value, clients=(sellerId==="__all__")?CAT_CLI:clientsForSeller(sellerId);
+    var n=months.length, realTot=[]; for(var i=0;i<n;i++) realTot.push(0);
+    clients.forEach(function(c){ if(c.meses) for(var i=0;i<n;i++) realTot[i]+=(+c.meses[i]||0); });
+    var wBase=0; opMix.forEach(function(m){ wBase += (m.pct/100)*comisLinea(m.l).base; });
+    var metaC=[], realC=[];
+    months.forEach(function(lbl,i){ var mn=parseInt((""+lbl).split("-")[1],10)||(i+1), mc=0;
+      opMix.forEach(function(m){ var sea=(SEASON[m.l]&&SEASON[m.l][mn-1])||0; mc += comis*(m.pct/100)*(sea/100); });
+      metaC.push(mc); realC.push(realTot[i]*wBase);
+    });
+    var idx=[]; for(var i=0;i<n;i++){ if(metaC[i]>0||realC[i]>0) idx.push(i); }
+    var groups=idx.map(function(i){ return {lab:fmtMes(months[i]), pv:metaC[i], rz:realC[i], ob:0}; });
+    var sMeta=0,sReal=0; idx.forEach(function(i){ sMeta+=metaC[i]; sReal+=realC[i]; });
+    groups.push({lab:"TOTAL", pv:sMeta, rz:sReal, ob:0, tot:true});
+    var kgLines=opMix.map(function(m){ var b=comisLinea(m.l).base; return {l:m.l, kg:b>0?comis*(m.pct/100)/b:0}; });
+    var cBase=0,cLogr=0,cSup=0; kgLines.forEach(function(x){ var f=comisLinea(x.l); cBase+=x.kg*f.base; cLogr+=x.kg*f.logr; cSup+=x.kg*f.sup; });
+    var falta=sMeta-sReal, faltaPos=falta>0;
+    var html='<div class="chart-card" style="margin-top:13px"><div class="vp-ttl">Comisión: Meta vs Realizado · Gs/mes</div>'+(idx.length?barsSVG(groups):'<div class="vp-empty">Cargá % y comisión.</div>')+
+      '<div class="pl-legend"><span><i class="li-pv"></i>Meta</span><span><i class="li-rz"></i>Realizado (estim.)</span></div></div>';
+    html+='<div class="pl-tot" style="margin-top:11px;background:'+(faltaPos?"#f6ead9":"var(--accent-soft)")+'"><span style="font-weight:800;color:'+(faltaPos?"var(--prospecto)":"var(--accent-deep)")+'">'+(faltaPos?"Te falta para tu meta":"¡Meta alcanzada!")+'</span><b style="color:'+(faltaPos?"var(--prospecto)":"var(--accent-deep)")+'">Gs '+fmtGs(Math.abs(falta))+'</b></div>';
+    html+='<div class="pl-sec" style="margin-top:14px">Si alcanzás tu objetivo (plus)</div>';
+    html+='<div class="pl-tot" style="background:var(--surface-2);margin-top:0"><span>Comisión base</span><b>Gs '+fmtGs(cBase)+'</b></div>';
+    html+='<div class="pl-tot" style="background:var(--accent-soft);margin-top:6px"><span>Objetivo logrado</span><b>Gs '+fmtGs(cLogr)+'</b></div>';
+    html+='<div class="pl-tot" style="background:var(--accent-soft);margin-top:6px"><span>Superado el objetivo</span><b>Gs '+fmtGs(cSup)+'</b></div>';
+    html+='<div class="pl-sec" style="margin-top:14px">Necesitás vender (año)</div>';
+    html+=kgLines.map(function(x){ return '<div class="pl-tot" style="background:var(--surface-2);margin-top:6px"><span>'+esc(x.l)+' <small style="color:var(--ink-faint)">· '+PFAM[x.l]+'</small></span><b>'+fmtGs(Math.round(x.kg))+' kg</b></div>'; }).join("");
+    html+='<div class="hint" style="margin-top:12px">Cálculo con la <b>tasa base</b>. Realizado estimado repartiendo tu venta total según la mezcla %. La meta anual se reparte por mes con la estacionalidad de cada línea.</div>';
+    el.innerHTML=html;
+  }
+  if($("#objPersOpenBtn")) $("#objPersOpenBtn").addEventListener("click", openObjPers);
+  if($("#objPersBack")) $("#objPersBack").addEventListener("click", closeObjPers);
+  if($("#opComis")) $("#opComis").addEventListener("input", function(){ renderOpResult(salesMonths()); });
+  if($("#opSeller")) $("#opSeller").addEventListener("change", function(){ renderOpResult(salesMonths()); });
+  if($("#vpPlanBtn")) $("#vpPlanBtn").addEventListener("click", openPlan);
+  if($("#planBack")) $("#planBack").addEventListener("click", closePlan);
+  if($("#planSearch")) $("#planSearch").addEventListener("input", function(){ renderPlan(); });
   function renderVentas(){
     var pool=ventasPool(), list=pool.list, labels=salesMonths();
     $("#vpSeller").textContent = pool.label;
