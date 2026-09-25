@@ -273,6 +273,10 @@
   .pl-eh{display:flex;align-items:center;gap:9px;margin-bottom:10px}
   .pl-eh .pl-enm{flex:1;font-size:14px;font-weight:800;min-width:0}
   .pl-eh .pl-close{background:transparent;border:0;color:var(--ink-faint);font-size:12px;font-weight:700;cursor:pointer;flex:none}
+  .pl-info{background:var(--surface-2);border:1px solid var(--line);border-radius:11px;padding:9px 11px;margin-bottom:11px}
+  .pl-info-r{display:flex;justify-content:space-between;align-items:baseline;font-size:12px;color:var(--ink-soft);padding:2px 0}
+  .pl-info-r b{color:var(--accent-deep);font-weight:800;font-variant-numeric:tabular-nums}
+  .pl-info-sub{font-size:11px;color:var(--ink-faint);margin-top:5px;padding-top:5px;border-top:1px dashed var(--line);line-height:1.4}
   .pl-months{display:flex;gap:5px;overflow-x:auto;margin-bottom:11px;padding-bottom:2px}
   .pl-mchip{flex:none;font-size:11.5px;font-weight:700;padding:6px 11px;border-radius:16px;background:var(--surface-2);color:var(--ink-soft);border:1px solid var(--line);cursor:pointer;font-family:inherit;white-space:nowrap}
   .pl-mchip.on{background:var(--accent);color:#fff;border-color:var(--accent-deep)}
@@ -1583,10 +1587,11 @@
     <div class="vp-top"><button class="vp-back" id="objBack">‹ Planificación</button><b>🎯 Objetivo por línea</b></div>
     <div class="hub-body">
       <div class="hub-h">Objetivo por línea de producto</div>
-      <div class="hub-s">Meta mensual por línea, por vendedor. Elegí vendedor y mes, cargá los kg y guardá.</div>
+      <div class="hub-s">Meta <b>mensual</b> por línea, por vendedor. Cargada desde la planilla de Metas (podés editar y guardar).</div>
       <div class="pl-sec">Vendedor</div>
       <select id="objSellerSel" class="ev-inp" style="margin-bottom:11px"></select>
       <div class="pl-months" id="objMonths"></div>
+      <div class="pl-sec">Objetivo del mes por línea (kg)</div>
       <div id="objRows"></div>
       <div class="pl-tot" id="objTot"><span>Total objetivo del mes</span><b>0 kg</b></div>
       <button class="pl-open" id="objSaveBtn" style="background:var(--accent);color:#fff;margin-top:12px">Guardar objetivo ✓</button>
@@ -2339,6 +2344,23 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
   var CAT_CLI=[], CAT_PRO=[], KGMAP={};
   var PLINES=["Balanceados","Proteicos","Concentrado","Núcleos","Sup. minerales","Balanceado ovino","Sup. minerales ovino","Proteico ovino","Sup. minerales equino","Balanceado equino","Núcleo ovino"];
   var PLAN={}, OBJ={};
+  // líneas del objetivo (según planilla de Metas) y datos cargados 2026 (mensual Ene..Dic por vendedor)
+  var OBJ_LINES=["Balanceados","Concentrado","Sup. minerales","Núcleos","Proteicos","Semen"];
+  var DEFAULT_OBJ={
+ "thatyany":{"Balanceados":[0,0,0,0,0,0,50000,50000,50000,0,0,0],"Concentrado":[0,0,0,0,0,0,2000,2000,2000,0,0,0],"Sup. minerales":[0,0,0,0,0,0,5000,5000,5000,0,0,0],"Núcleos":[0,0,0,0,0,0,5000,3000,2000,0,0,0],"Proteicos":[0,0,0,0,0,0,30000,30000,30000,0,0,0],"Semen":[0,0,0,0,0,0,0,0,0,0,0,0]},
+ "matias":{"Balanceados":[6500,5500,4500,4500,150500,131500,158500,173500,168500,8500,8500,8500],"Concentrado":[0,0,0,0,2000,9000,5000,3500,3000,0,0,0],"Sup. minerales":[30,30,120,90,6590,6620,6680,6320,6090,150,150,150],"Núcleos":[0,0,0,0,30000,25000,16000,16000,16000,0,0,0],"Proteicos":[50,50,50,50,30050,53050,55050,55050,40050,50,50,50],"Semen":[0,0,0,0,0,0,0,0,0,0,0,0]},
+ "mauricio":{"Balanceados":[87500,85000,74750,83550,85000,86500,89000,89000,82000,85000,82000,82000],"Concentrado":[1000,500,450,450,450,1000,2000,1800,1500,650,450,450],"Sup. minerales":[17560,8060,11120,6700,6700,6670,8240,7620,6700,6700,6700,6550],"Núcleos":[50,150,150,50,500,500,500,500,500,25,25,25],"Proteicos":[50100,30100,29600,26500,30625,30625,32125,55150,30150,25150,22150,15200],"Semen":[0,0,0,0,0,0,0,0,0,0,0,0]},
+ "rossmaryo":{"Balanceados":[9500,7500,7000,7000,237500,250000,270500,251500,190000,11500,10000,10000],"Concentrado":[0,0,0,0,5000,5000,30000,30000,22000,0,0,0],"Sup. minerales":[120,120,180,150,9150,10180,13240,13180,12150,180,180,180],"Núcleos":[0,0,0,0,1000,5000,10000,15000,15000,0,0,0],"Proteicos":[50,50,50,50,45100,65100,75125,91125,60150,150,150,150],"Semen":[0,0,0,0,0,0,0,0,0,0,0,0]},
+ "edgar":{"Balanceados":[137800,200500,225500,235500,225500,325800,302000,302000,201500,227000,197500,128500],"Concentrado":[5000,500,500,500,500,2000,2000,3000,4000,4000,5000,4000],"Sup. minerales":[15030,12030,20060,10030,20030,30060,25060,25060,25030,6030,5030,5030],"Núcleos":[1000,1000,5000,5000,8000,14000,20000,15000,15000,28000,15650,15000],"Proteicos":[50025,25025,40025,16025,22025,30025,60025,50025,30025,30025,28025,25025],"Semen":[0,0,0,0,0,0,0,0,0,0,0,0]},
+ "francisco":{"Balanceados":[126500,136000,147750,101500,105000,146500,151000,171000,151000,114750,114750,114750],"Concentrado":[3000,2225,2225,2225,2225,2000,2225,2225,2225,2225,2225,2225],"Sup. minerales":[8350,5330,5410,4035,3860,5410,5900,5910,5860,4035,4035,4035],"Núcleos":[1000,2500,2850,2850,2850,3000,4000,4000,2850,2850,2850,2825],"Proteicos":[47700,25150,32200,14875,22200,38250,65250,65250,55300,14950,15000,15000],"Semen":[0,0,0,0,0,0,0,0,300,0,0,0]},
+ "patricio":{"Balanceados":[44500,41000,40250,38250,36000,37000,49500,42500,44000,32500,31000,30500],"Concentrado":[14000,16000,16000,15000,15500,16000,16000,16000,16000,15000,15000,15000],"Sup. minerales":[620,1120,730,620,620,680,1210,1180,220,350,350,350],"Núcleos":[700,950,800,800,800,800,1000,1000,1000,1500,1000,825],"Proteicos":[4050,10050,12550,5550,5750,7050,7050,6550,5350,4975,4050,4050],"Semen":[0,0,0,0,0,0,0,0,0,0,0,0]},
+ "alessandro":{"Balanceados":[52500,42000,60500,26000,38500,46500,72500,72000,58500,29000,28500,28000],"Concentrado":[500,1000,1000,5000,8000,14000,14000,14000,25000,25000,14000,14000],"Sup. minerales":[1030,1130,1160,1130,980,1010,1160,2010,2030,1230,1130,1105],"Núcleos":[200,225,225,225,150,250,1000,1000,2000,250,225,200],"Proteicos":[7025,8725,9025,10025,10025,37525,40025,40025,50025,21525,18025,13025],"Semen":[0,0,0,0,0,0,0,0,200,0,0,0]},
+ "rodolfo":{"Balanceados":[58000,51000,50750,56500,46000,53000,73500,73000,62000,64750,62750,62750],"Concentrado":[9000,5500,3000,3000,3000,3500,3500,4000,3000,3000,3000,3000],"Sup. minerales":[5170,6220,6710,4740,5590,5510,7740,6210,4740,4810,4810,4810],"Núcleos":[50,100,1000,25,3000,3000,5000,4000,3000,25,25,25],"Proteicos":[13150,11600,13100,9025,9025,10150,11200,10200,12200,9100,9100,9100],"Semen":[0,0,0,0,0,0,0,0,0,0,0,0]},
+ "billie":{"Balanceados":[7000,14500,8475,8475,12500,12700,12750,18750,8725,8725,8725,8725],"Concentrado":[750,450,450,450,450,450,450,450,450,450,450,400],"Sup. minerales":[830,1030,1360,1330,1330,1360,1560,1560,1330,1360,1335,1335],"Núcleos":[2500,1850,2500,1850,1850,4000,4000,4000,3000,1800,1800,1800],"Proteicos":[1775,4325,3025,4025,6025,6025,6025,6025,5025,6025,5025,5025],"Semen":[0,0,0,0,0,0,0,0,0,0,0,0]},
+ "martin":{"Balanceados":[9500,7000,10000,4700,5000,5200,5250,5250,5250,5250,5250,5250],"Concentrado":[1200,750,550,425,450,500,500,425,425,425,425,425],"Sup. minerales":[630,855,460,380,380,460,1260,1060,430,435,435,410],"Núcleos":[300,250,150,75,500,500,250,2000,3000,150,150,150],"Proteicos":[725,725,775,325,625,625,675,825,825,325,325,325],"Semen":[0,0,0,0,0,0,0,0,0,0,0,0]},
+ "probal":{"Balanceados":[160000,160000,160000,170000,170000,175000,190000,195000,215000,185000,185000,163700],"Concentrado":[2000,2000,3000,3000,3000,5000,6000,5000,4000,4000,3000,2000],"Sup. minerales":[15000,10000,10000,10000,6000,8000,7000,7000,8000,11000,10500,3000],"Núcleos":[500,5750,7000,8000,8500,8500,12500,12500,9000,7000,7000,5000],"Proteicos":[50000,14500,15200,15000,30000,30000,30000,30000,30000,25000,25000,15000],"Semen":[0,0,0,0,0,0,0,0,0,0,0,0]}
+};
+  function objSellerData(sid){ var o=OBJ[sid]; if(o && Object.keys(o).length) return o; return DEFAULT_OBJ[sid]||{}; }
   // familia de comisión por línea + tasas Gs/kg (base / logrado / superado%)
   var PFAM={"Balanceados":"Balanceado","Balanceado ovino":"Balanceado","Balanceado equino":"Balanceado","Proteicos":"Proteico","Proteico ovino":"Proteico","Concentrado":"Concentrado","Núcleos":"Núcleo","Núcleo ovino":"Núcleo","Sup. minerales":"Sal","Sup. minerales ovino":"Sal","Sup. minerales equino":"Sal"};
   var COMIS={"Balanceado":{base:7.7,logr:16.5,supPct:10,sup:22},"Proteico":{base:7.7,logr:16.5,supPct:10,sup:22},"Concentrado":{base:22,logr:33,supPct:30,sup:44},"Sal":{base:55,logr:55,supPct:0,sup:55},"Núcleo":{base:55,logr:55,supPct:0,sup:55}};
@@ -2838,20 +2860,25 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
   function planEditingNow(){ var a=document.activeElement; return a && (a.tagName==="INPUT"||a.tagName==="SELECT") && (a.closest("#planPage")||a.closest("#objPage")||a.closest("#objPersPage")); }
   function planClients(){ return (planSeller==="__all__") ? CAT_CLI.slice() : clientsForSeller(planSeller); } // ordenado por kg desc
   function planDoc(c){ var k=planKey(c.nome,c.vendedor); if(!PLAN[k]) PLAN[k]={cliente:c.nome, vendedor:c.vendedor||"", plan:{}}; if(!PLAN[k].plan) PLAN[k].plan={}; return PLAN[k]; }
-  function planMonthsWithData(doc){ var n=0, p=doc&&doc.plan||{}; for(var m in p){ if((p[m]||[]).length) n++; } return n; }
+  function planMonthsWithData(doc){ var n=0, p=doc&&doc.plan||{}; for(var m in p){ if((p[m]||[]).some(function(r){return (+r.kg||0)>0;})) n++; } return n; }
+  function curMonthLabel(months){ var mn=(new Date()).getMonth()+1; for(var i=0;i<months.length;i++){ if(parseInt((""+months[i]).split("-")[1],10)===mn) return months[i]; } return months[months.length-1]||""; }
+  function loadedInMonth(doc, mLbl){ if(!doc||!doc.plan||!mLbl) return false; return (doc.plan[mLbl]||[]).some(function(r){ return (+r.kg||0)>0; }); }
   function fillSellerSelect(sel, val){ if(!sel) return; sel.innerHTML='<option value="__all__">Todo el equipo</option>'+SELLERS.map(function(s){ return '<option value="'+s.id+'">'+esc(s.name)+'</option>'; }).join(""); sel.value=val||"__all__"; }
-  function openPlan(){ $("#ventasPage").classList.add("hidden"); planOpenKey=null; planMonthIdx=0; $("#planSearch").value=""; fillSellerSelect($("#planSellerSel"), planSeller); $("#planPage").classList.remove("hidden"); renderPlan(); }
+  function openPlan(){ $("#ventasPage").classList.add("hidden"); planOpenKey=null; planMonthIdx=0; $("#planSearch").value=""; fillSellerSelect($("#planSellerSel"), planSeller);
+    if($("#objOpenBtn")) $("#objOpenBtn").style.display=(VCTX==="mgr")?"":"none"; // Objetivo por línea: solo Gestión
+    $("#planPage").classList.remove("hidden"); renderPlan(); }
   function closePlan(){ $("#planPage").classList.add("hidden"); $("#ventasPage").classList.remove("hidden"); renderVentas(); }
   function renderPlan(){
     var months=salesMonths();
     renderPlanChart(months);
     var q=norm($("#planSearch").value||""), list=planClients().filter(function(c){ return !q || norm(c.nome).indexOf(q)!==-1; });
+    var curM=curMonthLabel(months), curTxt=curM?fmtMes(curM):"mes";
     var html="";
     list.slice(0,150).forEach(function(c){
       var key=planKey(c.nome,c.vendedor);
       if(key===planOpenKey){ html+=planEditorHTML(c, key, months); return; }
-      var doc=PLAN[key], nm=planMonthsWithData(doc), done=nm>0;
-      html+='<button class="pl-cli '+(done?'pl-done':'pl-todo')+'" data-key="'+esc(key)+'"><span class="pl-dotc"></span><span class="pl-nm">'+esc(c.nome)+'</span><span class="pl-kg">'+fmtKg(c.kg||0)+' kg</span><span class="pl-st '+(done?'ok':'no')+'">'+(done?nm+' mes'+(nm>1?'es':''):'sin cargar')+'</span></button>';
+      var doc=PLAN[key], done=loadedInMonth(doc, curM);
+      html+='<button class="pl-cli '+(done?'pl-done':'pl-todo')+'" data-key="'+esc(key)+'"><span class="pl-dotc"></span><span class="pl-nm">'+esc(c.nome)+'</span><span class="pl-kg">'+fmtKg(c.kg||0)+' kg</span><span class="pl-st '+(done?'ok':'no')+'">'+(done?curTxt+' ✓':'sin '+curTxt)+'</span></button>';
     });
     if(!list.length) html='<div class="rday-empty" style="margin-top:14px">Sin clientes para este vendedor.</div>';
     $("#planList").innerHTML=html;
@@ -2866,8 +2893,16 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
         '<input class="pl-kg" data-i="'+i+'" inputmode="numeric" placeholder="kg" value="'+(r.kg!=null&&r.kg!==""?esc(fmtGs(r.kg)):"")+'"><button class="pl-rm" data-i="'+i+'">✕</button></div>';
     }).join("");
     var tot=rows.reduce(function(a,b){ return a+(+b.kg||0); },0);
+    var info='<div class="pl-info"><div class="pl-info-r"><span>Total ya comprado</span><b>'+fmtGs(c.kg||0)+' kg</b></div>';
+    if(planMonthIdx>0){ var pL=months[planMonthIdx-1], pRz=(c.meses&&c.meses[planMonthIdx-1]!=null)?(+c.meses[planMonthIdx-1]||0):0;
+      info+='<div class="pl-info-r"><span>Comprado en '+esc(fmtMes(pL))+'</span><b>'+fmtGs(pRz)+' kg</b></div>';
+      var pPlan=(doc.plan[pL]||[]).filter(function(r){ return (+r.kg||0)>0; });
+      if(pPlan.length) info+='<div class="pl-info-sub">Planificado en '+esc(fmtMes(pL))+': '+pPlan.map(function(r){ return esc(r.l)+' '+fmtGs(r.kg); }).join(' · ')+'</div>';
+    }
+    info+='</div>';
     return '<div class="pl-editor" data-key="'+esc(key)+'">'+
       '<div class="pl-eh"><span class="pl-enm">'+esc(c.nome)+'</span><button class="pl-close">cerrar ✕</button></div>'+
+      info+
       '<div class="pl-months">'+chips+'</div>'+
       '<div class="pl-sec">Líneas de producto · '+esc(fmtMes(mLbl))+'</div>'+
       '<div id="plRows">'+(prows||'')+'</div>'+
@@ -2900,56 +2935,64 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
       if(c.meses) for(var i=0;i<n;i++) rz[i]+=(+c.meses[i]||0);
     });
     var objSellers=(planSeller==="__all__")?SELLERS.map(function(s){return s.id;}):[planSeller];
-    objSellers.forEach(function(sid){ var o=OBJ[sid]; if(!o) return; months.forEach(function(mLbl,i){ PLINES.forEach(function(l){ if(o[l]&&o[l][mLbl]) ob[i]+=(+o[l][mLbl]||0); }); }); });
+    objSellers.forEach(function(sid){ var o=objSellerData(sid); if(!o) return; months.forEach(function(mLbl,i){ var mn=(parseInt((""+mLbl).split("-")[1],10)||(i+1))-1; OBJ_LINES.forEach(function(l){ if(o[l]&&o[l][mn]!=null) ob[i]+=(+o[l][mn]||0); }); }); });
     return {pv:pv, rz:rz, ob:ob};
   }
   function renderPlanChart(months){
     var el=$("#planChart"); if(!el) return;
     if(!months.length){ el.innerHTML='<div class="vp-empty">Importá la base (con meses) para ver el gráfico.</div>'; return; }
     var s=planSeriesFor(months);
-    var idx=[]; for(var i=0;i<months.length;i++){ if(s.pv[i]>0 || s.rz[i]>0 || s.ob[i]>0) idx.push(i); }
-    if(!idx.length){ el.innerHTML='<div class="vp-empty">Cargá previsiones para ver el gráfico.</div>'; return; }
+    var curMn=(new Date()).getMonth()+1; // mostrar solo hasta el mes actual
+    var idx=[]; for(var i=0;i<months.length;i++){ var mn=parseInt((""+months[i]).split("-")[1],10)||(i+1); if(mn<=curMn && (s.pv[i]>0 || s.rz[i]>0 || s.ob[i]>0)) idx.push(i); }
+    if(!idx.length){ el.innerHTML='<div class="vp-empty">Sin datos hasta el mes actual.</div>'; return; }
     var groups=idx.map(function(i){ return {lab:fmtMes(months[i]), pv:s.pv[i], rz:s.rz[i], ob:s.ob[i]}; });
     var tPv=0,tRz=0,tOb=0; idx.forEach(function(i){ tPv+=s.pv[i]; tRz+=s.rz[i]; tOb+=s.ob[i]; });
     groups.push({lab:"TOTAL", pv:tPv, rz:tRz, ob:tOb, tot:true});
     el.innerHTML=barsSVG(groups);
   }
-  function barsSVG(groups, names, fmt){
+  function barsSVG(groups, names, fmt, nSeries){
+    nSeries=nSeries||3;
     names=names||["Objetivo","Previsto","Realizado"]; fmt=fmt||function(v){ return fmtGs(v)+" kg"; };
     var W=336,H=200,pL=30,pR=8,pT=12,pB=26, iw=W-pL-pR, ih=H-pT-pB;
     var max=0; groups.forEach(function(d){ max=Math.max(max,d.pv,d.rz,d.ob||0); }); if(max<=0) max=1; max*=1.14;
-    var g=groups.length, gw=iw/g, bw=gw*0.2, gap=gw*0.055;
+    var g=groups.length, gw=iw/g, bw=gw*(g>10?0.30/nSeries*2:0.6/nSeries), gap=gw*0.05, lf=g>10?7.5:9.5;
+    var totalW=bw*nSeries+gap*(nSeries-1);
     function Y(v){ return pT+ih-(v/max)*ih; }
     var s='<svg viewBox="0 0 '+W+' '+H+'" width="100%">';
     for(var y=0;y<=3;y++){ var yy=pT+ih*y/3; s+='<line x1="'+pL+'" y1="'+yy+'" x2="'+(W-pR)+'" y2="'+yy+'" stroke="#e2e6dd"/>'; }
-    groups.forEach(function(d,i){ var cx=pL+gw*i+gw/2, x0=cx-(bw*3+gap*2)/2;
-      [["#c07a2b",d.ob||0,0],["#2f6b43",d.pv,1],["#1f6091",d.rz,2]].forEach(function(o,j){ var x=x0+j*(bw+gap), h=(o[1]/max)*ih, yy=Y(o[1]);
+    groups.forEach(function(d,i){ var cx=pL+gw*i+gw/2, x0=cx-totalW/2;
+      var allBars=[["#c07a2b",d.ob||0,0],["#2f6b43",d.pv,1],["#1f6091",d.rz,2]];
+      var bars = (nSeries===2) ? [allBars[1],allBars[2]] : allBars;
+      bars.forEach(function(o,j){ var x=x0+j*(bw+gap), h=(o[1]/max)*ih, yy=Y(o[1]);
         s+='<rect x="'+x.toFixed(1)+'" y="'+yy.toFixed(1)+'" width="'+bw.toFixed(1)+'" height="'+Math.max(0,h).toFixed(1)+'" rx="1.5" fill="'+o[0]+'"><title>'+esc(d.lab)+' · '+esc(names[o[2]])+': '+esc(fmt(o[1]))+'</title></rect>'; });
-      s+='<text x="'+cx.toFixed(1)+'" y="'+(H-9)+'" fill="'+(d.tot?"#245334":"#7d887f")+'" font-size="9.5" font-weight="'+(d.tot?"800":"600")+'" text-anchor="middle">'+esc(d.lab)+'</text>';
+      s+='<text x="'+cx.toFixed(1)+'" y="'+(H-9)+'" fill="'+(d.tot?"#245334":"#7d887f")+'" font-size="'+lf+'" font-weight="'+(d.tot?"800":"600")+'" text-anchor="middle">'+esc(d.lab)+'</text>';
     });
     for(var y=0;y<=3;y++){ var val=max*(3-y)/3, yy=pT+ih*y/3; s+='<text x="'+(pL-4)+'" y="'+(yy+3)+'" fill="#9aa39a" font-size="8" text-anchor="end">'+(val>=1e6?(val/1e6).toFixed(val>=1e7?0:1)+"M":(val>=1000?Math.round(val/1000)+"k":Math.round(val)))+'</text>'; }
     return s+'</svg>';
   }
   // ---- Objetivo por línea (Gestión) ----
-  var objMonthIdx=0, objSeller="__all__";
-  function objData(){ if(!OBJ[objSeller]) OBJ[objSeller]={}; return OBJ[objSeller]; }
-  function openObj(){ $("#planPage").classList.add("hidden"); objMonthIdx=0;
+  var objSeller="__all__", objMonthIdx=0;
+  function objData(){ // datos editables del vendedor (siembra desde DEFAULT si está vacío)
+    if(!OBJ[objSeller] || !Object.keys(OBJ[objSeller]).length){ var d=DEFAULT_OBJ[objSeller]; OBJ[objSeller]={}; if(d) OBJ_LINES.forEach(function(l){ OBJ[objSeller][l]=(d[l]||[]).slice(); }); }
+    return OBJ[objSeller];
+  }
+  function openObj(){ $("#planPage").classList.add("hidden");
     objSeller=(planSeller&&planSeller!=="__all__")?planSeller:(SELLERS[0]?SELLERS[0].id:"");
+    objMonthIdx=(new Date()).getMonth();
     var sel=$("#objSellerSel"); if(sel){ sel.innerHTML=SELLERS.map(function(s){ return '<option value="'+s.id+'">'+esc(s.name)+'</option>'; }).join(""); sel.value=objSeller; }
     $("#objPage").classList.remove("hidden"); renderObj(); }
   function closeObj(){ $("#objPage").classList.add("hidden"); $("#planPage").classList.remove("hidden"); renderPlan(); }
   function renderObj(){
-    var months=salesMonths(), O=objData();
-    if(!months.length){ $("#objMonths").innerHTML=''; $("#objRows").innerHTML='<div class="rday-empty">Importá la base (con meses) primero.</div>'; return; }
-    var mLbl=months[objMonthIdx]||months[0];
-    $("#objMonths").innerHTML=months.map(function(m,i){ var has=false; PLINES.forEach(function(l){ if(O[l]&&O[l][m]) has=true; }); return '<button class="pl-mchip'+(i===objMonthIdx?' on':'')+(has?' has':'')+'" data-mi="'+i+'">'+esc(fmtMes(m))+'</button>'; }).join("");
-    $("#objRows").innerHTML=PLINES.map(function(l){ var v=(O[l]&&O[l][mLbl]!=null)?O[l][mLbl]:""; var f=comisLinea(l);
-      return '<div class="obj-row"><div class="on">'+esc(l)+' <span class="of">'+PFAM[l]+' · base '+dec1(f.base)+' Gs/kg</span></div><input class="obj-in" data-l="'+esc(l)+'" inputmode="numeric" placeholder="0" value="'+(v!==""?esc(fmtGs(v)):"")+'"><span style="font-size:10px;color:var(--ink-faint)">kg</span></div>'; }).join("");
-    updateObjTot(mLbl);
+    var O=objData();
+    var chips=''; for(var mi=0;mi<12;mi++){ var has=OBJ_LINES.some(function(l){ return O[l]&&(+O[l][mi]||0)>0; }); chips+='<button class="pl-mchip'+(mi===objMonthIdx?' on':'')+(has?' has':'')+'" data-mi="'+mi+'">'+MESNOMS[mi]+'</button>'; }
+    $("#objMonths").innerHTML=chips;
+    $("#objRows").innerHTML=OBJ_LINES.map(function(l){ var v=(O[l]&&O[l][objMonthIdx]!=null)?(+O[l][objMonthIdx]||0):"";
+      return '<div class="obj-row"><div class="on">'+esc(l)+'</div><input class="obj-in" data-l="'+esc(l)+'" inputmode="numeric" placeholder="0" value="'+(v>0?esc(fmtGs(v)):"")+'"><span style="font-size:10px;color:var(--ink-faint)">kg</span></div>'; }).join("");
+    updateObjTot();
     $$(".pl-mchip",$("#objMonths")).forEach(function(ch){ ch.addEventListener("click", function(){ objMonthIdx=+ch.dataset.mi; renderObj(); }); });
-    $$(".obj-in",$("#objRows")).forEach(function(inp){ inp.addEventListener("input", function(){ var l=inp.dataset.l, O=objData(); if(!O[l]) O[l]={}; O[l][mLbl]=numKg(inp.value); updateObjTot(mLbl); }); });
+    $$(".obj-in",$("#objRows")).forEach(function(inp){ inp.addEventListener("input", function(){ var l=inp.dataset.l, O=objData(); if(!O[l]) O[l]=[]; O[l][objMonthIdx]=numKg(inp.value); updateObjTot(); }); });
   }
-  function updateObjTot(mLbl){ var O=objData(), t=0; PLINES.forEach(function(l){ if(O[l]&&O[l][mLbl]) t+=(+O[l][mLbl]||0); }); $("#objTot").querySelector("b").textContent=fmtGs(t)+" kg"; }
+  function updateObjTot(){ var O=objData(), t=0; OBJ_LINES.forEach(function(l){ if(O[l]) t+=(+O[l][objMonthIdx]||0); }); $("#objTot").querySelector("b").textContent=fmtGs(t)+" kg"; }
   if($("#objOpenBtn")) $("#objOpenBtn").addEventListener("click", openObj);
   if($("#objBack")) $("#objBack").addEventListener("click", closeObj);
   if($("#objSellerSel")) $("#objSellerSel").addEventListener("change", function(){ objSeller=this.value; objMonthIdx=0; renderObj(); });
@@ -2978,25 +3021,26 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
   }
   function renderOpResult(months){
     var el=$("#opRes"); if(!el) return;
-    if(!months.length){ el.innerHTML='<div class="hint" style="margin-top:12px">Importá la base (con meses) para simular.</div>'; return; }
     var comis=numKg($("#opComis").value);
     var sellerId=$("#opSeller").value, clients=(sellerId==="__all__")?CAT_CLI:clientsForSeller(sellerId);
-    var n=months.length, realTot=[]; for(var i=0;i<n;i++) realTot.push(0);
-    clients.forEach(function(c){ if(c.meses) for(var i=0;i<n;i++) realTot[i]+=(+c.meses[i]||0); });
+    var baseMonths=months||[], nb=baseMonths.length, realB=[]; for(var i=0;i<nb;i++) realB.push(0);
+    clients.forEach(function(c){ if(c.meses) for(var i=0;i<nb;i++) realB[i]+=(+c.meses[i]||0); });
     var wBase=0; opMix.forEach(function(m){ wBase += (m.pct/100)*comisLinea(m.l).base; });
+    var realMap={}; baseMonths.forEach(function(lbl,i){ realMap[lbl]=realB[i]; });
+    var year=nb?(""+baseMonths[0]).split("-")[0]:(""+(new Date().getFullYear()));
+    var months12=[]; for(var mm=1;mm<=12;mm++) months12.push(year+"-"+mm);
     var metaC=[], realC=[];
-    months.forEach(function(lbl,i){ var mn=parseInt((""+lbl).split("-")[1],10)||(i+1), mc=0;
+    months12.forEach(function(lbl,i){ var mn=i+1, mc=0;
       opMix.forEach(function(m){ var sea=(SEASON[m.l]&&SEASON[m.l][mn-1])||0; mc += comis*(m.pct/100)*(sea/100); });
-      metaC.push(mc); realC.push(realTot[i]*wBase);
+      metaC.push(mc); realC.push((realMap[lbl]||0)*wBase);
     });
-    var idx=[]; for(var i=0;i<n;i++){ if(metaC[i]>0||realC[i]>0) idx.push(i); }
-    var groups=idx.map(function(i){ return {lab:fmtMes(months[i]), pv:metaC[i], rz:realC[i], ob:0}; });
-    var sMeta=0,sReal=0; idx.forEach(function(i){ sMeta+=metaC[i]; sReal+=realC[i]; });
+    var groups=months12.map(function(lbl,i){ return {lab:fmtMes(lbl), pv:metaC[i], rz:realC[i], ob:0}; });
+    var sMeta=0,sReal=0; for(var i=0;i<12;i++){ sMeta+=metaC[i]; sReal+=realC[i]; }
     groups.push({lab:"TOTAL", pv:sMeta, rz:sReal, ob:0, tot:true});
     var kgLines=opMix.map(function(m){ var b=comisLinea(m.l).base; return {l:m.l, kg:b>0?comis*(m.pct/100)/b:0}; });
     var cBase=0,cLogr=0,cSup=0; kgLines.forEach(function(x){ var f=comisLinea(x.l); cBase+=x.kg*f.base; cLogr+=x.kg*f.logr; cSup+=x.kg*f.sup; });
     var falta=sMeta-sReal, faltaPos=falta>0;
-    var html='<div class="chart-card" style="margin-top:13px"><div class="vp-ttl">Comisión: Meta vs Realizado · Gs/mes</div>'+(idx.length?barsSVG(groups,["","Meta","Realizado"],function(v){return "Gs "+fmtGs(v);}):'<div class="vp-empty">Cargá % y comisión.</div>')+
+    var html='<div class="chart-card" style="margin-top:13px"><div class="vp-ttl">Comisión: Meta vs Realizado · Gs/mes (12 meses)</div>'+barsSVG(groups,["","Meta","Realizado"],function(v){return "Gs "+fmtGs(v);},2)+
       '<div class="pl-legend"><span><i class="li-pv"></i>Meta</span><span><i class="li-rz"></i>Realizado (estim.)</span></div></div>';
     html+='<div class="pl-tot" style="margin-top:11px;background:'+(faltaPos?"#f6ead9":"var(--accent-soft)")+'"><span style="font-weight:800;color:'+(faltaPos?"var(--prospecto)":"var(--accent-deep)")+'">'+(faltaPos?"Te falta para tu meta":"¡Meta alcanzada!")+'</span><b style="color:'+(faltaPos?"var(--prospecto)":"var(--accent-deep)")+'">Gs '+fmtGs(Math.abs(falta))+'</b></div>';
     html+='<div class="pl-sec" style="margin-top:14px">Si alcanzás tu objetivo (plus)</div>';
@@ -3005,6 +3049,8 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
     html+='<div class="pl-tot" style="background:var(--accent-soft);margin-top:6px"><span>Superado el objetivo</span><b>Gs '+fmtGs(cSup)+'</b></div>';
     html+='<div class="pl-sec" style="margin-top:14px">Necesitás vender (año)</div>';
     html+=kgLines.map(function(x){ return '<div class="pl-tot" style="background:var(--surface-2);margin-top:6px"><span>'+esc(x.l)+' <small style="color:var(--ink-faint)">· '+PFAM[x.l]+'</small></span><b>'+fmtGs(Math.round(x.kg))+' kg</b></div>'; }).join("");
+    var totKgN=kgLines.reduce(function(a,x){ return a+x.kg; },0);
+    html+='<div class="pl-tot" style="background:var(--accent-soft);margin-top:6px"><span style="font-weight:800">Total</span><b>'+fmtGs(Math.round(totKgN))+' kg</b></div>';
     html+='<div class="hint" style="margin-top:12px">Cálculo con la <b>tasa base</b>. Realizado estimado repartiendo tu venta total según la mezcla %. La meta anual se reparte por mes con la estacionalidad de cada línea.</div>';
     el.innerHTML=html;
   }
