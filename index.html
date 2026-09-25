@@ -258,12 +258,17 @@
   .vp-flt-row input{width:18px;height:18px;accent-color:var(--accent);flex:none;margin:0}
   .vp-flt-row .nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   /* planificación de ventas */
-  .pl-open{width:100%;background:#0b0e08;color:var(--lime);border:0;border-radius:12px;padding:12px;font-size:14px;font-weight:800;margin-bottom:10px;cursor:pointer;font-family:inherit}
+  .pl-open{width:100%;background:#0b0e08;color:#c2f24e;border:0;border-radius:12px;padding:12px;font-size:14px;font-weight:800;margin-bottom:10px;cursor:pointer;font-family:inherit}
   .pl-cli{width:100%;display:flex;align-items:center;gap:9px;text-align:left;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:11px 12px;margin-bottom:7px;box-shadow:var(--shadow);cursor:pointer;font-family:inherit}
   .pl-cli .pl-nm{flex:1;min-width:0;font-size:13.5px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .pl-cli .pl-kg{font-size:12px;font-weight:800;color:var(--accent-deep);font-variant-numeric:tabular-nums;flex:none}
   .pl-cli .pl-st{font-size:9.5px;font-weight:800;padding:3px 8px;border-radius:14px;flex:none}
-  .pl-st.ok{background:var(--accent-soft);color:var(--accent-deep)}.pl-st.no{background:var(--surface-2);color:var(--ink-faint);border:1px solid var(--line)}
+  .pl-st.ok{background:var(--accent-soft);color:var(--accent-deep)}.pl-st.no{background:color-mix(in srgb,var(--danger) 14%,transparent);color:var(--danger)}
+  .pl-cli .pl-dotc{width:9px;height:9px;border-radius:50%;flex:none}
+  .pl-cli.pl-done{border-color:color-mix(in srgb,var(--accent) 45%,var(--line));background:color-mix(in srgb,var(--accent) 6%,var(--surface))}
+  .pl-cli.pl-done .pl-dotc{background:var(--accent)}
+  .pl-cli.pl-todo{border-color:color-mix(in srgb,var(--danger) 40%,var(--line));background:color-mix(in srgb,var(--danger) 5%,var(--surface))}
+  .pl-cli.pl-todo .pl-dotc{background:var(--danger)}
   .pl-editor{background:var(--surface);border:1.5px solid var(--accent);border-radius:14px;padding:13px;margin-bottom:8px;box-shadow:0 6px 18px rgba(0,0,0,.06)}
   .pl-eh{display:flex;align-items:center;gap:9px;margin-bottom:10px}
   .pl-eh .pl-enm{flex:1;font-size:14px;font-weight:800;min-width:0}
@@ -1558,8 +1563,10 @@
     <div class="vp-top"><button class="vp-back" id="planBack">‹ Ventas</button><b>🎯 Planificación</b></div>
     <div class="hub-body">
       <div class="hub-h">Planificación de ventas</div>
-      <div class="hub-s">Previsión mensual por cliente y línea de producto. Los clientes van ordenados por kg comprado.</div>
-      <button class="pl-open" id="objOpenBtn" style="background:#0b0e08;margin-bottom:8px">🎯 Objetivo por línea (equipo)</button>
+      <div class="hub-s">Previsión mensual por cliente y línea. Clientes ordenados por kg comprado.</div>
+      <div class="pl-sec">Vendedor</div>
+      <select id="planSellerSel" class="ev-inp" style="margin-bottom:11px"></select>
+      <button class="pl-open" id="objOpenBtn" style="background:#0b0e08;margin-bottom:8px">🎯 Objetivo por línea</button>
       <button class="pl-open" id="objPersOpenBtn" style="background:#0b0e08;margin-bottom:12px">💰 Objetivo Personal (comisión)</button>
       <div class="chart-card" style="margin:0 0 12px">
         <div class="vp-ttl">Previsto vs Realizado vs Objetivo · kg/mes</div>
@@ -1576,10 +1583,13 @@
     <div class="vp-top"><button class="vp-back" id="objBack">‹ Planificación</button><b>🎯 Objetivo por línea</b></div>
     <div class="hub-body">
       <div class="hub-h">Objetivo por línea de producto</div>
-      <div class="hub-s">Meta mensual del equipo por línea. Elegí el mes y cargá los kg.</div>
+      <div class="hub-s">Meta mensual por línea, por vendedor. Elegí vendedor y mes, cargá los kg y guardá.</div>
+      <div class="pl-sec">Vendedor</div>
+      <select id="objSellerSel" class="ev-inp" style="margin-bottom:11px"></select>
       <div class="pl-months" id="objMonths"></div>
       <div id="objRows"></div>
       <div class="pl-tot" id="objTot"><span>Total objetivo del mes</span><b>0 kg</b></div>
+      <button class="pl-open" id="objSaveBtn" style="background:var(--accent);color:#fff;margin-top:12px">Guardar objetivo ✓</button>
     </div>
   </div>
 
@@ -2498,6 +2508,7 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
     }, noop);
     dbh.collection("planning").onSnapshot(function(snap){
       PLAN={}; OBJ={}; snap.docs.forEach(function(d){ if(d.id==="__obj__"){ OBJ=(d.data()||{}).obj||{}; } else { PLAN[d.id]=d.data()||{}; } });
+      if(planEditingNow()) return; // no re-renderizar mientras el usuario escribe
       if($("#planPage") && !$("#planPage").classList.contains("hidden")) renderPlan();
       if($("#objPage") && !$("#objPage").classList.contains("hidden")) renderObj();
     }, noop);
@@ -2823,24 +2834,26 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
   function closeVentas(){ $("#ventasPage").classList.add("hidden"); }
 
   // ---------- PLANIFICACIÓN DE VENTAS (solo Gestión por ahora) ----------
-  var planOpenKey=null, planMonthIdx=0;
-  function planClients(){ return CAT_CLI.slice(); } // ya ordenado por kg desc
+  var planOpenKey=null, planMonthIdx=0, planSeller="__all__";
+  function planEditingNow(){ var a=document.activeElement; return a && (a.tagName==="INPUT"||a.tagName==="SELECT") && (a.closest("#planPage")||a.closest("#objPage")||a.closest("#objPersPage")); }
+  function planClients(){ return (planSeller==="__all__") ? CAT_CLI.slice() : clientsForSeller(planSeller); } // ordenado por kg desc
   function planDoc(c){ var k=planKey(c.nome,c.vendedor); if(!PLAN[k]) PLAN[k]={cliente:c.nome, vendedor:c.vendedor||"", plan:{}}; if(!PLAN[k].plan) PLAN[k].plan={}; return PLAN[k]; }
   function planMonthsWithData(doc){ var n=0, p=doc&&doc.plan||{}; for(var m in p){ if((p[m]||[]).length) n++; } return n; }
-  function openPlan(){ $("#ventasPage").classList.add("hidden"); planOpenKey=null; planMonthIdx=0; $("#planSearch").value=""; $("#planPage").classList.remove("hidden"); renderPlan(); }
+  function fillSellerSelect(sel, val){ if(!sel) return; sel.innerHTML='<option value="__all__">Todo el equipo</option>'+SELLERS.map(function(s){ return '<option value="'+s.id+'">'+esc(s.name)+'</option>'; }).join(""); sel.value=val||"__all__"; }
+  function openPlan(){ $("#ventasPage").classList.add("hidden"); planOpenKey=null; planMonthIdx=0; $("#planSearch").value=""; fillSellerSelect($("#planSellerSel"), planSeller); $("#planPage").classList.remove("hidden"); renderPlan(); }
   function closePlan(){ $("#planPage").classList.add("hidden"); $("#ventasPage").classList.remove("hidden"); renderVentas(); }
   function renderPlan(){
     var months=salesMonths();
     renderPlanChart(months);
     var q=norm($("#planSearch").value||""), list=planClients().filter(function(c){ return !q || norm(c.nome).indexOf(q)!==-1; });
     var html="";
-    list.slice(0,120).forEach(function(c){
+    list.slice(0,150).forEach(function(c){
       var key=planKey(c.nome,c.vendedor);
       if(key===planOpenKey){ html+=planEditorHTML(c, key, months); return; }
-      var doc=PLAN[key], nm=planMonthsWithData(doc);
-      html+='<button class="pl-cli" data-key="'+esc(key)+'"><span class="pl-nm">'+esc(c.nome)+'</span><span class="pl-kg">'+fmtKg(c.kg||0)+' kg</span><span class="pl-st '+(nm?'ok':'no')+'">'+(nm?nm+' mes'+(nm>1?'es':''):'—')+'</span></button>';
+      var doc=PLAN[key], nm=planMonthsWithData(doc), done=nm>0;
+      html+='<button class="pl-cli '+(done?'pl-done':'pl-todo')+'" data-key="'+esc(key)+'"><span class="pl-dotc"></span><span class="pl-nm">'+esc(c.nome)+'</span><span class="pl-kg">'+fmtKg(c.kg||0)+' kg</span><span class="pl-st '+(done?'ok':'no')+'">'+(done?nm+' mes'+(nm>1?'es':''):'sin cargar')+'</span></button>';
     });
-    if(!list.length) html='<div class="rday-empty" style="margin-top:14px">Sin clientes. El gestor debe importar la base.</div>';
+    if(!list.length) html='<div class="rday-empty" style="margin-top:14px">Sin clientes para este vendedor.</div>';
     $("#planList").innerHTML=html;
     $$(".pl-cli",$("#planList")).forEach(function(b){ b.addEventListener("click", function(){ planOpenKey=b.dataset.key; planMonthIdx=0; renderPlan(); }); });
     wirePlanEditor(months);
@@ -2878,15 +2891,16 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
     }); });
   }
   function planSeriesFor(months){
-    // suma previsto, realizado y objetivo por mes (compilado gestión)
+    // previsto, realizado y objetivo por mes, según el vendedor seleccionado
     var n=months.length, pv=[], rz=[], ob=[];
     for(var i=0;i<n;i++){ pv.push(0); rz.push(0); ob.push(0); }
-    CAT_CLI.forEach(function(c){
+    planClients().forEach(function(c){
       var doc=PLAN[planKey(c.nome,c.vendedor)];
       months.forEach(function(mLbl,i){ if(doc&&doc.plan&&doc.plan[mLbl]) doc.plan[mLbl].forEach(function(r){ pv[i]+=(+r.kg||0); }); });
       if(c.meses) for(var i=0;i<n;i++) rz[i]+=(+c.meses[i]||0);
     });
-    months.forEach(function(mLbl,i){ PLINES.forEach(function(l){ if(OBJ[l]&&OBJ[l][mLbl]) ob[i]+=(+OBJ[l][mLbl]||0); }); });
+    var objSellers=(planSeller==="__all__")?SELLERS.map(function(s){return s.id;}):[planSeller];
+    objSellers.forEach(function(sid){ var o=OBJ[sid]; if(!o) return; months.forEach(function(mLbl,i){ PLINES.forEach(function(l){ if(o[l]&&o[l][mLbl]) ob[i]+=(+o[l][mLbl]||0); }); }); });
     return {pv:pv, rz:rz, ob:ob};
   }
   function renderPlanChart(months){
@@ -2900,7 +2914,8 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
     groups.push({lab:"TOTAL", pv:tPv, rz:tRz, ob:tOb, tot:true});
     el.innerHTML=barsSVG(groups);
   }
-  function barsSVG(groups){
+  function barsSVG(groups, names, fmt){
+    names=names||["Objetivo","Previsto","Realizado"]; fmt=fmt||function(v){ return fmtGs(v)+" kg"; };
     var W=336,H=200,pL=30,pR=8,pT=12,pB=26, iw=W-pL-pR, ih=H-pT-pB;
     var max=0; groups.forEach(function(d){ max=Math.max(max,d.pv,d.rz,d.ob||0); }); if(max<=0) max=1; max*=1.14;
     var g=groups.length, gw=iw/g, bw=gw*0.2, gap=gw*0.055;
@@ -2908,31 +2923,38 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
     var s='<svg viewBox="0 0 '+W+' '+H+'" width="100%">';
     for(var y=0;y<=3;y++){ var yy=pT+ih*y/3; s+='<line x1="'+pL+'" y1="'+yy+'" x2="'+(W-pR)+'" y2="'+yy+'" stroke="#e2e6dd"/>'; }
     groups.forEach(function(d,i){ var cx=pL+gw*i+gw/2, x0=cx-(bw*3+gap*2)/2;
-      [["#c07a2b",d.ob||0],["#2f6b43",d.pv],["#1f6091",d.rz]].forEach(function(o,j){ var x=x0+j*(bw+gap), h=(o[1]/max)*ih, yy=Y(o[1]);
-        s+='<rect x="'+x.toFixed(1)+'" y="'+yy.toFixed(1)+'" width="'+bw.toFixed(1)+'" height="'+Math.max(0,h).toFixed(1)+'" rx="1.5" fill="'+o[0]+'"/>'; });
+      [["#c07a2b",d.ob||0,0],["#2f6b43",d.pv,1],["#1f6091",d.rz,2]].forEach(function(o,j){ var x=x0+j*(bw+gap), h=(o[1]/max)*ih, yy=Y(o[1]);
+        s+='<rect x="'+x.toFixed(1)+'" y="'+yy.toFixed(1)+'" width="'+bw.toFixed(1)+'" height="'+Math.max(0,h).toFixed(1)+'" rx="1.5" fill="'+o[0]+'"><title>'+esc(d.lab)+' · '+esc(names[o[2]])+': '+esc(fmt(o[1]))+'</title></rect>'; });
       s+='<text x="'+cx.toFixed(1)+'" y="'+(H-9)+'" fill="'+(d.tot?"#245334":"#7d887f")+'" font-size="9.5" font-weight="'+(d.tot?"800":"600")+'" text-anchor="middle">'+esc(d.lab)+'</text>';
     });
     for(var y=0;y<=3;y++){ var val=max*(3-y)/3, yy=pT+ih*y/3; s+='<text x="'+(pL-4)+'" y="'+(yy+3)+'" fill="#9aa39a" font-size="8" text-anchor="end">'+(val>=1e6?(val/1e6).toFixed(val>=1e7?0:1)+"M":(val>=1000?Math.round(val/1000)+"k":Math.round(val)))+'</text>'; }
     return s+'</svg>';
   }
   // ---- Objetivo por línea (Gestión) ----
-  var objMonthIdx=0;
-  function openObj(){ $("#planPage").classList.add("hidden"); objMonthIdx=0; $("#objPage").classList.remove("hidden"); renderObj(); }
+  var objMonthIdx=0, objSeller="__all__";
+  function objData(){ if(!OBJ[objSeller]) OBJ[objSeller]={}; return OBJ[objSeller]; }
+  function openObj(){ $("#planPage").classList.add("hidden"); objMonthIdx=0;
+    objSeller=(planSeller&&planSeller!=="__all__")?planSeller:(SELLERS[0]?SELLERS[0].id:"");
+    var sel=$("#objSellerSel"); if(sel){ sel.innerHTML=SELLERS.map(function(s){ return '<option value="'+s.id+'">'+esc(s.name)+'</option>'; }).join(""); sel.value=objSeller; }
+    $("#objPage").classList.remove("hidden"); renderObj(); }
   function closeObj(){ $("#objPage").classList.add("hidden"); $("#planPage").classList.remove("hidden"); renderPlan(); }
   function renderObj(){
-    var months=salesMonths();
+    var months=salesMonths(), O=objData();
     if(!months.length){ $("#objMonths").innerHTML=''; $("#objRows").innerHTML='<div class="rday-empty">Importá la base (con meses) primero.</div>'; return; }
     var mLbl=months[objMonthIdx]||months[0];
-    $("#objMonths").innerHTML=months.map(function(m,i){ var has=false; PLINES.forEach(function(l){ if(OBJ[l]&&OBJ[l][m]) has=true; }); return '<button class="pl-mchip'+(i===objMonthIdx?' on':'')+(has?' has':'')+'" data-mi="'+i+'">'+esc(fmtMes(m))+'</button>'; }).join("");
-    $("#objRows").innerHTML=PLINES.map(function(l){ var v=(OBJ[l]&&OBJ[l][mLbl]!=null)?OBJ[l][mLbl]:""; var f=comisLinea(l);
+    $("#objMonths").innerHTML=months.map(function(m,i){ var has=false; PLINES.forEach(function(l){ if(O[l]&&O[l][m]) has=true; }); return '<button class="pl-mchip'+(i===objMonthIdx?' on':'')+(has?' has':'')+'" data-mi="'+i+'">'+esc(fmtMes(m))+'</button>'; }).join("");
+    $("#objRows").innerHTML=PLINES.map(function(l){ var v=(O[l]&&O[l][mLbl]!=null)?O[l][mLbl]:""; var f=comisLinea(l);
       return '<div class="obj-row"><div class="on">'+esc(l)+' <span class="of">'+PFAM[l]+' · base '+dec1(f.base)+' Gs/kg</span></div><input class="obj-in" data-l="'+esc(l)+'" inputmode="numeric" placeholder="0" value="'+(v!==""?esc(fmtGs(v)):"")+'"><span style="font-size:10px;color:var(--ink-faint)">kg</span></div>'; }).join("");
     updateObjTot(mLbl);
     $$(".pl-mchip",$("#objMonths")).forEach(function(ch){ ch.addEventListener("click", function(){ objMonthIdx=+ch.dataset.mi; renderObj(); }); });
-    $$(".obj-in",$("#objRows")).forEach(function(inp){ inp.addEventListener("input", function(){ var l=inp.dataset.l; if(!OBJ[l]) OBJ[l]={}; OBJ[l][mLbl]=numKg(inp.value); updateObjTot(mLbl); clearTimeout(_planSaveT); _planSaveT=setTimeout(saveObj, 700); }); });
+    $$(".obj-in",$("#objRows")).forEach(function(inp){ inp.addEventListener("input", function(){ var l=inp.dataset.l, O=objData(); if(!O[l]) O[l]={}; O[l][mLbl]=numKg(inp.value); updateObjTot(mLbl); }); });
   }
-  function updateObjTot(mLbl){ var t=0; PLINES.forEach(function(l){ if(OBJ[l]&&OBJ[l][mLbl]) t+=(+OBJ[l][mLbl]||0); }); $("#objTot").querySelector("b").textContent=fmtGs(t)+" kg"; }
+  function updateObjTot(mLbl){ var O=objData(), t=0; PLINES.forEach(function(l){ if(O[l]&&O[l][mLbl]) t+=(+O[l][mLbl]||0); }); $("#objTot").querySelector("b").textContent=fmtGs(t)+" kg"; }
   if($("#objOpenBtn")) $("#objOpenBtn").addEventListener("click", openObj);
   if($("#objBack")) $("#objBack").addEventListener("click", closeObj);
+  if($("#objSellerSel")) $("#objSellerSel").addEventListener("change", function(){ objSeller=this.value; objMonthIdx=0; renderObj(); });
+  if($("#objSaveBtn")) $("#objSaveBtn").addEventListener("click", function(){ saveObj(); var b=$("#objSaveBtn"); var o=b.textContent; b.textContent="Guardado ✓"; setTimeout(function(){ b.textContent=o; },1200); toast("Objetivo guardado ✓"); });
+  if($("#planSellerSel")) $("#planSellerSel").addEventListener("change", function(){ planSeller=this.value; planOpenKey=null; renderPlan(); });
 
   // ---- Objetivo Personal (comisión) ----
   var opMix=[{l:"Balanceados",pct:40},{l:"Proteicos",pct:25},{l:"Concentrado",pct:15},{l:"Sup. minerales",pct:20}];
@@ -2974,7 +2996,7 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
     var kgLines=opMix.map(function(m){ var b=comisLinea(m.l).base; return {l:m.l, kg:b>0?comis*(m.pct/100)/b:0}; });
     var cBase=0,cLogr=0,cSup=0; kgLines.forEach(function(x){ var f=comisLinea(x.l); cBase+=x.kg*f.base; cLogr+=x.kg*f.logr; cSup+=x.kg*f.sup; });
     var falta=sMeta-sReal, faltaPos=falta>0;
-    var html='<div class="chart-card" style="margin-top:13px"><div class="vp-ttl">Comisión: Meta vs Realizado · Gs/mes</div>'+(idx.length?barsSVG(groups):'<div class="vp-empty">Cargá % y comisión.</div>')+
+    var html='<div class="chart-card" style="margin-top:13px"><div class="vp-ttl">Comisión: Meta vs Realizado · Gs/mes</div>'+(idx.length?barsSVG(groups,["","Meta","Realizado"],function(v){return "Gs "+fmtGs(v);}):'<div class="vp-empty">Cargá % y comisión.</div>')+
       '<div class="pl-legend"><span><i class="li-pv"></i>Meta</span><span><i class="li-rz"></i>Realizado (estim.)</span></div></div>';
     html+='<div class="pl-tot" style="margin-top:11px;background:'+(faltaPos?"#f6ead9":"var(--accent-soft)")+'"><span style="font-weight:800;color:'+(faltaPos?"var(--prospecto)":"var(--accent-deep)")+'">'+(faltaPos?"Te falta para tu meta":"¡Meta alcanzada!")+'</span><b style="color:'+(faltaPos?"var(--prospecto)":"var(--accent-deep)")+'">Gs '+fmtGs(Math.abs(falta))+'</b></div>';
     html+='<div class="pl-sec" style="margin-top:14px">Si alcanzás tu objetivo (plus)</div>';
