@@ -924,6 +924,9 @@
   .cact .cpend{margin-left:auto;flex:none;font-size:10px;font-weight:700;color:var(--ink-faint);text-transform:uppercase}
 
   /* agenda especial (gestor) */
+  .ev-inp{width:100%;box-sizing:border-box;border:1.5px solid var(--line);border-radius:10px;background:var(--surface);color:var(--ink);padding:10px 11px;font-size:14px;font-family:inherit;margin-bottom:4px}
+  .cact.click-ev{cursor:pointer}
+  .cact.click-ev .tag.ev{text-decoration:underline}
   .btn-add{
     display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:14px;
   }
@@ -1900,6 +1903,7 @@
             <option value="Expo">Expo</option>
             <option value="Remate">Remate</option>
             <option value="Salida de Campo">Salida de Campo</option>
+            <option value="Evento">Evento</option>
           </select>
           <label class="ag-lbl">Título (opcional)</label>
           <input type="text" id="agTitulo" placeholder="Ej: Remate anual Tandil">
@@ -4239,12 +4243,52 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
       var s=o.s;
       var avatar = showWho ? '<div class="av" style="background:'+s.color+'">'+initials(s.name)+'</div>' : '';
       var who = showWho ? '<div class="who">'+esc(s.name)+'</div>' : '';
-      if(o._k==='e') return '<div class="cact">'+avatar+'<div style="min-width:0">'+who+'<div class="cli">'+esc(o.ev.tipo)+(o.ev.titulo?': '+esc(o.ev.titulo):'')+'</div></div><span class="tag ev">Evento</span></div>';
+      if(o._k==='e'){ var evCls = showWho ? ' click-ev' : ''; var evData = showWho ? (' data-agid="'+esc(o.ev.agId||"")+'" data-efecha="'+esc(o.ev.fecha||"")+'"') : '';
+        return '<div class="cact'+evCls+'"'+evData+'>'+avatar+'<div style="min-width:0">'+who+'<div class="cli">'+esc(o.ev.tipo)+(o.ev.titulo?': '+esc(o.ev.titulo):'')+'</div></div><span class="tag ev">Evento</span></div>'; }
       var a=o.motivo==="Cliente";
       if(o._k==='a') return '<div class="cact click" data-visit="'+esc(o.visit.id)+'" data-sid="'+esc(s.id)+'">'+avatar+'<div style="min-width:0">'+who+'<div class="cli">'+esc(o.cliente)+'</div></div><span class="tag '+(a?"a":"p")+'">'+o.motivo+'</span><span class="cchk">✓</span></div>';
       return '<div class="cact">'+avatar+'<div style="min-width:0">'+who+'<div class="cli">'+esc(o.cliente)+'</div></div><span class="tag '+(a?"a":"p")+'">'+o.motivo+'</span><span class="cpend">pendiente</span></div>';
     }).join("");
     $$(".cact.click",el).forEach(function(row){ row.addEventListener("click", function(){ var v=(DB[row.dataset.sid]||[]).filter(function(x){return x.id===row.dataset.visit;})[0]; if(v) openModal(v); }); });
+    $$(".cact.click-ev",el).forEach(function(row){ row.addEventListener("click", function(){ if(row.dataset.agid) openEventEdit(row.dataset.agid, row.dataset.efecha); }); });
+  }
+  // editar un evento (agId) en una fecha: participantes, fecha, tipo/título
+  function openEventEdit(agId, occFecha){
+    var users=[GESTOR].concat(SELLERS).concat([TECNICA]);
+    var existing=[], tipo="Evento", titulo="";
+    users.forEach(function(s){ routeFor(s.id).forEach(function(it){ if(it.kind==="evento" && it.agId===agId && it.fecha===occFecha){ existing.push({sid:s.id, id:it.id}); tipo=it.tipo||tipo; titulo=it.titulo||titulo; } }); });
+    if(!existing.length){ toast("No encontré ese evento.", true); return; }
+    var partSet={}; existing.forEach(function(e){ partSet[e.sid]=1; });
+    var partUsers=SELLERS.concat([TECNICA, GESTOR]);
+    var tipos=["Reunión","Entrenamiento","Expo","Remate","Salida de Campo","Evento"];
+    var body=$("#modalBody");
+    body.innerHTML =
+      '<div class="m-head"><div class="m-title">Editar evento</div></div>'+
+      '<label class="ag-lbl">Tipo</label>'+
+      '<select id="evTipo" class="ev-inp">'+tipos.map(function(t){ return '<option value="'+t+'"'+(t===tipo?' selected':'')+'>'+t+'</option>'; }).join("")+'</select>'+
+      '<label class="ag-lbl">Título (opcional)</label>'+
+      '<input type="text" id="evTitulo" class="ev-inp" value="'+esc(titulo)+'" placeholder="Ej: Remate anual">'+
+      '<label class="ag-lbl">Fecha</label>'+
+      '<input type="date" id="evFecha" class="ev-inp" value="'+esc(occFecha)+'">'+
+      '<label class="ag-lbl">Participantes</label>'+
+      '<div class="ag-vends" id="evVends">'+
+        partUsers.map(function(s){ var id=s.id, nm=(id==="gestion"?"Gestión (yo)":s.name); return '<label class="ag-vend"><input type="checkbox" class="ev-vsel" value="'+id+'"'+(partSet[id]?' checked':'')+'><span>'+esc(nm)+'</span></label>'; }).join("")+
+      '</div>'+
+      '<div class="ra-row two" style="margin-top:8px"><button class="btn" id="evSave">Guardar cambios</button><button class="btn-sec" id="evDel" type="button">Eliminar evento</button></div>';
+    $("#modal").classList.add("on");
+    $("#evSave").addEventListener("click", function(){
+      var nTipo=$("#evTipo").value, nTit=$("#evTitulo").value.trim(), nFecha=$("#evFecha").value||occFecha;
+      var picks=$$(".ev-vsel",$("#evVends")).filter(function(c){ return c.checked; }).map(function(c){ return c.value; });
+      if(!picks.length){ toast("Elegí al menos un participante.", true); return; }
+      existing.forEach(function(e){ delRoute(e.sid, e.id); });
+      picks.forEach(function(sid){ putRoute({id:"e"+Date.now()+Math.random().toString(36).slice(2,7), agId:agId, sellerId:sid, kind:"evento", tipo:nTipo, titulo:nTit, fecha:nFecha}); });
+      closeModal(); if(calMgr.state) calMgr.state.sel=null; renderRutasView(); toast("Evento actualizado ✓");
+    });
+    $("#evDel").addEventListener("click", function(){
+      if(!window.confirm("¿Eliminar este evento para todos los participantes?")) return;
+      existing.forEach(function(e){ delRoute(e.sid, e.id); });
+      closeModal(); renderRutasView(); toast("Evento eliminado ✓");
+    });
   }
   // configs de cada calendario
   var calMgr={ state:{y:null,m:null,sel:null}, gridId:"calGrid", titleId:"calTitle", dayId:"calDay", showWho:true, users:function(){ return [GESTOR].concat(SELLERS).concat([TECNICA]); } };
