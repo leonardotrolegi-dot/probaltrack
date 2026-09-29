@@ -596,6 +596,7 @@
   .leg .bar-mini i{display:block;height:100%;border-radius:6px}
   .leg .val{font-size:14px;font-weight:700;font-variant-numeric:tabular-nums;flex:none;min-width:20px;text-align:right}
   .leg .pct{font-size:11.5px;color:var(--ink-faint);flex:none;min-width:34px;text-align:right;font-variant-numeric:tabular-nums}
+  .leg .leg-state{width:10px;height:10px;border-radius:50%;flex:none;margin:0 3px;box-shadow:0 0 0 1.5px rgba(255,255,255,.55)}
   .leg .chev{flex:none;color:var(--ink-faint);display:grid;place-items:center;transition:transform .18s}
   .leg .chev svg{width:16px;height:16px}
   .leg.open .chev{transform:rotate(90deg);color:var(--accent)}
@@ -2952,30 +2953,34 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
     var groups=idx.map(function(i){ return {lab:fmtMes(months[i]), pv:s.pv[i]/1000, rz:s.rz[i]/1000, ob:s.ob[i]/1000}; });
     var tPv=0,tRz=0,tOb=0; idx.forEach(function(i){ tPv+=s.pv[i]; tRz+=s.rz[i]; tOb+=s.ob[i]; });
     groups.push({lab:"TOTAL", pv:tPv/1000, rz:tRz/1000, ob:tOb/1000, tot:true});
-    el.innerHTML=barsSVG(groups, ["Objetivo","Previsto","Realizado"], tonTip, 3, tonBarLbl, tonYLbl);
+    el.innerHTML=barsSVG(groups, ["Objetivo","Previsto","Realizado"], tonTip, 3, tonBarLbl, tonYLbl, function(d){ return d.ob>0?d.rz/d.ob*100:null; });
   }
   function tonBarLbl(v){ if(!v||v<=0) return ''; return (v>=100?Math.round(v):v.toFixed(1)).toString().replace('.',','); } // v en toneladas
   function tonTip(v){ return (v>=100?Math.round(v):(+v||0).toFixed(1)).toString().replace('.',',')+' t'; }
   function tonYLbl(val){ return val>=1000?(Math.round(val/100)/10).toString().replace('.',',')+"k":(""+Math.round(val)); }
-  function barsSVG(groups, names, fmt, nSeries, barLabel, yFmt){
+  function barsSVG(groups, names, fmt, nSeries, barLabel, yFmt, pctFmt){
     nSeries=nSeries||3;
     names=names||["Objetivo","Previsto","Realizado"]; fmt=fmt||function(v){ return fmtGs(v)+" kg"; };
     yFmt=yFmt||function(val){ return val>=1e6?(val/1e6).toFixed(val>=1e7?0:1)+"M":(val>=1000?Math.round(val/1000)+"k":Math.round(val)); };
-    var W=336,H=204,pL=30,pR=8,pT=12,pB=26, iw=W-pL-pR, ih=H-pT-pB;
-    var max=0; groups.forEach(function(d){ max=Math.max(max,d.pv,d.rz,d.ob||0); }); if(max<=0) max=1; max*=(barLabel?1.30:1.14);
-    var g=groups.length, gw=iw/g, bw=gw*(g>10?0.30/nSeries*2:0.6/nSeries), gap=gw*0.05, lf=g>10?7.5:9.5;
+    var W=336,H=(pctFmt?204:190),pL=28,pR=8,pT=14,pB=(pctFmt?38:24), iw=W-pL-pR, ih=H-pT-pB;
+    var max=0, hasM=false; groups.forEach(function(d){ if(!d.tot){ hasM=true; max=Math.max(max,d.pv,d.rz,d.ob||0); } }); // escala por los meses (no el TOTAL)
+    if(!hasM) groups.forEach(function(d){ max=Math.max(max,d.pv,d.rz,d.ob||0); });
+    if(max<=0) max=1; max*=(barLabel?1.22:1.12);
+    var g=groups.length, gw=iw/g, bw=gw*(g>10?0.74/nSeries:0.6/nSeries), gap=gw*0.045, lf=g>10?7.5:9.5;
     var totalW=bw*nSeries+gap*(nSeries-1);
-    function Y(v){ return pT+ih-(v/max)*ih; }
+    function Y(v){ return pT+ih-(Math.min(v,max)/max)*ih; }
     var s='<svg viewBox="0 0 '+W+' '+H+'" width="100%">';
     for(var y=0;y<=3;y++){ var yy=pT+ih*y/3; s+='<line x1="'+pL+'" y1="'+yy+'" x2="'+(W-pR)+'" y2="'+yy+'" stroke="#e2e6dd"/>'; }
     groups.forEach(function(d,i){ var cx=pL+gw*i+gw/2, x0=cx-totalW/2;
-      var allBars=[["#c07a2b",d.ob||0,0],["#2f6b43",d.pv,1],["#1f6091",d.rz,2]];
-      var bars = (nSeries===2) ? [allBars[1],allBars[2]] : allBars;
-      bars.forEach(function(o,j){ var x=x0+j*(bw+gap), h=(o[1]/max)*ih, yy=Y(o[1]);
+      var allBars=[["#2f6b43",d.pv,1],["#1f6091",d.rz,2],["#c07a2b",d.ob||0,0]]; // orden: Previsto, Realizado, Objetivo
+      var bars = (nSeries===2) ? [allBars[0],allBars[1]] : allBars;
+      bars.forEach(function(o,j){ var x=x0+j*(bw+gap), yy=Y(o[1]), h=pT+ih-yy;
         s+='<rect x="'+x.toFixed(1)+'" y="'+yy.toFixed(1)+'" width="'+bw.toFixed(1)+'" height="'+Math.max(0,h).toFixed(1)+'" rx="1.5" fill="'+o[0]+'"><title>'+esc(d.lab)+' · '+esc(names[o[2]])+': '+esc(fmt(o[1]))+'</title></rect>';
-        if(barLabel){ var lab=barLabel(o[1]); if(lab){ var lx=(x+bw/2).toFixed(1), ly=(yy-2).toFixed(1); s+='<text x="'+lx+'" y="'+ly+'" font-size="6.5" font-weight="700" fill="'+o[0]+'" text-anchor="start" transform="rotate(-90 '+lx+' '+ly+')">'+esc(lab)+'</text>'; } }
+        if(barLabel){ var lab=barLabel(o[1]); if(lab){ var lx=(x+bw/2).toFixed(1), near=(yy<pT+22), ly=(near?(yy+2):(yy-2)).toFixed(1), lfill=(near?"#fff":o[0]), lanc=(near?"end":"start"); s+='<text x="'+lx+'" y="'+ly+'" font-size="6.5" font-weight="700" fill="'+lfill+'" text-anchor="'+lanc+'" transform="rotate(-90 '+lx+' '+ly+')">'+esc(lab)+'</text>'; } }
       });
-      s+='<text x="'+cx.toFixed(1)+'" y="'+(H-9)+'" fill="'+(d.tot?"#245334":"#7d887f")+'" font-size="'+lf+'" font-weight="'+(d.tot?"800":"600")+'" text-anchor="middle">'+esc(d.lab)+'</text>';
+      var monthY = pctFmt ? (pT+ih+12) : (pT+ih+15);
+      s+='<text x="'+cx.toFixed(1)+'" y="'+monthY+'" fill="'+(d.tot?"#245334":"#7d887f")+'" font-size="'+lf+'" font-weight="'+(d.tot?"800":"600")+'" text-anchor="middle">'+esc(d.lab)+'</text>';
+      if(pctFmt){ var pct=pctFmt(d); if(pct!=null){ var pc=Math.round(pct), col=(pc>=100?"#245334":(pc>=60?"#c07a2b":"#b23b3b")); s+='<text x="'+cx.toFixed(1)+'" y="'+(pT+ih+23)+'" fill="'+col+'" font-size="7.5" font-weight="800" text-anchor="middle">'+pc+'%</text>'; } }
     });
     for(var y=0;y<=3;y++){ var val=max*(3-y)/3, yy=pT+ih*y/3; s+='<text x="'+(pL-4)+'" y="'+(yy+3)+'" fill="#9aa39a" font-size="8" text-anchor="end">'+esc(""+yFmt(val))+'</text>'; }
     return s+'</svg>';
@@ -3052,9 +3057,14 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
     groups.push({lab:"TOTAL", pv:sObj/1000, rz:sReal/1000, ob:0, tot:true});
     var faltaKg=totalKg-sReal, faltaPos=faltaKg>0;
     var html='<div class="chart-card" style="margin-top:13px"><div class="vp-ttl">Objetivo vs Realizado · toneladas/mes</div>'+
-      barsSVG(groups,["","Objetivo","Realizado"],tonTip,2,tonBarLbl,tonYLbl)+
-      '<div class="pl-legend"><span><i class="li-pv"></i>Objetivo</span><span><i class="li-rz"></i>Realizado</span></div></div>';
+      barsSVG(groups,["","Objetivo","Realizado"],tonTip,2,tonBarLbl,tonYLbl,function(d){ return d.pv>0?d.rz/d.pv*100:null; })+
+      '<div class="pl-legend"><span><i class="li-pv"></i>Objetivo</span><span><i class="li-rz"></i>Realizado</span><span style="color:var(--accent-deep)">% logro</span></div></div>';
     html+='<div class="pl-tot" style="margin-top:11px;background:'+(faltaPos?"#f6ead9":"var(--accent-soft)")+'"><span style="font-weight:800;color:'+(faltaPos?"var(--prospecto)":"var(--accent-deep)")+'">'+(faltaPos?"Te falta para lograr tu objetivo":"¡Objetivo alcanzado!")+'</span><b style="color:'+(faltaPos?"var(--prospecto)":"var(--accent-deep)")+'">'+fmtGs(Math.round(Math.abs(faltaKg)))+' kg</b></div>';
+    if(faltaPos){ var curM=(new Date()).getMonth()+1, remM=[]; for(var mm=curM+1;mm<=12;mm++) remM.push(MESNOMS[mm-1]);
+      var remN=remM.length, perM=remN>0?faltaKg/remN:faltaKg;
+      var remLbl = remN>0 ? (remN+' mes'+(remN>1?'es':'')+' que faltan · '+remM.join(", ")) : 'este mes';
+      html+='<div class="pl-tot" style="margin-top:6px;background:var(--prospecto);color:#fff"><span style="font-weight:800">Vender por mes <small style="opacity:.9;font-weight:700">· '+esc(remLbl)+'</small></span><b>'+fmtGs(Math.round(perM))+' kg/mes</b></div>';
+    }
     html+='<div class="pl-sec" style="margin-top:14px">Resumen</div>';
     html+='<div class="pl-tot" style="background:var(--surface-2)"><span>Comisión objetivo del año</span><b>Gs '+fmtGs(comis)+'</b></div>';
     html+='<div class="pl-tot" style="background:var(--surface-2);margin-top:6px"><span>Comisión/kg promedio</span><b>Gs '+dec1(avg)+'/kg</b></div>';
@@ -3760,6 +3770,7 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
         '<span class="bar-mini"><i style="width:'+pct+'%;background:'+col+'"></i></span>'+
         (opts.legendExtra ? '<span class="leg-extra">'+opts.legendExtra(d)+'</span>' : '')+
         '<span class="val">'+d.count+'</span>'+
+        (opts.showState ? (function(){ var st=prospState(d.visits); return '<span class="leg-state" style="background:'+(STATE_COLOR[st]||"#9aa39a")+'" title="'+esc(st)+'"></span>'; })() : '')+
         '<span class="pct">'+pct+'%</span>'+
         '<span class="chev"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></span>'+
       '</div>'+
@@ -3872,6 +3883,8 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
       '</div></div>';
   }
   var STATE_COLOR={ "Perdido":"#e14b4b", "Congelado":"#e8b53a", "Venta cerrada":"#3fbf5f", "Activo":"#3d86e0" };
+  // estado (semáforo) de un prospecto: última situación registrada (incluye cambios de etapa)
+  function prospState(visits){ if(!visits||!visits.length) return "Activo"; var lt=null; visits.forEach(function(v){ if(!lt || (v.ts||0)>(lt.ts||0) || ((v.ts||0)===(lt.ts||0) && (""+(v.data||""))>(""+(lt.data||"")))) lt=v; }); return lt?normSit(lt.situacao||"Activo"):"Activo"; }
   function prospByClient(list, universe){
     var g=latestByName(list,"Prospecto"), byC={}; // g incluye cambios de etapa (para el estado)
     // sólo VISITAS reales (no los cambios de etapa) para el conteo/lista de visitas
@@ -4455,7 +4468,7 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
     var back = '<div class="drill-head"><button class="drill-back"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>Todos</button>'+
       '<span class="drill-name"><span class="sd" style="background:'+s.color+'"></span>'+esc(s.name)+'</span></div>';
     drawDonut(data, kpiEl, chartEl, {
-      label:label, canDelete:true, prependHTML:back,
+      label:label, canDelete:true, prependHTML:back, showState:(which==="prospectos"),
       onBack:function(){ renderMgrChart(which); },
       refresh:function(){ renderMgrDrill(which, sellerId); }
     });
