@@ -1608,6 +1608,8 @@
       <select id="opSeller" class="ev-inp"></select>
       <div class="pl-sec">Comisión objetivo del año</div>
       <div class="pl-prow"><span style="font-size:12px;color:var(--ink-faint);font-weight:700">Gs</span><input id="opComis" class="pl-kg" style="flex:1;width:auto;font-size:16px" inputmode="numeric" value="24.000.000"></div>
+      <div class="pl-sec">Comisión/kg promedio del año</div>
+      <div class="pl-prow"><span style="font-size:12px;color:var(--ink-faint);font-weight:700">Gs</span><input id="opAvg" class="pl-kg" style="flex:1;width:auto;font-size:16px" inputmode="decimal" value="6"><span style="font-size:11px;color:var(--ink-faint);font-weight:700">/kg</span></div>
       <div class="pl-sec">Mezcla por línea (%) <span style="color:var(--prospecto);font-weight:700;text-transform:none;letter-spacing:0" id="opSum">· suma 0%</span></div>
       <div id="opMix"></div>
       <button class="pl-add" id="opAddMix">＋ Agregar línea</button>
@@ -2379,6 +2381,8 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
     "Balanceado equino":[6.3,5.6,5.7,5.6,6.2,8.4,11.4,13.5,12.2,10.5,7.3,7.5],
     "Núcleo ovino":[7.2,4.3,5.1,5.9,4.5,14.7,16.5,1.9,5.1,24.5,7.2,3.2]
   };
+  // proporción general de ventas mes a mes (promedio de las líneas) — para distribuir el objetivo total
+  var GEN_SEASON=(function(){ var a=[],m,l; for(m=0;m<12;m++){ var s=0,n=0; for(l in SEASON){ s+=SEASON[l][m]; n++; } a.push(n?s/n:0); } return a; })();
   function planKey(nome, vend){ return "pl_"+slug(nome||"")+"__"+slug(vend||""); }
   var _planSaveT=null;
   function savePlan(key){
@@ -2982,23 +2986,28 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
     if(!OBJ[objSeller] || !Object.keys(OBJ[objSeller]).length){ var d=DEFAULT_OBJ[objSeller]; OBJ[objSeller]={}; if(d) OBJ_LINES.forEach(function(l){ OBJ[objSeller][l]=(d[l]||[]).slice(); }); }
     return OBJ[objSeller];
   }
+  function objAggregate(){ var agg={}; OBJ_LINES.forEach(function(l){ agg[l]=[0,0,0,0,0,0,0,0,0,0,0,0]; }); SELLERS.forEach(function(s){ var o=objSellerData(s.id)||{}; OBJ_LINES.forEach(function(l){ if(o[l]) for(var m=0;m<12;m++) agg[l][m]+=(+o[l][m]||0); }); }); return agg; }
+  function objCurData(){ return (objSeller==="__all__") ? objAggregate() : objData(); }
   function openObj(){ $("#planPage").classList.add("hidden");
-    objSeller=(planSeller&&planSeller!=="__all__")?planSeller:(SELLERS[0]?SELLERS[0].id:"");
+    objSeller=(planSeller&&planSeller!=="__all__")?planSeller:"__all__";
     objMonthIdx=(new Date()).getMonth();
-    var sel=$("#objSellerSel"); if(sel){ sel.innerHTML=SELLERS.map(function(s){ return '<option value="'+s.id+'">'+esc(s.name)+'</option>'; }).join(""); sel.value=objSeller; }
+    var sel=$("#objSellerSel"); if(sel){ sel.innerHTML='<option value="__all__">Todo el equipo (suma)</option>'+SELLERS.map(function(s){ return '<option value="'+s.id+'">'+esc(s.name)+'</option>'; }).join(""); sel.value=objSeller; }
     $("#objPage").classList.remove("hidden"); renderObj(); }
   function closeObj(){ $("#objPage").classList.add("hidden"); $("#planPage").classList.remove("hidden"); renderPlan(); }
   function renderObj(){
-    var O=objData();
+    var isAll=(objSeller==="__all__"), O=objCurData();
     var chips=''; for(var mi=0;mi<12;mi++){ var has=OBJ_LINES.some(function(l){ return O[l]&&(+O[l][mi]||0)>0; }); chips+='<button class="pl-mchip'+(mi===objMonthIdx?' on':'')+(has?' has':'')+'" data-mi="'+mi+'">'+MESNOMS[mi]+'</button>'; }
     $("#objMonths").innerHTML=chips;
     $("#objRows").innerHTML=OBJ_LINES.map(function(l){ var v=(O[l]&&O[l][objMonthIdx]!=null)?(+O[l][objMonthIdx]||0):"";
-      return '<div class="obj-row"><div class="on">'+esc(l)+'</div><input class="obj-in" data-l="'+esc(l)+'" inputmode="numeric" placeholder="0" value="'+(v>0?esc(fmtGs(v)):"")+'"><span style="font-size:10px;color:var(--ink-faint)">kg</span></div>'; }).join("");
+      return '<div class="obj-row"><div class="on">'+esc(l)+'</div><input class="obj-in" data-l="'+esc(l)+'" inputmode="numeric" placeholder="0"'+(isAll?' readonly style="background:var(--surface-2);color:var(--ink-soft)"':'')+' value="'+(v>0?esc(fmtGs(v)):"")+'"><span style="font-size:10px;color:var(--ink-faint)">kg</span></div>'; }).join("");
     updateObjTot();
+    var sb=$("#objSaveBtn"); if(sb){ sb.style.display=isAll?"none":""; }
+    $("#objRoNote") && $("#objRoNote").remove();
+    if(isAll){ var n=document.createElement("div"); n.id="objRoNote"; n.className="hint"; n.style.marginTop="10px"; n.innerHTML="Suma de todos los vendedores (solo lectura). Elegí un vendedor para editar."; $("#objSaveBtn").parentNode.insertBefore(n, $("#objSaveBtn")); }
     $$(".pl-mchip",$("#objMonths")).forEach(function(ch){ ch.addEventListener("click", function(){ objMonthIdx=+ch.dataset.mi; renderObj(); }); });
-    $$(".obj-in",$("#objRows")).forEach(function(inp){ inp.addEventListener("input", function(){ var l=inp.dataset.l, O=objData(); if(!O[l]) O[l]=[]; O[l][objMonthIdx]=numKg(inp.value); updateObjTot(); }); });
+    if(!isAll) $$(".obj-in",$("#objRows")).forEach(function(inp){ inp.addEventListener("input", function(){ var l=inp.dataset.l, O=objData(); if(!O[l]) O[l]=[]; O[l][objMonthIdx]=numKg(inp.value); updateObjTot(); }); });
   }
-  function updateObjTot(){ var O=objData(), t=0; OBJ_LINES.forEach(function(l){ if(O[l]) t+=(+O[l][objMonthIdx]||0); }); $("#objTot").querySelector("b").textContent=fmtGs(t)+" kg"; }
+  function updateObjTot(){ var O=objCurData(), t=0; OBJ_LINES.forEach(function(l){ if(O[l]) t+=(+O[l][objMonthIdx]||0); }); $("#objTot").querySelector("b").textContent=fmtGs(t)+" kg"; }
   if($("#objOpenBtn")) $("#objOpenBtn").addEventListener("click", openObj);
   if($("#objBack")) $("#objBack").addEventListener("click", closeObj);
   if($("#objSellerSel")) $("#objSellerSel").addEventListener("change", function(){ objSeller=this.value; objMonthIdx=0; renderObj(); });
@@ -3027,42 +3036,42 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
   }
   function renderOpResult(months){
     var el=$("#opRes"); if(!el) return;
-    var comis=numKg($("#opComis").value);
+    var comis=numKg($("#opComis").value);      // comisión objetivo del año (Gs)
+    var avg=numPY($("#opAvg").value);           // comisión/kg promedio (Gs/kg)
+    var totalKg = avg>0 ? comis/avg : 0;        // kg totales a vender en el año
     var sellerId=$("#opSeller").value, clients=(sellerId==="__all__")?CAT_CLI:clientsForSeller(sellerId);
     var baseMonths=months||[], nb=baseMonths.length, realB=[]; for(var i=0;i<nb;i++) realB.push(0);
     clients.forEach(function(c){ if(c.meses) for(var i=0;i<nb;i++) realB[i]+=(+c.meses[i]||0); });
-    var wBase=0; opMix.forEach(function(m){ wBase += (m.pct/100)*comisLinea(m.l).base; });
     var realMap={}; baseMonths.forEach(function(lbl,i){ realMap[lbl]=realB[i]; });
     var year=nb?(""+baseMonths[0]).split("-")[0]:(""+(new Date().getFullYear()));
     var months12=[]; for(var mm=1;mm<=12;mm++) months12.push(year+"-"+mm);
-    var metaC=[], realC=[];
-    months12.forEach(function(lbl,i){ var mn=i+1, mc=0;
-      opMix.forEach(function(m){ var sea=(SEASON[m.l]&&SEASON[m.l][mn-1])||0; mc += comis*(m.pct/100)*(sea/100); });
-      metaC.push(mc); realC.push((realMap[lbl]||0)*wBase);
-    });
-    var groups=months12.map(function(lbl,i){ return {lab:fmtMes(lbl), pv:metaC[i], rz:realC[i], ob:0}; });
-    var sMeta=0,sReal=0; for(var i=0;i<12;i++){ sMeta+=metaC[i]; sReal+=realC[i]; }
-    groups.push({lab:"TOTAL", pv:sMeta, rz:sReal, ob:0, tot:true});
-    var kgLines=opMix.map(function(m){ var b=comisLinea(m.l).base; return {l:m.l, kg:b>0?comis*(m.pct/100)/b:0}; });
-    var cBase=0,cLogr=0,cSup=0; kgLines.forEach(function(x){ var f=comisLinea(x.l); cBase+=x.kg*f.base; cLogr+=x.kg*f.logr; cSup+=x.kg*f.sup; });
-    var falta=sMeta-sReal, faltaPos=falta>0;
-    var html='<div class="chart-card" style="margin-top:13px"><div class="vp-ttl">Comisión: Meta vs Realizado · Gs/mes (12 meses)</div>'+barsSVG(groups,["","Meta","Realizado"],function(v){return "Gs "+fmtGs(v);},2,function(v){return (!v||v<=0)?'':(v/1e6).toFixed(1).replace('.',',')+'M';})+
-      '<div class="pl-legend"><span><i class="li-pv"></i>Meta</span><span><i class="li-rz"></i>Realizado (estim.)</span></div></div>';
-    html+='<div class="pl-tot" style="margin-top:11px;background:'+(faltaPos?"#f6ead9":"var(--accent-soft)")+'"><span style="font-weight:800;color:'+(faltaPos?"var(--prospecto)":"var(--accent-deep)")+'">'+(faltaPos?"Te falta para tu meta":"¡Meta alcanzada!")+'</span><b style="color:'+(faltaPos?"var(--prospecto)":"var(--accent-deep)")+'">Gs '+fmtGs(Math.abs(falta))+'</b></div>';
-    html+='<div class="pl-sec" style="margin-top:14px">Si alcanzás tu objetivo (plus)</div>';
-    html+='<div class="pl-tot" style="background:var(--surface-2);margin-top:0"><span>Comisión base</span><b>Gs '+fmtGs(cBase)+'</b></div>';
-    html+='<div class="pl-tot" style="background:var(--accent-soft);margin-top:6px"><span>Objetivo logrado</span><b>Gs '+fmtGs(cLogr)+'</b></div>';
-    html+='<div class="pl-tot" style="background:var(--accent-soft);margin-top:6px"><span>Superado el objetivo</span><b>Gs '+fmtGs(cSup)+'</b></div>';
-    html+='<div class="pl-sec" style="margin-top:14px">Necesitás vender (año)</div>';
-    html+=kgLines.map(function(x){ return '<div class="pl-tot" style="background:var(--surface-2);margin-top:6px"><span>'+esc(x.l)+' <small style="color:var(--ink-faint)">· '+PFAM[x.l]+'</small></span><b>'+fmtGs(Math.round(x.kg))+' kg</b></div>'; }).join("");
+    var objKg=[], realKg=[];
+    months12.forEach(function(lbl,i){ objKg.push(totalKg*(GEN_SEASON[i]||0)/100); realKg.push(realMap[lbl]||0); });
+    var groups=months12.map(function(lbl,i){ return {lab:fmtMes(lbl), pv:objKg[i]/1000, rz:realKg[i]/1000, ob:0}; });
+    var sObj=0,sReal=0; for(var i=0;i<12;i++){ sObj+=objKg[i]; sReal+=realKg[i]; }
+    groups.push({lab:"TOTAL", pv:sObj/1000, rz:sReal/1000, ob:0, tot:true});
+    var faltaKg=totalKg-sReal, faltaPos=faltaKg>0;
+    var html='<div class="chart-card" style="margin-top:13px"><div class="vp-ttl">Objetivo vs Realizado · toneladas/mes</div>'+
+      barsSVG(groups,["","Objetivo","Realizado"],tonTip,2,tonBarLbl,tonYLbl)+
+      '<div class="pl-legend"><span><i class="li-pv"></i>Objetivo</span><span><i class="li-rz"></i>Realizado</span></div></div>';
+    html+='<div class="pl-tot" style="margin-top:11px;background:'+(faltaPos?"#f6ead9":"var(--accent-soft)")+'"><span style="font-weight:800;color:'+(faltaPos?"var(--prospecto)":"var(--accent-deep)")+'">'+(faltaPos?"Te falta para lograr tu objetivo":"¡Objetivo alcanzado!")+'</span><b style="color:'+(faltaPos?"var(--prospecto)":"var(--accent-deep)")+'">'+fmtGs(Math.round(Math.abs(faltaKg)))+' kg</b></div>';
+    html+='<div class="pl-sec" style="margin-top:14px">Resumen</div>';
+    html+='<div class="pl-tot" style="background:var(--surface-2)"><span>Comisión objetivo del año</span><b>Gs '+fmtGs(comis)+'</b></div>';
+    html+='<div class="pl-tot" style="background:var(--surface-2);margin-top:6px"><span>Comisión/kg promedio</span><b>Gs '+dec1(avg)+'/kg</b></div>';
+    html+='<div class="pl-tot" style="background:var(--accent-soft);margin-top:6px"><span style="font-weight:800">Total a vender (año)</span><b>'+fmtGs(Math.round(totalKg))+' kg</b></div>';
+    html+='<div class="pl-tot" style="background:var(--surface-2);margin-top:6px"><span>Vendido hasta ahora</span><b>'+fmtGs(Math.round(sReal))+' kg</b></div>';
+    html+='<div class="pl-sec" style="margin-top:14px">Simulación por línea <small style="color:var(--ink-faint)">· según tu mezcla %</small></div>';
+    var kgLines=opMix.map(function(m){ return {l:m.l, kg:totalKg*(m.pct/100)}; });
+    html+=kgLines.map(function(x){ return '<div class="pl-tot" style="background:var(--surface-2);margin-top:6px"><span>'+esc(x.l)+'</span><b>'+fmtGs(Math.round(x.kg))+' kg</b></div>'; }).join("");
     var totKgN=kgLines.reduce(function(a,x){ return a+x.kg; },0);
     html+='<div class="pl-tot" style="background:var(--accent-soft);margin-top:6px"><span style="font-weight:800">Total</span><b>'+fmtGs(Math.round(totKgN))+' kg</b></div>';
-    html+='<div class="hint" style="margin-top:12px">Cálculo con la <b>tasa base</b>. Realizado estimado repartiendo tu venta total según la mezcla %. La meta anual se reparte por mes con la estacionalidad de cada línea.</div>';
+    html+='<div class="hint" style="margin-top:12px"><b>Cómo se calcula:</b> Total a vender = comisión objetivo ÷ comisión/kg promedio. El <b>Objetivo</b> mensual se reparte por la proporción de ventas del año. <b>Realizado</b> = tus kg vendidos. La simulación por línea reparte el total según tu mezcla % (referencia).</div>';
     el.innerHTML=html;
   }
   if($("#objPersOpenBtn")) $("#objPersOpenBtn").addEventListener("click", openObjPers);
   if($("#objPersBack")) $("#objPersBack").addEventListener("click", closeObjPers);
   if($("#opComis")) $("#opComis").addEventListener("input", function(){ renderOpResult(salesMonths()); });
+  if($("#opAvg")) $("#opAvg").addEventListener("input", function(){ renderOpResult(salesMonths()); });
   if($("#opSeller")) $("#opSeller").addEventListener("change", function(){ renderOpResult(salesMonths()); });
   if($("#vpPlanBtn")) $("#vpPlanBtn").addEventListener("click", openPlan);
   if($("#planBack")) $("#planBack").addEventListener("click", closePlan);
