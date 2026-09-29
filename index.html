@@ -1573,7 +1573,7 @@
       <button class="pl-open" id="objOpenBtn" style="background:#0b0e08;margin-bottom:8px">🎯 Objetivo por línea</button>
       <button class="pl-open" id="objPersOpenBtn" style="background:#0b0e08;margin-bottom:12px">💰 Objetivo Personal (comisión)</button>
       <div class="chart-card" style="margin:0 0 12px">
-        <div class="vp-ttl">Previsto vs Realizado vs Objetivo · kg/mes</div>
+        <div class="vp-ttl">Previsto vs Realizado vs Objetivo · toneladas/mes</div>
         <div id="planChart"></div>
         <div class="pl-legend"><span><i class="li-pv"></i>Previsto</span><span><i class="li-rz"></i>Realizado</span><span><i class="li-ob"></i>Objetivo</span></div>
       </div>
@@ -2945,16 +2945,20 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
     var curMn=(new Date()).getMonth()+1; // mostrar solo hasta el mes actual
     var idx=[]; for(var i=0;i<months.length;i++){ var mn=parseInt((""+months[i]).split("-")[1],10)||(i+1); if(mn<=curMn && (s.pv[i]>0 || s.rz[i]>0 || s.ob[i]>0)) idx.push(i); }
     if(!idx.length){ el.innerHTML='<div class="vp-empty">Sin datos hasta el mes actual.</div>'; return; }
-    var groups=idx.map(function(i){ return {lab:fmtMes(months[i]), pv:s.pv[i], rz:s.rz[i], ob:s.ob[i]}; });
+    var groups=idx.map(function(i){ return {lab:fmtMes(months[i]), pv:s.pv[i]/1000, rz:s.rz[i]/1000, ob:s.ob[i]/1000}; });
     var tPv=0,tRz=0,tOb=0; idx.forEach(function(i){ tPv+=s.pv[i]; tRz+=s.rz[i]; tOb+=s.ob[i]; });
-    groups.push({lab:"TOTAL", pv:tPv, rz:tRz, ob:tOb, tot:true});
-    el.innerHTML=barsSVG(groups);
+    groups.push({lab:"TOTAL", pv:tPv/1000, rz:tRz/1000, ob:tOb/1000, tot:true});
+    el.innerHTML=barsSVG(groups, ["Objetivo","Previsto","Realizado"], tonTip, 3, tonBarLbl, tonYLbl);
   }
-  function barsSVG(groups, names, fmt, nSeries){
+  function tonBarLbl(v){ if(!v||v<=0) return ''; return (v>=100?Math.round(v):v.toFixed(1)).toString().replace('.',','); } // v en toneladas
+  function tonTip(v){ return (v>=100?Math.round(v):(+v||0).toFixed(1)).toString().replace('.',',')+' t'; }
+  function tonYLbl(val){ return val>=1000?(Math.round(val/100)/10).toString().replace('.',',')+"k":(""+Math.round(val)); }
+  function barsSVG(groups, names, fmt, nSeries, barLabel, yFmt){
     nSeries=nSeries||3;
     names=names||["Objetivo","Previsto","Realizado"]; fmt=fmt||function(v){ return fmtGs(v)+" kg"; };
-    var W=336,H=200,pL=30,pR=8,pT=12,pB=26, iw=W-pL-pR, ih=H-pT-pB;
-    var max=0; groups.forEach(function(d){ max=Math.max(max,d.pv,d.rz,d.ob||0); }); if(max<=0) max=1; max*=1.14;
+    yFmt=yFmt||function(val){ return val>=1e6?(val/1e6).toFixed(val>=1e7?0:1)+"M":(val>=1000?Math.round(val/1000)+"k":Math.round(val)); };
+    var W=336,H=204,pL=30,pR=8,pT=12,pB=26, iw=W-pL-pR, ih=H-pT-pB;
+    var max=0; groups.forEach(function(d){ max=Math.max(max,d.pv,d.rz,d.ob||0); }); if(max<=0) max=1; max*=(barLabel?1.30:1.14);
     var g=groups.length, gw=iw/g, bw=gw*(g>10?0.30/nSeries*2:0.6/nSeries), gap=gw*0.05, lf=g>10?7.5:9.5;
     var totalW=bw*nSeries+gap*(nSeries-1);
     function Y(v){ return pT+ih-(v/max)*ih; }
@@ -2964,10 +2968,12 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
       var allBars=[["#c07a2b",d.ob||0,0],["#2f6b43",d.pv,1],["#1f6091",d.rz,2]];
       var bars = (nSeries===2) ? [allBars[1],allBars[2]] : allBars;
       bars.forEach(function(o,j){ var x=x0+j*(bw+gap), h=(o[1]/max)*ih, yy=Y(o[1]);
-        s+='<rect x="'+x.toFixed(1)+'" y="'+yy.toFixed(1)+'" width="'+bw.toFixed(1)+'" height="'+Math.max(0,h).toFixed(1)+'" rx="1.5" fill="'+o[0]+'"><title>'+esc(d.lab)+' · '+esc(names[o[2]])+': '+esc(fmt(o[1]))+'</title></rect>'; });
+        s+='<rect x="'+x.toFixed(1)+'" y="'+yy.toFixed(1)+'" width="'+bw.toFixed(1)+'" height="'+Math.max(0,h).toFixed(1)+'" rx="1.5" fill="'+o[0]+'"><title>'+esc(d.lab)+' · '+esc(names[o[2]])+': '+esc(fmt(o[1]))+'</title></rect>';
+        if(barLabel){ var lab=barLabel(o[1]); if(lab){ var lx=(x+bw/2).toFixed(1), ly=(yy-2).toFixed(1); s+='<text x="'+lx+'" y="'+ly+'" font-size="6.5" font-weight="700" fill="'+o[0]+'" text-anchor="start" transform="rotate(-90 '+lx+' '+ly+')">'+esc(lab)+'</text>'; } }
+      });
       s+='<text x="'+cx.toFixed(1)+'" y="'+(H-9)+'" fill="'+(d.tot?"#245334":"#7d887f")+'" font-size="'+lf+'" font-weight="'+(d.tot?"800":"600")+'" text-anchor="middle">'+esc(d.lab)+'</text>';
     });
-    for(var y=0;y<=3;y++){ var val=max*(3-y)/3, yy=pT+ih*y/3; s+='<text x="'+(pL-4)+'" y="'+(yy+3)+'" fill="#9aa39a" font-size="8" text-anchor="end">'+(val>=1e6?(val/1e6).toFixed(val>=1e7?0:1)+"M":(val>=1000?Math.round(val/1000)+"k":Math.round(val)))+'</text>'; }
+    for(var y=0;y<=3;y++){ var val=max*(3-y)/3, yy=pT+ih*y/3; s+='<text x="'+(pL-4)+'" y="'+(yy+3)+'" fill="#9aa39a" font-size="8" text-anchor="end">'+esc(""+yFmt(val))+'</text>'; }
     return s+'</svg>';
   }
   // ---- Objetivo por línea (Gestión) ----
@@ -3040,7 +3046,7 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
     var kgLines=opMix.map(function(m){ var b=comisLinea(m.l).base; return {l:m.l, kg:b>0?comis*(m.pct/100)/b:0}; });
     var cBase=0,cLogr=0,cSup=0; kgLines.forEach(function(x){ var f=comisLinea(x.l); cBase+=x.kg*f.base; cLogr+=x.kg*f.logr; cSup+=x.kg*f.sup; });
     var falta=sMeta-sReal, faltaPos=falta>0;
-    var html='<div class="chart-card" style="margin-top:13px"><div class="vp-ttl">Comisión: Meta vs Realizado · Gs/mes (12 meses)</div>'+barsSVG(groups,["","Meta","Realizado"],function(v){return "Gs "+fmtGs(v);},2)+
+    var html='<div class="chart-card" style="margin-top:13px"><div class="vp-ttl">Comisión: Meta vs Realizado · Gs/mes (12 meses)</div>'+barsSVG(groups,["","Meta","Realizado"],function(v){return "Gs "+fmtGs(v);},2,function(v){return (!v||v<=0)?'':(v/1e6).toFixed(1).replace('.',',')+'M';})+
       '<div class="pl-legend"><span><i class="li-pv"></i>Meta</span><span><i class="li-rz"></i>Realizado (estim.)</span></div></div>';
     html+='<div class="pl-tot" style="margin-top:11px;background:'+(faltaPos?"#f6ead9":"var(--accent-soft)")+'"><span style="font-weight:800;color:'+(faltaPos?"var(--prospecto)":"var(--accent-deep)")+'">'+(faltaPos?"Te falta para tu meta":"¡Meta alcanzada!")+'</span><b style="color:'+(faltaPos?"var(--prospecto)":"var(--accent-deep)")+'">Gs '+fmtGs(Math.abs(falta))+'</b></div>';
     html+='<div class="pl-sec" style="margin-top:14px">Si alcanzás tu objetivo (plus)</div>';
