@@ -3017,32 +3017,33 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
     var W=336,H=(pctFmt?204:190),pL=28,pR=8,pT=14,pB=(pctFmt?38:24), iw=W-pL-pR, ih=H-pT-pB;
     var max=0, hasM=false; groups.forEach(function(d){ if(!d.tot){ hasM=true; max=Math.max(max,d.pv,d.rz,d.ob||0); } }); // escala por los meses (no el TOTAL)
     if(!hasM) groups.forEach(function(d){ max=Math.max(max,d.pv,d.rz,d.ob||0); });
-    if(max<=0) max=1; max*=(barLabel?1.22:1.12);
+    if(max<=0) max=1;
+    // margen superior reservado para que el número (rotado, ENCIMA de la barra) nunca se corte
+    var maxLen=0; groups.forEach(function(d){ [d.pv,d.rz,d.ob].forEach(function(v){ var l=barLabel?barLabel(v):''; if(l) maxLen=Math.max(maxLen,(""+l).length); }); });
+    var topPad = barLabel ? (maxLen*3.7+8) : 6;
     var g=groups.length, gw=iw/g, bw=gw*(g>10?0.74/nSeries:0.6/nSeries), gap=gw*0.045, lf=g>10?7.5:9.5;
     var totalW=bw*nSeries+gap*(nSeries-1);
-    function Y(v){ return pT+ih-(Math.min(v,max)/max)*ih; }
+    var ihB=ih-topPad; if(ihB<ih*0.45) ihB=ih*0.55;
+    function Y(v){ return pT+topPad+(1-Math.min(v,max)/max)*ihB; }
+    var baseY=pT+topPad+ihB; // línea base (0)
     var s='<svg viewBox="0 0 '+W+' '+H+'" width="100%">';
-    for(var y=0;y<=3;y++){ var yy=pT+ih*y/3; s+='<line x1="'+pL+'" y1="'+yy+'" x2="'+(W-pR)+'" y2="'+yy+'" stroke="#e2e6dd"/>'; }
+    for(var y=0;y<=3;y++){ var yy=pT+topPad+ihB*y/3; s+='<line x1="'+pL+'" y1="'+yy.toFixed(1)+'" x2="'+(W-pR)+'" y2="'+yy.toFixed(1)+'" stroke="#e2e6dd"/>'; }
     groups.forEach(function(d,i){ var cx=pL+gw*i+gw/2, x0=cx-totalW/2;
       var allBars=[["#2f6b43",d.pv,1],["#1f6091",d.rz,2],["#c07a2b",d.ob||0,0]]; // orden: Previsto, Realizado, Objetivo
       var bars = (nSeries===2) ? [allBars[0],allBars[1]] : allBars;
-      bars.forEach(function(o,j){ var x=x0+j*(bw+gap), yy=Y(o[1]), h=pT+ih-yy;
+      bars.forEach(function(o,j){ var x=x0+j*(bw+gap), yy=Y(o[1]), h=baseY-yy;
         s+='<rect x="'+x.toFixed(1)+'" y="'+yy.toFixed(1)+'" width="'+bw.toFixed(1)+'" height="'+Math.max(0,h).toFixed(1)+'" rx="1.5" fill="'+o[0]+'"><title>'+esc(d.lab)+' · '+esc(names[o[2]])+': '+esc(fmt(o[1]))+'</title></rect>';
+        // número SIEMPRE encima de la barra (rotado, leyendo hacia arriba), en el color de la serie
         if(barLabel){ var lab=barLabel(o[1]); if(lab){
-            var lx=(x+bw/2).toFixed(1), labPx=(""+lab).length*3.6+5;
-            // Todas las etiquetas se leen hacia arriba (anchor start). Si la barra es alta
-            // (o arriba no cabría), el número va DENTRO en blanco, desde abajo hasta el tope
-            // (nunca se corta por arriba); si la barra es baja, va ENCIMA en color.
-            var fits=h>=labPx+4, wouldCross=(yy-labPx)<pT+2;
-            var inside=fits && (wouldCross || h>ih*0.45);
-            var ly=(inside?(yy+labPx+2):(yy-3)), lfill=(inside?"#fff":o[0]);
-            s+='<text x="'+lx+'" y="'+ly.toFixed(1)+'" font-size="6.5" font-weight="700" fill="'+lfill+'" text-anchor="start" transform="rotate(-90 '+lx+' '+ly.toFixed(1)+')">'+esc(lab)+'</text>'; } }
+            var lx=(x+bw/2).toFixed(1), labW=(""+lab).length*3.7+3, ly=yy-3;
+            if(ly-labW < pT+1) ly = pT+1+labW; // clamp de seguridad
+            s+='<text x="'+lx+'" y="'+ly.toFixed(1)+'" font-size="6.5" font-weight="700" fill="'+o[0]+'" text-anchor="start" transform="rotate(-90 '+lx+' '+ly.toFixed(1)+')">'+esc(lab)+'</text>'; } }
       });
-      var monthY = pctFmt ? (pT+ih+12) : (pT+ih+15);
-      s+='<text x="'+cx.toFixed(1)+'" y="'+monthY+'" fill="'+(d.tot?"#245334":"#7d887f")+'" font-size="'+lf+'" font-weight="'+(d.tot?"800":"600")+'" text-anchor="middle">'+esc(d.lab)+'</text>';
-      if(pctFmt){ var pct=pctFmt(d); if(pct!=null){ var pc=Math.round(pct), col=(pc>99?"#245334":(pc>=95?"#c07a2b":"#b23b3b")); s+='<text x="'+cx.toFixed(1)+'" y="'+(pT+ih+23)+'" fill="'+col+'" font-size="7.5" font-weight="800" text-anchor="middle">'+pc+'%</text>'; } }
+      var monthY = baseY + (pctFmt ? 12 : 15);
+      s+='<text x="'+cx.toFixed(1)+'" y="'+monthY.toFixed(1)+'" fill="'+(d.tot?"#245334":"#7d887f")+'" font-size="'+lf+'" font-weight="'+(d.tot?"800":"600")+'" text-anchor="middle">'+esc(d.lab)+'</text>';
+      if(pctFmt){ var pct=pctFmt(d); if(pct!=null){ var pc=Math.round(pct), col=(pc>99?"#245334":(pc>=95?"#c07a2b":"#b23b3b")); s+='<text x="'+cx.toFixed(1)+'" y="'+(baseY+23).toFixed(1)+'" fill="'+col+'" font-size="7.5" font-weight="800" text-anchor="middle">'+pc+'%</text>'; } }
     });
-    for(var y=0;y<=3;y++){ var val=max*(3-y)/3, yy=pT+ih*y/3; s+='<text x="'+(pL-4)+'" y="'+(yy+3)+'" fill="#9aa39a" font-size="8" text-anchor="end">'+esc(""+yFmt(val))+'</text>'; }
+    for(var y=0;y<=3;y++){ var val=max*(3-y)/3, yy=pT+topPad+ihB*y/3; s+='<text x="'+(pL-4)+'" y="'+(yy+3).toFixed(1)+'" fill="#9aa39a" font-size="8" text-anchor="end">'+esc(""+yFmt(val))+'</text>'; }
     return s+'</svg>';
   }
   // ---- Objetivo por línea (Gestión) ----
