@@ -2681,6 +2681,9 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
   // Historial de versiones (changelog). Al agregar una mejora: sumar una entrada
   // arriba con la fecha y bumpear el número. APP_VERSION = la última entrada.
   var CHANGELOG = [
+    { v:"1.123", d:"30/09/2026", n:[
+        "Potencial de la venta: al escribir el consumo ya no se cierra el teclado (se actualizan solo los números, sin recargar los campos)."
+      ] },
     { v:"1.122", d:"30/09/2026", n:[
         "Ajuste visual: la etiqueta «Mejor comisión» ya no se corta en Potencial de la venta."
       ] },
@@ -5504,32 +5507,47 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
 
   // ---- HERRAMIENTA: Potencial de la venta (comisión por producto según consumo del lote) ----
   var potProds=[{l:"Sup. minerales",cs:150},{l:"Balanceados",cs:2000},{l:"Concentrado",cs:800}];
+  // Construye las tarjetas UNA vez (selects + inputs). No se reconstruye al tipear el
+  // consumo (si no, el input se recrea y el teclado se cierra en cada dígito).
   function renderPot(){
+    var el=$("#potProds"); if(!el) return;
+    el.innerHTML=potProds.map(function(p,i){
+      return '<div class="pot-card" data-i="'+i+'" style="flex:1 0 150px;min-width:150px;border:1.5px solid var(--line);border-radius:13px;padding:11px 10px;position:relative;background:var(--card)">'+
+        '<span class="pot-badge" style="position:absolute;top:-9px;right:8px;background:var(--accent);color:#fff;font-size:9px;font-weight:800;border-radius:7px;padding:2px 6px;display:none">Mejor comisión</span>'+
+        '<div style="font-size:11px;font-weight:800;color:var(--ink-faint);text-transform:uppercase;letter-spacing:.03em;margin-bottom:7px">Producto '+(i+1)+'</div>'+
+        '<select class="pot-line" data-i="'+i+'" style="width:100%;font-size:12.5px;padding:8px 6px;border:1px solid var(--line);border-radius:9px;background:var(--card);margin-bottom:5px">'+PLINES.map(function(l){return '<option'+(l===p.l?' selected':'')+'>'+esc(l)+'</option>';}).join("")+'</select>'+
+        '<span class="pot-rate" style="font-size:10.5px;font-weight:700;color:var(--accent-deep);background:var(--accent-soft);border-radius:7px;padding:3px 6px;display:inline-block;margin-bottom:9px">'+dec1(comisLinea(p.l).base)+' Gs/kg</span>'+
+        '<div style="font-size:9.5px;color:var(--ink-faint);font-weight:700;text-transform:uppercase;margin:2px 0 3px">Consumo (g/día/animal)</div><input class="pot-cs" data-i="'+i+'" inputmode="numeric" value="'+fmtGs(p.cs)+'" style="width:100%;font-size:13px;font-weight:700;text-align:right;border:1px solid var(--line);border-radius:9px;padding:7px 7px;font-variant-numeric:tabular-nums">'+
+        '<div style="margin-top:9px;padding-top:8px;border-top:1px dashed var(--line)">'+
+          '<div class="pot-vol" style="font-size:14px;font-weight:800;color:var(--activo);font-variant-numeric:tabular-nums;line-height:1.05">0</div><div style="font-size:9.5px;color:var(--ink-faint)">volumen (kg)</div>'+
+          '<div style="background:var(--accent-soft);border-radius:9px;padding:6px 8px;margin-top:6px"><div class="pot-com" style="font-size:16px;font-weight:800;color:var(--accent-deep);font-variant-numeric:tabular-nums;line-height:1.05">0</div><div style="font-size:9.5px;color:var(--ink-faint)">tu comisión (Gs)</div></div>'+
+        '</div></div>';
+    }).join("");
+    $$(".pot-line",el).forEach(function(s){ s.addEventListener("change",function(){ potProds[+s.dataset.i].l=s.value; var c=s.closest(".pot-card"); var rb=c&&c.querySelector(".pot-rate"); if(rb) rb.textContent=dec1(comisLinea(s.value).base)+' Gs/kg'; updatePotOutputs(); }); });
+    $$(".pot-cs",el).forEach(function(inp){ inp.addEventListener("input",function(){ potProds[+inp.dataset.i].cs=numKg(inp.value); updatePotOutputs(); }); });
+    var ctx=$("#potCtx"); if(ctx) ctx.innerHTML="El volumen de cada producto = animales × consumo × días. Con distinto consumo, cada línea da un volumen y una comisión diferente — por eso conviene compararlas.";
+    updatePotOutputs();
+  }
+  // Recalcula SOLO los números y el resaltado (no toca selects/inputs → el teclado no se cierra)
+  function updatePotOutputs(){
     var el=$("#potProds"); if(!el) return;
     var an=numKg($("#potAn").value), pd=numKg($("#potPd").value);
     var res=potProds.map(function(p){ var vol=an*(p.cs/1000)*pd; return {vol:vol, com:vol*(comisLinea(p.l).base||0)}; });
     var comArr=res.map(function(r){return r.com;}), best=comArr.indexOf(Math.max.apply(null,comArr));
-    el.innerHTML=potProds.map(function(p,i){ var r=res[i], isBest=(i===best && r.com>0);
-      return '<div style="flex:1 0 150px;min-width:150px;border:1.5px solid '+(isBest?'var(--accent)':'var(--line)')+';border-radius:13px;padding:11px 10px;position:relative;background:var(--card)">'+
-        (isBest?'<span style="position:absolute;top:-9px;right:8px;background:var(--accent);color:#fff;font-size:9px;font-weight:800;border-radius:7px;padding:2px 6px">Mejor comisión</span>':'')+
-        '<div style="font-size:11px;font-weight:800;color:var(--ink-faint);text-transform:uppercase;letter-spacing:.03em;margin-bottom:7px">Producto '+(i+1)+'</div>'+
-        '<select class="pot-line" data-i="'+i+'" style="width:100%;font-size:12.5px;padding:8px 6px;border:1px solid var(--line);border-radius:9px;background:var(--card);margin-bottom:5px">'+PLINES.map(function(l){return '<option'+(l===p.l?' selected':'')+'>'+esc(l)+'</option>';}).join("")+'</select>'+
-        '<span style="font-size:10.5px;font-weight:700;color:var(--accent-deep);background:var(--accent-soft);border-radius:7px;padding:3px 6px;display:inline-block;margin-bottom:9px">'+dec1(comisLinea(p.l).base)+' Gs/kg</span>'+
-        '<div style="font-size:9.5px;color:var(--ink-faint);font-weight:700;text-transform:uppercase;margin:2px 0 3px">Consumo (g/día/animal)</div><input class="pot-cs" data-i="'+i+'" inputmode="numeric" value="'+fmtGs(p.cs)+'" style="width:100%;font-size:13px;font-weight:700;text-align:right;border:1px solid var(--line);border-radius:9px;padding:7px 7px;font-variant-numeric:tabular-nums">'+
-        '<div style="margin-top:9px;padding-top:8px;border-top:1px dashed var(--line)">'+
-          '<div style="font-size:14px;font-weight:800;color:var(--activo);font-variant-numeric:tabular-nums;line-height:1.05">'+fmtGs(Math.round(r.vol))+'</div><div style="font-size:9.5px;color:var(--ink-faint)">volumen (kg)</div>'+
-          '<div style="background:var(--accent-soft);border-radius:9px;padding:6px 8px;margin-top:6px"><div style="font-size:16px;font-weight:800;color:var(--accent-deep);font-variant-numeric:tabular-nums;line-height:1.05">'+fmtGs(Math.round(r.com))+'</div><div style="font-size:9.5px;color:var(--ink-faint)">tu comisión (Gs)</div></div>'+
-        '</div></div>';
-    }).join("");
-    $$(".pot-line",el).forEach(function(s){ s.addEventListener("change",function(){ potProds[+s.dataset.i].l=s.value; renderPot(); }); });
-    $$(".pot-cs",el).forEach(function(inp){ inp.addEventListener("input",function(){ potProds[+inp.dataset.i].cs=numKg(inp.value); renderPot(); }); });
-    var ctx=$("#potCtx"); if(ctx) ctx.innerHTML="El volumen de cada producto = animales × consumo × días. Con distinto consumo, cada línea da un volumen y una comisión diferente — por eso conviene compararlas.";
+    $$(".pot-card",el).forEach(function(c){ var i=+c.dataset.i, r=res[i]; if(!r) return;
+      var v=c.querySelector(".pot-vol"), m=c.querySelector(".pot-com"), b=c.querySelector(".pot-badge");
+      if(v) v.textContent=fmtGs(Math.round(r.vol));
+      if(m) m.textContent=fmtGs(Math.round(r.com));
+      var isBest=(i===best && r.com>0);
+      if(b) b.style.display=isBest?"":"none";
+      c.style.borderColor=isBest?"var(--accent)":"var(--line)";
+    });
   }
   function openPotencial(){ $("#hubPage").classList.add("hidden"); $("#potPage").classList.remove("hidden"); renderPot(); }
   if($("#toolPotencial")) $("#toolPotencial").addEventListener("click", openPotencial);
   if($("#potBack")) $("#potBack").addEventListener("click", function(){ $("#potPage").classList.add("hidden"); openHub(); });
-  if($("#potAn")) $("#potAn").addEventListener("input", renderPot);
-  if($("#potPd")) $("#potPd").addEventListener("input", renderPot);
+  if($("#potAn")) $("#potAn").addEventListener("input", updatePotOutputs);
+  if($("#potPd")) $("#potPd").addEventListener("input", updatePotOutputs);
 
   function renderReportCanvas(data, imgs){
     var PW=794, PH=1123, SCALE=2;
