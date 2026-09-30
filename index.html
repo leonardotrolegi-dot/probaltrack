@@ -527,6 +527,9 @@
   .mic svg{width:16px;height:16px}
   .mic.rec{width:44px;height:44px;border-radius:12px;opacity:1;background:var(--danger);animation:pulse 1.2s infinite}
   .mic.rec svg{width:21px;height:21px}
+  .mic.mic-pt{right:46px;background:#7a5cc0;width:34px}
+  .mic.mic-pt .pt-badge{position:absolute;top:-7px;right:-6px;background:#fff;color:#7a5cc0;font-size:7.5px;font-weight:800;border-radius:6px;padding:0 3px;line-height:12px;box-shadow:var(--shadow)}
+  .mic.mic-pt.rec .pt-badge{display:none}
   @keyframes pulse{0%,100%{box-shadow:0 0 0 0 color-mix(in srgb,var(--danger) 55%,transparent)}50%{box-shadow:0 0 0 9px transparent}}
   .mic-note{font-size:12px;color:var(--ink-faint);margin-top:7px;display:flex;align-items:center;gap:6px}
   .rec-live{color:var(--danger);font-weight:600}
@@ -926,6 +929,8 @@
   .mr-check{margin-left:auto;flex:none;color:#fff;background:var(--accent);width:20px;height:20px;border-radius:50%;
     display:grid;place-items:center;font-size:12px;font-weight:800}
   .mr-pend{margin-left:auto;flex:none;font-size:10.5px;font-weight:700;color:var(--ink-faint);text-transform:uppercase;letter-spacing:.03em}
+  .mr-line.mr-over .mr-pend{color:#b23b3b}
+  .mr-line.mr-over .mr-date{color:#b23b3b;font-weight:700}
   /* calendario (gestor) */
   .rtoggle{display:flex;background:var(--surface-2);border:1.5px solid var(--line);border-radius:12px;padding:4px;margin:12px 0}
   .rtoggle-b{flex:1;border:0;background:transparent;color:var(--ink-soft);font-family:inherit;font-size:13.5px;font-weight:700;padding:8px 4px;border-radius:9px;cursor:pointer}
@@ -1365,7 +1370,11 @@
           <label for="fObs">Observaciones <span style="color:var(--ink-faint);font-weight:400">(uso interno)</span></label>
           <div class="obs-wrap">
             <textarea id="fObs" placeholder="Escriba o toque el micrófono para dictar…"></textarea>
-            <button class="mic" id="micBtn" type="button" title="Ditar por voz">
+            <button class="mic mic-pt" id="micPtBtn" type="button" title="Grabar en portugués y traducir al español">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="22"/></svg>
+              <span class="pt-badge">PT→ES</span>
+            </button>
+            <button class="mic" id="micBtn" type="button" title="Dictar por voz (español)">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="22"/></svg>
             </button>
           </div>
@@ -1487,6 +1496,7 @@
             <div class="cal-legend"><span><i class="cl-a"></i>Realizada</span><span><i class="cl-p"></i>Pendiente</span><span><i class="cl-e"></i>Evento</span></div>
           </div>
           <div id="sCalDay"></div>
+          <div id="sPendWrap"></div>
         </div>
 
         <div id="sWeekWrap" class="hidden">
@@ -2034,6 +2044,7 @@
             <div class="cal-legend"><span><i class="cl-a"></i>Realizada</span><span><i class="cl-p"></i>Pendiente</span><span><i class="cl-e"></i>Evento</span></div>
           </div>
           <div id="calDay"></div>
+          <div id="mPendWrap"></div>
         </div>
 
         <div id="mListWrap" class="hidden">
@@ -2080,6 +2091,7 @@
         </div>
         <div class="kpis" id="mKpiCart"></div>
         <div class="chart-card" id="mChartCart"></div>
+        <div id="mCartList"></div>
       </section>
 
       <!-- MI RUTA (gestor) -->
@@ -2317,21 +2329,29 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
     "Gabriel":"3571"
   };
   function slug(s){ return s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/[^a-z0-9]+/g,"_").replace(/^_|_$/g,""); }
+  // Vendedores desactivados: NO entran en SELLERS, así desaparecen de la pantalla de
+  // login y de TODO el panel de gestión. Sus datos de venta/clientes quedan en la base.
+  var HIDDEN_SELLERS={ "billie":1, "martin":1, "pre_venta":1 };
   var SELLERS=[], SELLER_BY={}, KEY={}, CLIENTES_FALLBACK=[], _cliSeen={};
   RAW_8020.split("\n").forEach(function(ln){
     ln=ln.trim(); if(!ln) return;
     var p=ln.split("|"), resp=(p[0]||"").trim(), cli=(p[1]||"").trim(), est=(p[2]||"").trim();
     if(!resp || !cli) return;
     var id=slug(resp);
-    if(!SELLER_BY[id]){ var s={id:id, name:resp, role:"Comercial", pin:(PINS[resp]||"1234"), color:SELLER_COLORS[SELLERS.length%SELLER_COLORS.length]}; SELLERS.push(s); SELLER_BY[id]=s; KEY[id]=[]; }
-    var idNome = est ? (cli+" · "+est) : cli;
-    KEY[id].push({c:cli, e:est, id:idNome});
+    if(!HIDDEN_SELLERS[id]){
+      if(!SELLER_BY[id]){ var s={id:id, name:resp, role:"Comercial", pin:(PINS[resp]||"1234"), color:SELLER_COLORS[SELLERS.length%SELLER_COLORS.length]}; SELLERS.push(s); SELLER_BY[id]=s; KEY[id]=[]; }
+      var idNome = est ? (cli+" · "+est) : cli;
+      KEY[id].push({c:cli, e:est, id:idNome});
+    }
     if(!_cliSeen[cli]){ _cliSeen[cli]=1; CLIENTES_FALLBACK.push({nome:cli, loc:est||"", vendedor:resp}); }
   });
+  // Cambio SOLO de etiqueta de login/pantalla: Rossmaryo -> José Palacio (id "rossmaryo",
+  // ventas, PIN y demás datos intactos).
+  if(SELLER_BY["rossmaryo"]) SELLER_BY["rossmaryo"].name="José Palacio";
   // Gabriel: vendedor nuevo (aún sin clientes en la base; hará prospección). Cuenta normal.
   if(!SELLER_BY["gabriel"]){ var _gb={id:"gabriel", name:"Gabriel", role:"Comercial", pin:PINS["Gabriel"]||"3571", color:SELLER_COLORS[SELLERS.length%SELLER_COLORS.length]}; SELLERS.push(_gb); SELLER_BY["gabriel"]=_gb; KEY["gabriel"]=[]; }
   var PROSPECTOS_FALLBACK=[];
-  var NAME2ID={}; SELLERS.forEach(function(s){ NAME2ID[slug(s.name)]=s.id; });
+  var NAME2ID={}; SELLERS.forEach(function(s){ NAME2ID[slug(s.name)]=s.id; NAME2ID[s.id]=s.id; }); NAME2ID["rossmaryo"]="rossmaryo";
   var GESTOR = {id:"gestion", name:"Gestión", role:"Gestión", color:"#3a3f52"};
   // Equipo Técnica: usuario aparte (NO entra en SELLERS, así sus visitas no suman
   // en los totales/gráficos de los vendedores). Ve todo y puede visitar a cualquiera.
@@ -2976,7 +2996,13 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
       var bars = (nSeries===2) ? [allBars[0],allBars[1]] : allBars;
       bars.forEach(function(o,j){ var x=x0+j*(bw+gap), yy=Y(o[1]), h=pT+ih-yy;
         s+='<rect x="'+x.toFixed(1)+'" y="'+yy.toFixed(1)+'" width="'+bw.toFixed(1)+'" height="'+Math.max(0,h).toFixed(1)+'" rx="1.5" fill="'+o[0]+'"><title>'+esc(d.lab)+' · '+esc(names[o[2]])+': '+esc(fmt(o[1]))+'</title></rect>';
-        if(barLabel){ var lab=barLabel(o[1]); if(lab){ var lx=(x+bw/2).toFixed(1), near=(yy<pT+22), ly=(near?(yy+2):(yy-2)).toFixed(1), lfill=(near?"#fff":o[0]), lanc=(near?"end":"start"); s+='<text x="'+lx+'" y="'+ly+'" font-size="6.5" font-weight="700" fill="'+lfill+'" text-anchor="'+lanc+'" transform="rotate(-90 '+lx+' '+ly+')">'+esc(lab)+'</text>'; } }
+        if(barLabel){ var lab=barLabel(o[1]); if(lab){
+            var lx=(x+bw/2).toFixed(1), labPx=(""+lab).length*3.6+5;
+            // dentro de la barra (leyendo hacia abajo, blanco) si es alta o si arriba no cabe;
+            // si no, arriba de la barra (leyendo hacia arriba, color de la barra)
+            var inside=(h>=labPx+4) && ((yy-labPx)<pT+2 || h>ih*0.5);
+            var ly=(inside?(yy+3):(yy-3)).toFixed(1), lfill=(inside?"#fff":o[0]), lanc=(inside?"end":"start");
+            s+='<text x="'+lx+'" y="'+ly+'" font-size="6.5" font-weight="700" fill="'+lfill+'" text-anchor="'+lanc+'" transform="rotate(-90 '+lx+' '+ly+')">'+esc(lab)+'</text>'; } }
       });
       var monthY = pctFmt ? (pT+ih+12) : (pT+ih+15);
       s+='<text x="'+cx.toFixed(1)+'" y="'+monthY+'" fill="'+(d.tot?"#245334":"#7d887f")+'" font-size="'+lf+'" font-weight="'+(d.tot?"800":"600")+'" text-anchor="middle">'+esc(d.lab)+'</text>';
@@ -3453,35 +3479,52 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
 
   // ---------- MIC / speech-to-text ----------
   var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-  var rec = null, recording = false, baseText = "";
-  var micBtn = $("#micBtn"), micNoteTxt = $("#micNoteTxt");
+  var rec = null, recording = false, baseText = "", recMode = "es", lastSeg = "";
+  var micBtn = $("#micBtn"), micPtBtn = $("#micPtBtn"), micNoteTxt = $("#micNoteTxt");
   if(!SR){
     micBtn.style.display = "none";
+    if(micPtBtn) micPtBtn.style.display = "none";
     micNoteTxt.textContent = "Dictado por voz disponible en Chrome del móvil. Aquí puede escribir normalmente.";
   }
+  // Traducción PT→ES (servicio gratuito MyMemory). Si falla, deja el texto original.
+  function translatePtEs(text, cb){
+    text=(text||"").trim(); if(!text){ cb(""); return; }
+    try{
+      fetch("https://api.mymemory.translated.net/get?q="+encodeURIComponent(text)+"&langpair=pt|es")
+        .then(function(r){ return r.json(); })
+        .then(function(j){ var t=(j&&j.responseData&&j.responseData.translatedText)?j.responseData.translatedText:text; cb(t); })
+        .catch(function(){ cb(text); });
+    }catch(e){ cb(text); }
+  }
+  function appendObs(txt){ txt=(txt||"").trim(); if(!txt) return; var b=$("#fObs").value.trim(); $("#fObs").value=(b?b+" ":"")+txt; baseText=$("#fObs").value.trim(); }
   // Estrategia "una frase por vez": cada tramo usa un reconocimiento NUEVO
   // (continuous=false). Así Android no re-emite las frases anteriores (no duplica).
   // El texto ya dicho se guarda en baseText; cada tramo solo agrega lo nuevo.
-  function startRec(){
+  function startRec(mode){
     if(!SR) return;
+    recMode = mode || "es";
     baseText = $("#fObs").value.trim();
     recording = true;
-    micBtn.classList.add("rec");
-    micNoteTxt.innerHTML = '<span class="rec-live">● Escuchando…</span> toque de nuevo para parar.';
+    (recMode==="pt"?micPtBtn:micBtn).classList.add("rec");
+    micNoteTxt.innerHTML = (recMode==="pt")
+      ? '<span class="rec-live">● Escuchando (portugués)…</span> hable en portugués; se traduce al español.'
+      : '<span class="rec-live">● Escuchando…</span> toque de nuevo para parar.';
     recRunOne();
   }
   function recRunOne(){
     if(!recording) return;
     try{
       rec = new SR();
-      rec.lang = "es-PY";
+      rec.lang = (recMode==="pt") ? "pt-BR" : "es-PY";
       rec.continuous = false;
       rec.interimResults = true;
+      lastSeg = "";
       rec.onresult = function(ev){
         var txt = "";
         for(var i=0;i<ev.results.length;i++){ txt += ev.results[i][0].transcript; }
-        txt = txt.trim();
-        $("#fObs").value = (baseText ? baseText + " " : "") + txt;
+        txt = txt.trim(); lastSeg = txt;
+        if(recMode==="pt"){ micNoteTxt.innerHTML = '<span class="rec-live">● PT:</span> '+esc(txt); }
+        else { $("#fObs").value = (baseText ? baseText + " " : "") + txt; }
       };
       rec.onerror = function(ev){
         if(ev.error==="not-allowed" || ev.error==="service-not-allowed"){
@@ -3491,8 +3534,12 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
         // otros errores (no-speech, aborted, network): no detener; onend reinicia.
       };
       rec.onend = function(){
-        // consolidar lo dicho en este tramo y arrancar un tramo nuevo
-        baseText = $("#fObs").value.trim();
+        if(recMode==="pt"){
+          var seg = lastSeg; lastSeg = "";
+          if(seg){ translatePtEs(seg, function(es){ appendObs(es); }); }
+        } else {
+          baseText = $("#fObs").value.trim();
+        }
         if(recording){ try{ recRunOne(); }catch(e){} }
       };
       rec.start();
@@ -3502,9 +3549,11 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
     recording = false;
     if(rec){ try{rec.stop();}catch(e){} rec=null; }
     micBtn.classList.remove("rec");
-    if(SR) micNoteTxt.textContent = "Toque el micrófono y hable — la voz se convierte en texto automáticamente.";
+    if(micPtBtn) micPtBtn.classList.remove("rec");
+    if(SR) micNoteTxt.textContent = "Toque 🎙️ para dictar en español, o PT→ES para hablar en portugués (se traduce).";
   }
-  micBtn.addEventListener("click", function(){ recording ? stopRec() : startRec(); });
+  micBtn.addEventListener("click", function(){ (recording && recMode==="es") ? stopRec() : (function(){ if(recording) stopRec(); startRec("es"); })(); });
+  if(micPtBtn) micPtBtn.addEventListener("click", function(){ (recording && recMode==="pt") ? stopRec() : (function(){ if(recording) stopRec(); startRec("pt"); })(); });
 
   // ---------- SAVE ----------
   var _savingLock=false;
@@ -4226,6 +4275,41 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
     drawDonut(data, null, $("#rutaSplit"), {label:"tipos", colors:colors, hint:"Toque para ver las visitas"});
   }
 
+  // ---- Visitas pendientes (ítems de ruta planificados sin visita realizada) ----
+  function pendingItemsFor(sid){
+    var items=routeFor(sid), realized=(DB[sid]||[]).filter(function(v){return !v.stateChange;});
+    var byId={}, byKey={};
+    realized.forEach(function(v){ byId[v.id]=v; var k=v.cliente+"|"+v.data; if(!byKey[k]||(v.ts||0)>(byKey[k].ts||0)) byKey[k]=v; });
+    var out=[];
+    items.forEach(function(it){ if(it.kind==="evento") return; var v=it.visitId?byId[it.visitId]:byKey[it.cliente+"|"+it.fecha]; if(!v) out.push(it); });
+    out.sort(function(a,b){ return (a.fecha||"")<(b.fecha||"")?-1:((a.fecha||"")>(b.fecha||"")?1:0); });
+    return out;
+  }
+  function pendRowHTML(it, whoName){
+    var overdue=it.fecha && it.fecha<todayISO(), a=it.motivo==="Cliente";
+    return '<div class="mr-line'+(overdue?' mr-over':'')+'">'+
+      '<span class="mr-date">'+(it.fecha?shortDate(it.fecha):'—')+'</span>'+
+      '<span class="mr-item '+(a?"a":"p")+'">'+esc(it.cliente)+(whoName?' <small style="color:var(--ink-faint)">· '+esc(whoName)+'</small>':'')+'</span>'+
+      '<span class="mr-pend">'+(overdue?'atrasada':'pendiente')+'</span></div>';
+  }
+  function renderSellerPend(){
+    var el=$("#sPendWrap"); if(!el) return;
+    var pend=pendingItemsFor(current.id);
+    if(!pend.length){ el.innerHTML='<div class="sec-label" style="margin-top:18px">Visitas pendientes</div><div class="rday-empty">Sin visitas pendientes. 🎉</div>'; return; }
+    el.innerHTML='<div class="sec-label" style="margin-top:18px">Visitas pendientes ('+pend.length+') — toque para finalizar</div>'+
+      '<div class="mr-days">'+pend.map(function(it){ return pendRowHTML(it,""); }).join("")+'</div>';
+    $$(".mr-line",el).forEach(function(row,i){ row.style.cursor="pointer"; row.addEventListener("click", function(){ realizarVisita(pend[i]); }); });
+  }
+  function renderMgrPend(){
+    var el=$("#mPendWrap"); if(!el) return;
+    var everyone=[GESTOR].concat(SELLERS).concat([TECNICA]), all=[];
+    everyone.forEach(function(s){ pendingItemsFor(s.id).forEach(function(it){ all.push({it:it, who:s}); }); });
+    all.sort(function(a,b){ return (a.it.fecha||"")<(b.it.fecha||"")?-1:((a.it.fecha||"")>(b.it.fecha||"")?1:0); });
+    if(!all.length){ el.innerHTML='<div class="sec-label" style="margin-top:18px">Visitas pendientes de todo el equipo</div><div class="rday-empty">Sin visitas pendientes.</div>'; return; }
+    el.innerHTML='<div class="sec-label" style="margin-top:18px">Visitas pendientes de todo el equipo ('+all.length+')</div>'+
+      '<div class="mr-days">'+all.map(function(x){ return pendRowHTML(x.it, firstName(x.who.name)); }).join("")+'</div>';
+  }
+
   function realizarVisita(item){
     pendingRoute = item;
     acInput.value = item.cliente;
@@ -4465,7 +4549,8 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
     var total = data.reduce(function(x,y){return x+y.count;},0);
     var kpiHTML = '<div class="kpi"><b>'+total+'</b><span>visitas de '+esc(firstName(s.name))+'</span></div>'+
                   '<div class="kpi"><b>'+data.length+'</b><span>'+label+'</span></div>';
-    var back = '<div class="drill-head"><button class="drill-back"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>Todos</button>'+
+    if(which==="prospectos"){ var mse=$("#mSemProsp"); if(mse) mse.innerHTML = semaforoHTML(prospStates(list, prospUniverse(sellerId))); }
+    var back ='<div class="drill-head"><button class="drill-back"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>Todos</button>'+
       '<span class="drill-name"><span class="sd" style="background:'+s.color+'"></span>'+esc(s.name)+'</span></div>';
     drawDonut(data, kpiEl, chartEl, {
       label:label, canDelete:true, prependHTML:back, showState:(which==="prospectos"),
@@ -4485,6 +4570,7 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
     return toArr(map);
   }
   function renderMgr80(){
+    var mcl=$("#mCartList"); if(mcl) mcl.innerHTML="";
     var data = SELLERS.map(function(s){
       var visits = keyVisits(s.id);
       return {name:s.name, count:visits.length, sellerId:s.id, color:s.color, visits:visits};
@@ -4511,6 +4597,22 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
       label:"clientes", kpiHTML:kpiHTML, canDelete:true, prependHTML:back,
       onBack:function(){ renderMgr80(); }, refresh:function(){ renderMgr80Drill(sellerId); }
     });
+    // Lista completa de clientes clave (80/20) del vendedor: quién está al día y quién falta visitar
+    var mcl=$("#mCartList");
+    if(mcl){
+      var auto=keyClientsFor(sellerId), keys=auto.length?auto:(KEY[sellerId]||[]);
+      var mv=vFilt(visitsFor(sellerId), fMgr), lastBy={};
+      mv.forEach(function(v){ if(v.stateChange) return; var d=v.data||""; if(!lastBy[v.cliente]||d>lastBy[v.cliente].last){ lastBy[v.cliente]={last:d, n:(lastBy[v.cliente]?lastBy[v.cliente].n:0)}; } });
+      // conteo de visitas por cliente
+      var cntBy={}; mv.forEach(function(v){ if(v.stateChange) return; cntBy[v.cliente]=(cntBy[v.cliente]||0)+1; });
+      var rows=keys.map(function(k){ var last=lastBy[k.id]?lastBy[k.id].last:""; var st=statusOf(last); return {c:k.c, e:k.e, id:k.id, n:(cntBy[k.id]||0), st:st}; });
+      rows.sort(function(a,b){ return (b.st.k-a.st.k) || ((b.st.days||0)-(a.st.days||0)); });
+      var nOk=rows.filter(function(r){return r.st.k===0;}).length;
+      var nFalta=rows.filter(function(r){return r.st.k>=1;}).length;
+      mcl.innerHTML = '<div class="kd-title" style="margin-top:14px">Clientes clave de '+esc(firstName(s.name))+' — '+nFalta+' por visitar · '+nOk+' al día</div>'+
+        rows.map(function(r){ return '<div class="kd-row"><span class="pill '+r.st.cls+'">'+r.st.label+'</span><span class="kd-nm">'+esc(r.c)+(r.e?' <small style="color:var(--ink-faint)">· '+esc(r.e)+'</small>':'')+'</span><span class="kd-c">'+r.n+' vis.</span></div>'; }).join("") ||
+        '<div class="kd-row" style="color:var(--ink-faint)">Sin clientes clave.</div>';
+    }
   }
 
   // Rutas semanales (resumo global, só leitura) — con filtro de fechas
@@ -4683,8 +4785,8 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
   // configs de cada calendario
   var calMgr={ state:{y:null,m:null,sel:null}, gridId:"calGrid", titleId:"calTitle", dayId:"calDay", showWho:true, users:function(){ return [GESTOR].concat(SELLERS).concat([TECNICA]); } };
   var calSel_={ state:{y:null,m:null,sel:null}, gridId:"sCalGrid", titleId:"sCalTitle", dayId:"sCalDay", showWho:false, users:function(){ return current?[current]:[]; } };
-  function renderMgrCalendar(){ renderCalendar(calMgr); }
-  function renderSellerCalendar(){ renderCalendar(calSel_); }
+  function renderMgrCalendar(){ renderCalendar(calMgr); renderMgrPend(); }
+  function renderSellerCalendar(){ renderCalendar(calSel_); renderSellerPend(); }
   function calStep(cfg, delta){ if(cfg.state.y==null){ var n=new Date(); cfg.state.y=n.getFullYear(); cfg.state.m=n.getMonth(); } cfg.state.m+=delta; if(cfg.state.m<0){cfg.state.m=11;cfg.state.y--;} if(cfg.state.m>11){cfg.state.m=0;cfg.state.y++;} cfg.state.sel=null; renderCalendar(cfg); }
   function renderRutasView(){ if(rutaView==="cal") renderMgrCalendar(); else renderMgrRoutes(); }
 
