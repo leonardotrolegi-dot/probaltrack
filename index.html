@@ -1431,6 +1431,15 @@
           </div>
         </div>
 
+        <div class="field hidden" id="fAsignadoField">
+          <label for="fAsignado">Vendedor asignado</label>
+          <select id="fAsignado"></select>
+          <div class="mic-note">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+            La oportunidad se asigna a este vendedor (etiqueta «MKT»).
+          </div>
+        </div>
+
         <div class="save-row">
           <button class="btn" id="saveBtn">Guardar visita</button>
         </div>
@@ -2384,7 +2393,11 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
   // ningún reporte (fuera de SELLERS y fuera de las vistas del gestor). Puede visitar a cualquiera.
   var DEMO = { id:"demo", name:"TESTE (prueba)", role:"Sandbox — no cuenta", pin:"1590", color:"#8a8f98", tecnica:true, demo:true };
   SELLER_BY[DEMO.id] = DEMO;
-  var LOGIN_USERS = SELLERS.concat([TECNICA, DEMO]);
+  // Marketing: perfil propio (como un "vendedor" aparte). Crea oportunidades y las asigna
+  // a un vendedor (solo etiqueta); sus datos NO se mezclan con los de los vendedores.
+  var MARKETING = { id:"marketing", name:"Marketing", role:"Creación de oportunidades", pin:"7029", color:"#5a4ba8", mkt:true };
+  SELLER_BY[MARKETING.id] = MARKETING;
+  var LOGIN_USERS = SELLERS.concat([MARKETING, TECNICA, DEMO]);
 
   // Catálogo (clientes/prospectos) — vem del banco vía importación del gestor
   var CAT_CLI=[], CAT_PRO=[], KGMAP={};
@@ -2453,7 +2466,7 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
   // ¿el vendedor actual es dueño de este ítem? (puede realizarle visitas)
   function ownsItem(item, mot){
     if(!current) return false;
-    if(current.tecnica) return true; // Equipo Técnica puede visitar a cualquiera
+    if(current.tecnica || current.mkt) return true; // Técnica y Marketing acceden a todos
     if(mot==="Prospecto") return !item.vendedor || item.vendedor===current.id;
     return !item.vendedor || sellerMatchName(current.name, item.vendedor);
   }
@@ -2681,6 +2694,11 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
   // Historial de versiones (changelog). Al agregar una mejora: sumar una entrada
   // arriba con la fecha y bumpear el número. APP_VERSION = la última entrada.
   var CHANGELOG = [
+    { v:"1.124", d:"01/10/2026", n:[
+        "Nuevo perfil «Marketing»: crea oportunidades (clientes o prospectos) sobre toda la cartera y las asigna a un vendedor (etiqueta «MKT»).",
+        "Marketing tiene Oportunidad, Ruta, Clientes y Prospectos; los gráficos muestran oportunidades por vendedor asignado.",
+        "Marketing es un perfil aparte: aparece en Gestión con su propia tarjeta y no se mezcla con los números de los vendedores."
+      ] },
     { v:"1.123", d:"30/09/2026", n:[
         "Potencial de la venta: al escribir el consumo ya no se cierra el teclado (se actualizan solo los números, sin recargar los campos)."
       ] },
@@ -2797,9 +2815,22 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
     $("#topAvatar").textContent = initials(seller.name);
     $("#topName").textContent = seller.name;
     $("#topRole").textContent = seller.role;
-    // el botón Ventas es de facturación (vendedores); el técnico no lo usa
-    $("#ventasBtn").style.display = seller.tecnica ? "none" : "";
-    if($("#sHubBtn")) $("#sHubBtn").classList.remove("hidden"); // HUB liberado para todos
+    // el botón Ventas es de facturación (vendedores); el técnico/marketing no lo usan
+    var mkt = !!seller.mkt;
+    $("#ventasBtn").style.display = (seller.tecnica || mkt) ? "none" : "";
+    if($("#sHubBtn")){ $("#sHubBtn").classList.remove("hidden"); if(mkt) $("#sHubBtn").classList.add("hidden"); } // HUB: todos menos marketing
+    // --- Perfil Marketing: relabels, campo vendedor asignado y accesos ---
+    var rv=$("#v-registo");
+    var h2=rv&&rv.querySelector(".view-head h2"), psub=rv&&rv.querySelector(".view-head p");
+    if(h2) h2.textContent = mkt ? "Nueva oportunidad" : "Nueva visita";
+    if(psub) psub.textContent = mkt ? "Complete los campos y guarde. Queda asignada a un vendedor." : "Complete los campos y guarde. Queda registrado en su usuario.";
+    var lData=document.querySelector('label[for="fData"]'); if(lData) lData.textContent = mkt ? "Fecha de la interacción" : "Fecha de la visita";
+    var lProx=document.querySelector('label[for="fProxima"]'); if(lProx) lProx.innerHTML = (mkt?"Próxima interacción":"Próxima visita")+' <span style="color:var(--ink-faint);font-weight:400">(opcional)</span>';
+    if($("#saveBtn")) $("#saveBtn").textContent = mkt ? "Guardar oportunidad" : "Guardar visita";
+    var rtab=document.querySelector('#navSeller [data-view="registo"]'); if(rtab&&rtab.lastChild) rtab.lastChild.textContent = mkt ? "Oportunidad" : "Registro";
+    var cartTab=document.querySelector('#navSeller [data-view="carteira"]'); if(cartTab) cartTab.style.display = mkt ? "none" : "";
+    $("#fAsignadoField").classList.toggle("hidden", !mkt);
+    if(mkt){ $("#fAsignado").innerHTML='<option value="">— Elegir vendedor —</option>'+SELLERS.map(function(s){ return '<option value="'+s.id+'">'+esc(s.name)+'</option>'; }).join(""); }
     $("#fData").value = todayISO();
     pendingRoute = null; hideBanner();
     fSeller.from=""; fSeller.to=""; $("#sPeriod").value="all"; $("#sCustom").classList.add("hidden");
@@ -3639,6 +3670,7 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
     if(!ownsByName(cli, motivo)){ acInput.focus(); toast("Ese "+(motivo==="Prospecto"?"prospecto":"cliente")+" es de otro vendedor. Solo su vendedor puede registrarle visitas.", true); return; }
     var obs = $("#fObs").value.trim();
     if(!obs){ $("#fObs").focus(); toast("Las observaciones son obligatorias.", true); return; }
+    if(current.mkt && !$("#fAsignado").value){ $("#fAsignado").focus(); toast("Elija el vendedor asignado.", true); return; }
     // Motivo de pérdida "Otros" exige observación en el motivo
     if($("#fSituacao").value==="Perdido" && $("#fPerdidaMotivo").value==="Otros" && !$("#fPerdidaObs").value.trim()){
       $("#fPerdidaObs").focus(); toast("Con el motivo «Otros», la observación de la pérdida es obligatoria.", true); return;
@@ -3657,6 +3689,7 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
     };
     if(motivo==="Prospecto"){ var pp=readPresup(); if(pp.enviado) rec2.presupuesto=pp; }
     if(rec2.situacao==="Perdido"){ rec2.perdida={motivo:$("#fPerdidaMotivo").value, obs:$("#fPerdidaObs").value.trim()}; }
+    if(current.mkt){ rec2.asignado=$("#fAsignado").value; rec2.origen="mkt"; }
     _savingLock=true; setTimeout(function(){ _savingLock=false; }, 1000);
     var savePr = putVisit(rec2);
     // se veio da rota semanal, marca o item como realizado (mantém no histórico)
@@ -3672,6 +3705,7 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
     // reset
     acInput.value=""; $("#fObs").value=""; baseText=""; $("#fProxima").value="";
     $("#fData").value = todayISO();
+    if($("#fAsignado")) $("#fAsignado").value="";
     $$("input[name=motivo]")[0].checked = true; updateSit();
     resetReport(); resetPresup(); togglePresup();
     renderRecent();
@@ -3694,7 +3728,7 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
     var v = visitsFor(current.id).sort(function(a,b){ return b.data<a.data?-1:(b.data>a.data?1:0); });
     var wrap = $("#recentWrap");
     if(v.length===0){ wrap.innerHTML=""; return; }
-    var html = '<h3>Últimas visitas</h3>';
+    var html = '<h3>'+((current&&current.mkt)?'Últimas oportunidades':'Últimas visitas')+'</h3>';
     html += v.slice(0,12).map(function(r){
       var a = r.motivo==="Cliente";
       var sitTag = sitSpecial(r.situacao) ? '<span class="sit '+sitClass(r.situacao)+'">'+esc(r.situacao)+'</span>' : '';
@@ -4115,11 +4149,36 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
     });
   }
   function renderSellerChart(which){
+    if(current && current.mkt){ renderMktChart(which); return; }
     var list = vFilt(visitsFor(current.id), fSeller);
     if(which==="prospectos"){ renderProspectos(list); return; }
     var opts = {label:"clientes", kpiHTML:clienteKPIs(list),
       legendExtra:function(d){ var kg=kgFor(d.name); return kg? fmtKg(kg)+' kg' : ''; } };
     drawDonut(aggregate(list, "Cliente"), $("#kpiClientes"), $("#chartClientes"), opts);
+  }
+  // Marketing: oportunidades (clientes o prospectos) agrupadas por VENDEDOR ASIGNADO
+  function aggregateByAsignado(list){
+    var map={};
+    list.forEach(function(v){ var a=v.asignado||"__none__"; (map[a]||(map[a]=[])).push(v); });
+    return Object.keys(map).map(function(k){ var s=SELLER_BY[k]; return { name:(s?s.name:"Sin asignar"), count:map[k].length, color:(s?s.color:"#9aa39a"), sellerId:k, visits:map[k] }; }).sort(function(a,b){ return b.count-a.count; });
+  }
+  function mktOppList(sid, mot){
+    var s=SELLER_BY[sid];
+    var list=vFilt(visitsFor(current.id), fSeller).filter(function(v){ return v.motivo===mot && !v.stateChange && (v.asignado||"__none__")===sid; }).sort(function(a,b){ return b.data<a.data?-1:(b.data>a.data?1:0); });
+    var rows=list.map(function(v){ return {main:v.cliente, sub:fmtDate(v.data)+" · "+(v.situacao||""), right:""}; });
+    openMList("Oportunidades → "+(s?s.name:"Sin asignar"), rows, function(i){ openModal(list[i]); });
+  }
+  function renderMktChart(which){
+    var mot = (which==="clientes") ? "Cliente" : "Prospecto";
+    var list = vFilt(visitsFor(current.id), fSeller).filter(function(v){ return v.motivo===mot && !v.stateChange; });
+    var data = aggregateByAsignado(list);
+    var total = data.reduce(function(a,d){ return a+d.count; },0);
+    var kpiEl = which==="clientes" ? $("#kpiClientes") : $("#kpiProspectos");
+    var chartEl = which==="clientes" ? $("#chartClientes") : $("#chartProspectos");
+    var kpiHTML='<div class="kpi"><b>'+total+'</b><span>oportunidades</span></div><div class="kpi"><b>'+data.length+'</b><span>vendedores</span></div>';
+    if(which==="prospectos"){ var sp=$("#semProsp"); if(sp) sp.innerHTML=""; var pl=$("#prospClientList"); if(pl) pl.innerHTML=""; var rc=$("#chartRech"); if(rc) rc.innerHTML=""; }
+    if(!data.length){ if(kpiEl) kpiEl.innerHTML=kpiHTML; if(chartEl) chartEl.innerHTML='<div class="empty">Sin oportunidades aún.</div>'; return; }
+    drawDonut(data, kpiEl, chartEl, { label:"vendedores", kpiHTML:kpiHTML, colors:data.map(function(d){ return d.color; }), hint:"Oportunidades por vendedor asignado", onLegClick:function(i,d){ mktOppList(d.sellerId, mot); } });
   }
 
   // ---------- 80/20 ----------
@@ -4471,7 +4530,7 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
         '<div class="last">Última actividad: '+(last?fmtDate(last):"—")+'</div>'+
       '</div>';
     }
-    $("#mTeam").innerHTML = SELLERS.map(function(s){ return teamCard(s, false); }).join("") + teamCard(TECNICA, true);
+    $("#mTeam").innerHTML = SELLERS.map(function(s){ return teamCard(s, false); }).join("") + teamCard(TECNICA, true) + teamCard(MARKETING, true);
     $$(".tstat-btn",$("#mTeam")).forEach(function(b){
       b.addEventListener("click", function(){
         if(b.dataset.k==="visitas") teamVisitList(b.dataset.s);
