@@ -2438,6 +2438,24 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
  "martin":{"Balanceados":[9500,7000,10000,4700,5000,5200,5250,5250,5250,5250,5250,5250],"Concentrado":[1200,750,550,425,450,500,500,425,425,425,425,425],"Sup. minerales":[630,855,460,380,380,460,1260,1060,430,435,435,410],"Núcleos":[300,250,150,75,500,500,250,2000,3000,150,150,150],"Proteicos":[725,725,775,325,625,625,675,825,825,325,325,325],"Semen":[0,0,0,0,0,0,0,0,0,0,0,0]},
  "probal":{"Balanceados":[160000,160000,160000,170000,170000,175000,190000,195000,215000,185000,185000,163700],"Concentrado":[2000,2000,3000,3000,3000,5000,6000,5000,4000,4000,3000,2000],"Sup. minerales":[15000,10000,10000,10000,6000,8000,7000,7000,8000,11000,10500,3000],"Núcleos":[500,5750,7000,8000,8500,8500,12500,12500,9000,7000,7000,5000],"Proteicos":[50000,14500,15200,15000,30000,30000,30000,30000,30000,25000,25000,15000],"Semen":[0,0,0,0,0,0,0,0,0,0,0,0]}
 };
+  // Metas de OCTUBRE (índice 9) actualizadas por Gestión — orden: [Balanceados, Concentrado, Sup. minerales, Núcleos, Proteicos, Semen]
+  (function(){
+    var OCT={
+      thatyany:[55000,2000,5150,2000,30000,0],
+      matias:[154600,3300,6950,30000,45050,0],
+      mauricio:[78850,1500,6730,500,28150,0],
+      rossmaryo:[206000,20000,12330,5000,60150,0],
+      edgar:[212000,4000,20830,10000,30025,0],
+      francisco:[180000,3800,6420,2850,54300,0],
+      patricio:[38500,15000,1160,1000,6550,0],
+      alessandro:[37600,20000,2060,2000,35025,0],
+      rodolfo:[64750,3000,4810,25,9100,0],
+      billie:[8725,450,1360,1800,6025,0],
+      martin:[5250,425,435,150,325,0],
+      probal:[195000,4000,11000,7000,25000,0]
+    };
+    Object.keys(OCT).forEach(function(sid){ var o=DEFAULT_OBJ[sid]; if(!o) return; OCT[sid].forEach(function(v,i){ var l=OBJ_LINES[i]; if(o[l]) o[l][9]=v; }); });
+  })();
   function objSellerData(sid){ var o=OBJ[sid]; if(o && Object.keys(o).length) return o; return DEFAULT_OBJ[sid]||{}; }
   // familia de comisión por línea + tasas Gs/kg (base / logrado / superado%)
   var PFAM={"Balanceados":"Balanceado","Balanceado ovino":"Balanceado","Balanceado equino":"Balanceado","Proteicos":"Proteico","Proteico ovino":"Proteico","Concentrado":"Concentrado","Núcleos":"Núcleo","Núcleo ovino":"Núcleo","Sup. minerales":"Sal","Sup. minerales ovino":"Sal","Sup. minerales equino":"Sal"};
@@ -2713,6 +2731,12 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
   // Historial de versiones (changelog). Al agregar una mejora: sumar una entrada
   // arriba con la fecha y bumpear el número. APP_VERSION = la última entrada.
   var CHANGELOG = [
+    { v:"1.129", d:"02/10/2026", n:[
+        "Las ventas cargadas como «Rossmaryo» ahora se contabilizan para José Palacio (ventas, 80/20 y realizado)."
+      ] },
+    { v:"1.128", d:"02/10/2026", n:[
+        "Actualizadas las metas de Octubre por línea de cada vendedor (Objetivo por línea)."
+      ] },
     { v:"1.127", d:"02/10/2026", n:[
         "En el panel de Ventas, debajo de «kg vendidos» ahora se muestra la fecha en que Gestión actualizó los datos."
       ] },
@@ -2972,9 +2996,13 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
   function salesMonths(){ var m=(LAST_IMPORT["Cliente"]&&LAST_IMPORT["Cliente"].months)||[]; return m; }
   // El app usa el primer nombre (Matías, Francisco…); la planilla trae el nombre
   // completo (col. A). Casan si cada palabra del nombre corto está en el completo.
+  // Alias de nombre para casar ventas/clientes: en la base las ventas de José Palacio
+  // figuran con el vendedor "Rossmaryo" (se le cambió solo el nombre de login).
+  var MATCH_ALIAS = { "jose palacio":"rossmaryo" };
   function sellerMatchName(appName, vendName){
     if(!appName || !vendName) return false;
     var a=norm(appName), b=norm(vendName);
+    if(MATCH_ALIAS[a]) a=MATCH_ALIAS[a]; // usar el nombre con el que figuran los datos
     if(a===b) return true;
     var at=a.split(/\s+/).filter(Boolean), bt=b.split(/\s+/).filter(Boolean);
     if(!at.length) return false;
