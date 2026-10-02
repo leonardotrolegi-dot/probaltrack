@@ -802,6 +802,9 @@
   .nv-list{display:flex;flex-direction:column;gap:8px}
   .nv-day{font-size:10.5px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:var(--ink-faint);margin:12px 2px 2px}
   .nv-row{display:flex;gap:11px;align-items:flex-start;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:11px 12px;box-shadow:var(--shadow);cursor:pointer;text-align:left;width:100%}
+  .nv-row.nv-unread{border-color:var(--accent);background:var(--accent-soft);position:relative}
+  .nv-row.nv-unread::after{content:"";position:absolute;top:10px;right:10px;width:8px;height:8px;border-radius:50%;background:var(--accent)}
+  .nv-list{display:flex;flex-direction:column;gap:9px}
   .nv-av{width:34px;height:34px;border-radius:10px;flex:none;display:grid;place-items:center;color:#fff;font-size:12px;font-weight:800}
   .nv-body{flex:1;min-width:0}
   .nv-txt{font-size:13px;color:var(--ink);line-height:1.35}.nv-txt b{font-weight:800}
@@ -1536,6 +1539,18 @@
           <div class="chart-card" id="rutaSplit"></div>
         </div>
       </section>
+
+      <!-- AVISOS (vendedor) -->
+      <section class="view" id="v-avisos">
+        <div class="view-head">
+          <h2>Avisos</h2>
+          <p>Lo que Gestión te agenda en la ruta, y tu actividad reciente.</p>
+        </div>
+        <div class="sec-label">Notificaciones</div>
+        <div id="sNovList"></div>
+        <div class="sec-label" style="margin-top:20px">Tu actividad</div>
+        <div id="sActList"></div>
+      </section>
     </main>
 
     <nav class="tabbar" id="navSeller">
@@ -1558,6 +1573,10 @@
       <button class="tab" data-view="carteira">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l2.4 7.4H22l-6 4.6 2.3 7.4-6.3-4.6-6.3 4.6L7.9 14 2 9.4h7.6z"/></svg>
         80/20
+      </button>
+      <button class="tab" data-view="avisos">
+        <span class="tab-ic" style="position:relative;display:inline-flex"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg><span class="nv-dot" id="sNovDot"></span></span>
+        Avisos
       </button>
     </nav>
   </div>
@@ -2694,6 +2713,13 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
   // Historial de versiones (changelog). Al agregar una mejora: sumar una entrada
   // arriba con la fecha y bumpear el número. APP_VERSION = la última entrada.
   var CHANGELOG = [
+    { v:"1.126", d:"02/10/2026", n:[
+        "Nuevo panel «Avisos» para vendedores: historial de tu actividad (visitas, ventas, prospectos) + notificaciones cuando Gestión te agrega un evento a la ruta.",
+        "La campana muestra un contador de eventos nuevos sin leer."
+      ] },
+    { v:"1.125", d:"02/10/2026", n:[
+        "Objetivo Personal: el botón «Agregar línea» ahora funciona (agrega una línea nueva a la mezcla)."
+      ] },
     { v:"1.124", d:"01/10/2026", n:[
         "Nuevo perfil «Marketing»: crea oportunidades (clientes o prospectos) sobre toda la cartera y las asigna a un vendedor (etiqueta «MKT»).",
         "Marketing tiene Oportunidad, Ruta, Clientes y Prospectos; los gráficos muestran oportunidades por vendedor asignado.",
@@ -2871,11 +2897,60 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
     if(v==="prospectos") renderSellerChart("prospectos");
     if(v==="carteira")   render80();
     if(v==="rota")       renderSellerRuta();
+    if(v==="avisos")     renderSellerNov();
+    if(v!=="avisos")     updateSellerNovDot();
     shell.querySelector("main").scrollTop = 0;
   }
   $$(".tab",$("#navSeller")).forEach(function(t){
     t.addEventListener("click", function(){ switchView(t.dataset.view); });
   });
+  // ---------- AVISOS (vendedor) ----------
+  function sellerEvents(){ // eventos que Gestión agregó a la ruta del vendedor actual
+    if(!current) return [];
+    return routeFor(current.id).filter(function(it){ return it.kind==="evento"; })
+      .map(function(it){ return { id:it.id, agId:it.agId, tipo:it.tipo||"Evento", titulo:it.titulo||"", fecha:it.fecha||"", ts:(it.ts||dateToTs(it.fecha)||0) }; })
+      .sort(function(a,b){ return (b.ts||0)-(a.ts||0); });
+  }
+  function sNovSeenKey(){ return "pt_snov_seen_"+(current?current.id:"x"); }
+  function sNovLastSeen(){ try{ return +localStorage.getItem(sNovSeenKey())||0; }catch(e){ return 0; } }
+  function sNovMarkSeen(ts){ try{ localStorage.setItem(sNovSeenKey(), ""+(ts||Date.now())); }catch(e){} }
+  function updateSellerNovDot(){
+    var dot=$("#sNovDot"); if(!dot || !current) return;
+    var seen=sNovLastSeen(), n=sellerEvents().filter(function(e){ return (e.ts||0)>seen; }).length;
+    if(n>0){ dot.textContent=n>9?"9+":(""+n); dot.classList.add("on"); }
+    else { dot.textContent=""; dot.classList.remove("on"); }
+  }
+  function renderSellerNov(){
+    // Notificaciones: eventos puestos por Gestión en la ruta
+    var evs=sellerEvents(), seen=sNovLastSeen();
+    var nl=$("#sNovList");
+    if(nl){
+      nl.innerHTML = evs.length ? '<div class="nv-list">'+evs.map(function(e){
+        var isNew=(e.ts||0)>seen;
+        var ev=e.titulo ? (e.tipo+': '+e.titulo) : e.tipo;
+        return '<div class="nv-row'+(isNew?' nv-unread':'')+'" data-fecha="'+esc(e.fecha)+'">'+
+          '<span class="nv-av" style="background:#3a3f52">GE</span>'+
+          '<span class="nv-body"><span class="nv-txt">Gestión te añadió el evento <b>«'+esc(ev)+'»</b> en tu ruta para el <b>'+esc(fmtDate(e.fecha))+'</b>.</span>'+
+          '<span class="nv-meta"><span class="nv-kind etapa">Ruta</span><span class="nv-time">'+esc(agoText(e.ts))+'</span></span></span></div>';
+      }).join("")+'</div>' : '<div class="empty">Sin notificaciones. Gestión no te agendó eventos todavía.</div>';
+      $$(".nv-row",nl).forEach(function(r){ r.addEventListener("click", function(){ var f=r.dataset.fecha; sRutaView="cal"; switchView("rota"); if(f){ try{ gotoDate(f); }catch(e){} } }); });
+    }
+    // Tu actividad: historial propio (no cuenta como notificación)
+    var al=$("#sActList");
+    if(al){
+      var acts=feedEvents().filter(function(e){ return e.sid===current.id; }).slice(0,60);
+      var kindLabel={nuevo:"Nuevo prospecto", cliente:"Cliente", prospecto:"Prospecto", etapa:"Cambio de etapa", presup:"Venta/Presupuesto"};
+      al.innerHTML = acts.length ? '<div class="nv-list">'+acts.map(function(e,i){
+        return '<button class="nv-row" data-i="'+i+'">'+
+          '<span class="nv-av" style="background:'+(e.color||current.color)+'">'+esc(novInitials(current.name))+'</span>'+
+          '<span class="nv-body"><span class="nv-txt">'+e.txt.charAt(0).toUpperCase()+e.txt.slice(1)+'</span>'+
+          '<span class="nv-meta"><span class="nv-kind '+e.kind+'">'+(kindLabel[e.kind]||"")+'</span><span class="nv-time">'+esc(agoText(e.ts))+'</span></span></span></button>';
+      }).join("")+'</div>' : '<div class="empty">Todavía no registraste actividad.</div>';
+      $$(".nv-row",al).forEach(function(b){ b.addEventListener("click", function(){ var e=acts[+b.dataset.i]; if(e&&e.rec){ var rec={}; for(var k in e.rec) rec[k]=e.rec[k]; rec.sellerId=current.id; openModal(rec, function(){ switchView("avisos"); }); } }); });
+    }
+    if(evs.length) sNovMarkSeen(evs[0].ts || Date.now()); else sNovMarkSeen(Date.now());
+    updateSellerNovDot();
+  }
   function rerenderSeller(){
     if(curSView==="clientes")   renderSellerChart("clientes");
     if(curSView==="prospectos") renderSellerChart("prospectos");
@@ -3236,6 +3311,11 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
   if($("#objPersBack")) $("#objPersBack").addEventListener("click", closeObjPers);
   if($("#opComis")) $("#opComis").addEventListener("input", function(){ renderOpResult(salesMonths()); });
   if($("#opSeller")) $("#opSeller").addEventListener("change", function(){ renderOpResult(salesMonths()); });
+  if($("#opAddMix")) $("#opAddMix").addEventListener("click", function(){
+    var used={}; opMix.forEach(function(m){ used[m.l]=1; });
+    var free=PLINES.filter(function(l){ return !used[l]; })[0] || PLINES[0];
+    opMix.push({l:free, pct:0}); renderObjPers();
+  });
   if($("#vpPlanBtn")) $("#vpPlanBtn").addEventListener("click", openPlan);
   if($("#planBack")) $("#planBack").addEventListener("click", closePlan);
   if($("#planSearch")) $("#planSearch").addEventListener("input", function(){ renderPlan(); });
@@ -4905,7 +4985,7 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
       if(!picks.length){ toast("Elegí al menos un participante.", true); return; }
       var useAg = ref.agId || ("ag"+Date.now().toString(36)+Math.random().toString(36).slice(2,6));
       existing.forEach(function(e){ delRoute(e.sid, e.id); });
-      picks.forEach(function(sid){ putRoute({id:"e"+Date.now()+Math.random().toString(36).slice(2,7), agId:useAg, sellerId:sid, kind:"evento", tipo:nTipo, titulo:nTit, fecha:nFecha}); });
+      picks.forEach(function(sid){ putRoute({id:"e"+Date.now()+Math.random().toString(36).slice(2,7), agId:useAg, sellerId:sid, kind:"evento", tipo:nTipo, titulo:nTit, fecha:nFecha, ts:Date.now(), byMgr:true}); });
       closeModal(); if(calMgr.state) calMgr.state.sel=null; renderRutasView(); toast("Evento actualizado ✓");
     });
     $("#evDel").addEventListener("click", function(){
@@ -5042,7 +5122,7 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
     agDates.forEach(function(f){
       var agId="ag"+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
       targets.forEach(function(sid){
-        putRoute({id:"e"+Date.now()+Math.random().toString(36).slice(2,7), agId:agId, sellerId:sid, kind:"evento", tipo:tipo, titulo:titulo, fecha:f});
+        putRoute({id:"e"+Date.now()+Math.random().toString(36).slice(2,7), agId:agId, sellerId:sid, kind:"evento", tipo:tipo, titulo:titulo, fecha:f, ts:Date.now(), byMgr:true});
       });
     });
     var n = targets.length*agDates.length;
