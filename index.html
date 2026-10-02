@@ -2713,6 +2713,9 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
   // Historial de versiones (changelog). Al agregar una mejora: sumar una entrada
   // arriba con la fecha y bumpear el número. APP_VERSION = la última entrada.
   var CHANGELOG = [
+    { v:"1.127", d:"02/10/2026", n:[
+        "En el panel de Ventas, debajo de «kg vendidos» ahora se muestra la fecha en que Gestión actualizó los datos."
+      ] },
     { v:"1.126", d:"02/10/2026", n:[
         "Nuevo panel «Avisos» para vendedores: historial de tu actividad (visitas, ventas, prospectos) + notificaciones cuando Gestión te agrega un evento a la ruta.",
         "La campana muestra un contador de eventos nuevos sin leer."
@@ -3324,19 +3327,20 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
     $("#vpSeller").textContent = pool.label;
     var n = labels.length || (list[0]&&list[0].meses?list[0].meses.length:9);
     var series, ttl, kpi;
+    var _imp=LAST_IMPORT["Cliente"], impLine=(_imp&&_imp.at)?'<br><span style="font-size:10px;color:var(--ink-faint);font-weight:400">Datos actualizados por Gestión: '+esc(fmtDate((""+_imp.at).slice(0,10)))+'</span>':'';
     if(VSEL==="__todos__"){
       series=[]; for(var i=0;i<n;i++) series.push(0);
       list.forEach(function(c){ if(c.meses) for(var i=0;i<n;i++) series[i]+=(+c.meses[i]||0); });
       var tot=series.reduce(function(a,b){return a+b;},0);
       ttl = pool.team ? (pool.subset ? pool.label : "Todo el equipo") : "Todos los clientes";
-      kpi='<div class="kpi"><b>'+fmtKg(tot)+'</b><span>kg vendidos (2026)</span></div>'+
+      kpi='<div class="kpi"><b>'+fmtKg(tot)+'</b><span>kg vendidos (2026)'+impLine+'</span></div>'+
           '<div class="kpi"><b>'+list.length+'</b><span>'+(pool.team?"clientes (equipo)":"clientes")+'</span></div>';
     } else {
       var c=list[VSEL];
       series=(c&&c.meses)?c.meses.map(Number):[];
       var tot=series.reduce(function(a,b){return a+(+b||0);},0);
       ttl=c?c.nome:"—";
-      kpi='<div class="kpi"><b>'+fmtKg(tot)+'</b><span>kg vendidos (2026)</span></div>'+
+      kpi='<div class="kpi"><b>'+fmtKg(tot)+'</b><span>kg vendidos (2026)'+impLine+'</span></div>'+
           (c&&c.vendedor?'<div class="kpi"><b style="font-size:15px">'+esc(c.vendedor)+'</b><span>vendedor</span></div>':'');
     }
     $("#vpTtl").textContent=ttl;
