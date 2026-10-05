@@ -2138,7 +2138,7 @@
       <section class="view" id="m-carteira">
         <div class="view-head">
           <h2>80/20 — global</h2>
-          <p>Visitas a clientes clave por vendedor. Toque un vendedor para ver sus visitas.</p>
+          <p>Clientes que concentran el 80% del volumen vendido. La torta muestra cuántos tiene cada vendedor. Toque el número para ver la lista, o un vendedor para su 80/20.</p>
         </div>
         <div class="kpis" id="mKpiCart"></div>
         <div class="chart-card" id="mChartCart"></div>
@@ -2731,6 +2731,9 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
   // Historial de versiones (changelog). Al agregar una mejora: sumar una entrada
   // arriba con la fecha y bumpear el número. APP_VERSION = la última entrada.
   var CHANGELOG = [
+    { v:"1.130", d:"05/10/2026", n:[
+        "80/20 de Gestión: el número grande ahora muestra los clientes que concentran el 80% del volumen (clickeable → lista), y la torta muestra cuántos de esos clientes tiene cada vendedor. El click en un vendedor sigue abriendo su 80/20 y visitas."
+      ] },
     { v:"1.129", d:"02/10/2026", n:[
         "Las ventas cargadas como «Rossmaryo» ahora se contabilizan para José Palacio (ventas, 80/20 y realizado)."
       ] },
@@ -4813,20 +4816,45 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
     var map={}; list.forEach(function(x){ if(!map[x.cliente]) map[x.cliente]=[]; map[x.cliente].push(x); });
     return toArr(map);
   }
+  // 80/20 GLOBAL de la empresa conservando el vendedor: unidades por (cliente|vendedor),
+  // Pareto hasta el 80% del volumen total vendido.
+  function key8020Global(){
+    var byKey={};
+    CAT_CLI.forEach(function(c){ var k=(c.nome||"")+"\u0001"+(c.vendedor||""); if(!byKey[k]) byKey[k]={nome:c.nome, vendedor:c.vendedor||"", kg:0}; byKey[k].kg+=(+c.kg||0); });
+    var arr=Object.keys(byKey).map(function(k){return byKey[k];}).filter(function(o){return o.kg>0;});
+    arr.sort(function(a,b){ return b.kg-a.kg; });
+    var total=arr.reduce(function(a,b){return a+b.kg;},0);
+    if(total<=0) return [];
+    var cum=0,out=[];
+    for(var i=0;i<arr.length;i++){ out.push(arr[i]); cum+=arr[i].kg; if(cum>=0.8*total) break; }
+    return out;
+  }
+  function sellerOfVend(vend){ for(var i=0;i<SELLERS.length;i++){ if(sellerMatchName(SELLERS[i].name, vend)) return SELLERS[i]; } return null; }
+  function openMgr80GlobalList(){
+    var g8=key8020Global().slice().sort(function(a,b){ return b.kg-a.kg; });
+    var rows=g8.map(function(u){ var s=sellerOfVend(u.vendedor); return {main:u.nome, sub:(s?s.name:(u.vendedor||"—")), right:fmtKg(u.kg)+" kg"}; });
+    openMList("Clientes que concentran el 80% del volumen ("+g8.length+")", rows, function(){});
+  }
   function renderMgr80(){
     var mcl=$("#mCartList"); if(mcl) mcl.innerHTML="";
-    var data = SELLERS.map(function(s){
-      var visits = keyVisits(s.id);
-      return {name:s.name, count:visits.length, sellerId:s.id, color:s.color, visits:visits};
-    }).filter(function(d){ return d.count>0; }).sort(function(a,b){ return b.count-a.count; });
-    var total = data.reduce(function(x,y){return x+y.count;},0);
-    var kpiHTML = '<div class="kpi"><b>'+total+'</b><span>visitas a clientes clave</span></div>'+
-                  '<div class="kpi"><b>'+data.length+'</b><span>vendedores activos</span></div>';
+    var g8=key8020Global();
+    if(!g8.length){
+      $("#mKpiCart").innerHTML='<div class="kpi"><b>0</b><span>clientes · 80% del volumen</span></div>';
+      $("#mChartCart").innerHTML='<div class="empty">Importá la base de clientes (con kg) para ver el 80/20.</div>';
+      return;
+    }
+    var map={};
+    g8.forEach(function(u){ var s=sellerOfVend(u.vendedor), sid=s?s.id:"__otros__"; (map[sid]||(map[sid]=[])).push(u); });
+    var data=Object.keys(map).map(function(sid){ var s=SELLER_BY[sid]; return {name:(s?s.name:"Otros"), count:map[sid].length, color:(s?s.color:"#9aa39a"), sellerId:sid}; }).sort(function(a,b){ return b.count-a.count; });
+    var total=g8.length;
+    var kpiHTML='<button class="kpi kpi-btn" id="m80GlobalBtn" style="text-align:left"><b>'+total+'</b><span>clientes · 80% del volumen ›</span></button>'+
+                '<div class="kpi"><b>'+data.length+'</b><span>vendedores</span></div>';
     drawDonut(data, $("#mKpiCart"), $("#mChartCart"), {
-      label:"vendedores", kpiHTML:kpiHTML, colors:data.map(function(d){return d.color;}),
-      hint:"Toque un vendedor para ver sus visitas",
-      onLegClick:function(i,d){ renderMgr80Drill(d.sellerId); }
+      label:"clientes", kpiHTML:kpiHTML, colors:data.map(function(d){return d.color;}),
+      hint:"Clientes del 80/20 por vendedor · toque un vendedor para ver su 80/20 y visitas",
+      onLegClick:function(i,d){ if(d.sellerId && d.sellerId!=="__otros__") renderMgr80Drill(d.sellerId); }
     });
+    var gb=$("#m80GlobalBtn"); if(gb) gb.addEventListener("click", openMgr80GlobalList);
   }
   function renderMgr80Drill(sellerId){
     var s=SELLER_BY[sellerId];
