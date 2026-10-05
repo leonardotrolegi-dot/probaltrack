@@ -2731,6 +2731,9 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
   // Historial de versiones (changelog). Al agregar una mejora: sumar una entrada
   // arriba con la fecha y bumpear el número. APP_VERSION = la última entrada.
   var CHANGELOG = [
+    { v:"1.131", d:"05/10/2026", n:[
+        "Planificación: el gráfico muestra todos los meses ya transcurridos (aunque un mes no tenga datos), no solo los que tenían carga."
+      ] },
     { v:"1.130", d:"05/10/2026", n:[
         "80/20 de Gestión: el número grande ahora muestra los clientes que concentran el 80% del volumen (clickeable → lista), y la torta muestra cuántos de esos clientes tiene cada vendedor. El click en un vendedor sigue abriendo su 80/20 y visitas."
       ] },
@@ -3169,8 +3172,8 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
     var el=$("#planChart"); if(!el) return;
     if(!months.length){ el.innerHTML='<div class="vp-empty">Importá la base (con meses) para ver el gráfico.</div>'; return; }
     var s=planSeriesFor(months);
-    var curMn=(new Date()).getMonth()+1; // mostrar solo hasta el mes actual
-    var idx=[]; for(var i=0;i<months.length;i++){ var mn=parseInt((""+months[i]).split("-")[1],10)||(i+1); if(mn<=curMn && (s.pv[i]>0 || s.rz[i]>0 || s.ob[i]>0)) idx.push(i); }
+    var curMn=(new Date()).getMonth()+1; // mostrar TODOS los meses ya transcurridos (hasta el actual), con o sin datos
+    var idx=[]; for(var i=0;i<months.length;i++){ var mn=parseInt((""+months[i]).split("-")[1],10)||(i+1); if(mn<=curMn) idx.push(i); }
     if(!idx.length){ el.innerHTML='<div class="vp-empty">Sin datos hasta el mes actual.</div>'; return; }
     var groups=idx.map(function(i){ return {lab:fmtMes(months[i]), pv:s.pv[i]/1000, rz:s.rz[i]/1000, ob:s.ob[i]/1000}; });
     var tPv=0,tRz=0,tOb=0; idx.forEach(function(i){ tPv+=s.pv[i]; tRz+=s.rz[i]; tOb+=s.ob[i]; });
