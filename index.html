@@ -1616,6 +1616,12 @@
       <button class="pl-open" id="objPersOpenBtn" style="background:#0b0e08;margin-bottom:12px">💰 Objetivo Personal (comisión)</button>
       <div class="chart-card" style="margin:0 0 12px">
         <div class="vp-ttl">Previsto vs Realizado vs Objetivo · toneladas/mes</div>
+        <div style="display:flex;gap:8px;align-items:center;margin-bottom:10px">
+          <span style="font-size:11px;color:var(--ink-faint);font-weight:700;text-transform:uppercase">Meses</span>
+          <select id="planMonFrom" class="fb-period" style="flex:1"></select>
+          <span style="color:var(--ink-faint)">→</span>
+          <select id="planMonTo" class="fb-period" style="flex:1"></select>
+        </div>
         <div id="planChart"></div>
         <div class="pl-legend"><span><i class="li-pv"></i>Previsto</span><span><i class="li-rz"></i>Realizado</span><span><i class="li-ob"></i>Objetivo</span></div>
       </div>
@@ -2731,8 +2737,11 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
   // Historial de versiones (changelog). Al agregar una mejora: sumar una entrada
   // arriba con la fecha y bumpear el número. APP_VERSION = la última entrada.
   var CHANGELOG = [
-    { v:"1.131", d:"05/10/2026", n:[
-        "Planificación: el gráfico muestra todos los meses ya transcurridos (aunque un mes no tenga datos), no solo los que tenían carga."
+    { v:"1.133", d:"05/10/2026", n:[
+        "Planificación: filtro de meses (Desde / Hasta) para el gráfico Previsto vs Realizado vs Objetivo."
+      ] },
+    { v:"1.132", d:"05/10/2026", n:[
+        "Planificación: el gráfico arranca en Enero y muestra todos los meses transcurridos hasta hoy, aunque la base importada empiece en otro mes (esos aparecen en 0)."
       ] },
     { v:"1.130", d:"05/10/2026", n:[
         "80/20 de Gestión: el número grande ahora muestra los clientes que concentran el 80% del volumen (clickeable → lista), y la torta muestra cuántos de esos clientes tiene cada vendedor. El click en un vendedor sigue abriendo su 80/20 y visitas."
@@ -3086,7 +3095,15 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
   function closeVentas(){ $("#ventasPage").classList.add("hidden"); }
 
   // ---------- PLANIFICACIÓN DE VENTAS (solo Gestión por ahora) ----------
-  var planOpenKey=null, planMonthIdx=0, planSeller="__all__";
+  var planOpenKey=null, planMonthIdx=0, planSeller="__all__", planMonFrom=1, planMonTo=null;
+  function fillPlanMonths(){
+    var fr=$("#planMonFrom"), to=$("#planMonTo"); if(!fr||!to) return;
+    var curMn=(new Date()).getMonth()+1;
+    if(planMonTo==null) planMonTo=curMn;
+    var opts=''; for(var m=1;m<=12;m++){ opts+='<option value="'+m+'">'+MESNOMS[m-1]+'</option>'; }
+    fr.innerHTML=opts; to.innerHTML=opts;
+    fr.value=planMonFrom; to.value=planMonTo;
+  }
   function planEditingNow(){ var a=document.activeElement; return a && (a.tagName==="INPUT"||a.tagName==="SELECT") && (a.closest("#planPage")||a.closest("#objPage")||a.closest("#objPersPage")); }
   function planClients(){ return (planSeller==="__all__") ? CAT_CLI.slice() : clientsForSeller(planSeller); } // ordenado por kg desc
   function planDoc(c){ var k=planKey(c.nome,c.vendedor); if(!PLAN[k]) PLAN[k]={cliente:c.nome, vendedor:c.vendedor||"", plan:{}}; if(!PLAN[k].plan) PLAN[k].plan={}; return PLAN[k]; }
@@ -3094,7 +3111,7 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
   function curMonthLabel(months){ var mn=(new Date()).getMonth()+1; for(var i=0;i<months.length;i++){ if(parseInt((""+months[i]).split("-")[1],10)===mn) return months[i]; } return months[months.length-1]||""; }
   function loadedInMonth(doc, mLbl){ if(!doc||!doc.plan||!mLbl) return false; return (doc.plan[mLbl]||[]).some(function(r){ return (+r.kg||0)>0; }); }
   function fillSellerSelect(sel, val){ if(!sel) return; sel.innerHTML='<option value="__all__">Todo el equipo</option>'+SELLERS.map(function(s){ return '<option value="'+s.id+'">'+esc(s.name)+'</option>'; }).join(""); sel.value=val||"__all__"; }
-  function openPlan(){ $("#ventasPage").classList.add("hidden"); planOpenKey=null; planMonthIdx=0; $("#planSearch").value=""; fillSellerSelect($("#planSellerSel"), planSeller);
+  function openPlan(){ $("#ventasPage").classList.add("hidden"); planOpenKey=null; planMonthIdx=0; $("#planSearch").value=""; fillSellerSelect($("#planSellerSel"), planSeller); fillPlanMonths();
     if($("#objOpenBtn")) $("#objOpenBtn").style.display=(VCTX==="mgr")?"":"none"; // Objetivo por línea: solo Gestión
     $("#planPage").classList.remove("hidden"); renderPlan(); }
   function closePlan(){ $("#planPage").classList.add("hidden"); $("#ventasPage").classList.remove("hidden"); renderVentas(); }
@@ -3172,11 +3189,19 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
     var el=$("#planChart"); if(!el) return;
     if(!months.length){ el.innerHTML='<div class="vp-empty">Importá la base (con meses) para ver el gráfico.</div>'; return; }
     var s=planSeriesFor(months);
-    var curMn=(new Date()).getMonth()+1; // mostrar TODOS los meses ya transcurridos (hasta el actual), con o sin datos
-    var idx=[]; for(var i=0;i<months.length;i++){ var mn=parseInt((""+months[i]).split("-")[1],10)||(i+1); if(mn<=curMn) idx.push(i); }
-    if(!idx.length){ el.innerHTML='<div class="vp-empty">Sin datos hasta el mes actual.</div>'; return; }
-    var groups=idx.map(function(i){ return {lab:fmtMes(months[i]), pv:s.pv[i]/1000, rz:s.rz[i]/1000, ob:s.ob[i]/1000}; });
-    var tPv=0,tRz=0,tOb=0; idx.forEach(function(i){ tPv+=s.pv[i]; tRz+=s.rz[i]; tOb+=s.ob[i]; });
+    // Rango de meses según el filtro (por defecto: Enero .. mes actual). Meses sin dato en 0.
+    var curMn=(new Date()).getMonth()+1;
+    var fromM=planMonFrom||1, toM=planMonTo||curMn;
+    if(fromM>toM){ var _t=fromM; fromM=toM; toM=_t; }
+    var year = months.length ? (""+months[0]).split("-")[0] : (""+(new Date().getFullYear()));
+    var mnIdx={}; months.forEach(function(lbl,i){ var mn=parseInt((""+lbl).split("-")[1],10); if(mn) mnIdx[mn]=i; });
+    var groups=[], tPv=0,tRz=0,tOb=0;
+    for(var m=fromM;m<=toM;m++){
+      var ii=mnIdx[m];
+      var pv=(ii!=null?(+s.pv[ii]||0):0), rz=(ii!=null?(+s.rz[ii]||0):0), ob=(ii!=null?(+s.ob[ii]||0):0);
+      groups.push({lab:fmtMes(year+"-"+m), pv:pv/1000, rz:rz/1000, ob:ob/1000});
+      tPv+=pv; tRz+=rz; tOb+=ob;
+    }
     groups.push({lab:"TOTAL", pv:tPv/1000, rz:tRz/1000, ob:tOb/1000, tot:true});
     el.innerHTML=barsSVG(groups, ["Objetivo","Previsto","Realizado"], tonTip, 3, tonBarLbl, tonYLbl, function(d){ return d.ob>0?d.rz/d.ob*100:null; });
   }
@@ -3355,6 +3380,8 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
   });
   if($("#vpPlanBtn")) $("#vpPlanBtn").addEventListener("click", openPlan);
   if($("#planBack")) $("#planBack").addEventListener("click", closePlan);
+  if($("#planMonFrom")) $("#planMonFrom").addEventListener("change", function(){ planMonFrom=+this.value||1; if(planMonFrom>planMonTo){ planMonTo=planMonFrom; var t=$("#planMonTo"); if(t) t.value=planMonTo; } renderPlanChart(salesMonths()); });
+  if($("#planMonTo")) $("#planMonTo").addEventListener("change", function(){ planMonTo=+this.value||12; if(planMonFrom>planMonTo){ planMonFrom=planMonTo; var f=$("#planMonFrom"); if(f) f.value=planMonFrom; } renderPlanChart(salesMonths()); });
   if($("#planSearch")) $("#planSearch").addEventListener("input", function(){ renderPlan(); });
   function renderVentas(){
     var pool=ventasPool(), list=pool.list, labels=salesMonths();
