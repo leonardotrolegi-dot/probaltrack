@@ -2737,6 +2737,14 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
   // Historial de versiones (changelog). Al agregar una mejora: sumar una entrada
   // arriba con la fecha y bumpear el número. APP_VERSION = la última entrada.
   var CHANGELOG = [
+    { v:"1.135", d:"08/10/2026", n:[
+        "Planificación habilitada para vendedores: cargan su previsión de Octubre a Diciembre (solo su cartera).",
+        "El gráfico del vendedor muestra Septiembre→Diciembre; para Gestión se mantiene completo (Ene→Dic).",
+        "Corregido un error al entrar como Gestión (foco del PIN)."
+      ] },
+    { v:"1.134", d:"08/10/2026", n:[
+        "Objetivo Personal: se quitó el gráfico «Objetivo vs Realizado · toneladas/mes»."
+      ] },
     { v:"1.133", d:"05/10/2026", n:[
         "Planificación: filtro de meses (Desde / Hasta) para el gráfico Previsto vs Realizado vs Objetivo."
       ] },
@@ -2830,7 +2838,7 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
     $("#mgrLink").classList.add("on");
     $("#pinHint").innerHTML = "Ingrese el PIN del gestor.";
     refreshLoginBtn();
-    $("#pin input")[0].focus();
+    var _pf=$$("#pin input")[0]; if(_pf) _pf.focus();
   });
 
   var pinInputs = $$("#pin input");
@@ -3086,7 +3094,7 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
       mflt.classList.remove("hidden");
       $("#vpMgrFltPanel").classList.add("hidden");
     } else { VMGRSET=null; mflt.classList.add("hidden"); }
-    if($("#vpPlanBtn")) $("#vpPlanBtn").classList.toggle("hidden", !mgr); // planificación: por ahora solo Gestión
+    if($("#vpPlanBtn")) $("#vpPlanBtn").classList.remove("hidden"); // Planificación: gestor y vendedores
     $("#vpSearch").value="";
     $("#vpList").classList.remove("on"); $("#vpList").innerHTML="";
     $("#ventasPage").classList.remove("hidden");
@@ -3106,18 +3114,31 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
   }
   function planEditingNow(){ var a=document.activeElement; return a && (a.tagName==="INPUT"||a.tagName==="SELECT") && (a.closest("#planPage")||a.closest("#objPage")||a.closest("#objPersPage")); }
   function planClients(){ return (planSeller==="__all__") ? CAT_CLI.slice() : clientsForSeller(planSeller); } // ordenado por kg desc
+  function planYear(){ var b=salesMonths(); return b.length?(""+b[0]).split("-")[0]:(""+(new Date().getFullYear())); }
+  function baseIdxByMnMap(){ var b=salesMonths(), map={}; b.forEach(function(lbl,i){ var mn=parseInt((""+lbl).split("-")[1],10); if(mn) map[mn]=i; }); return map; }
+  // meses editables: vendedor carga su previsión de Oct a Dic; gestor edita todo el año
+  function editorMonths(){ var y=planYear(); var nums=(VCTX==="mgr")?[1,2,3,4,5,6,7,8,9,10,11,12]:[10,11,12]; return nums.map(function(m){ return y+"-"+m; }); }
   function planDoc(c){ var k=planKey(c.nome,c.vendedor); if(!PLAN[k]) PLAN[k]={cliente:c.nome, vendedor:c.vendedor||"", plan:{}}; if(!PLAN[k].plan) PLAN[k].plan={}; return PLAN[k]; }
   function planMonthsWithData(doc){ var n=0, p=doc&&doc.plan||{}; for(var m in p){ if((p[m]||[]).some(function(r){return (+r.kg||0)>0;})) n++; } return n; }
   function curMonthLabel(months){ var mn=(new Date()).getMonth()+1; for(var i=0;i<months.length;i++){ if(parseInt((""+months[i]).split("-")[1],10)===mn) return months[i]; } return months[months.length-1]||""; }
   function loadedInMonth(doc, mLbl){ if(!doc||!doc.plan||!mLbl) return false; return (doc.plan[mLbl]||[]).some(function(r){ return (+r.kg||0)>0; }); }
   function fillSellerSelect(sel, val){ if(!sel) return; sel.innerHTML='<option value="__all__">Todo el equipo</option>'+SELLERS.map(function(s){ return '<option value="'+s.id+'">'+esc(s.name)+'</option>'; }).join(""); sel.value=val||"__all__"; }
-  function openPlan(){ $("#ventasPage").classList.add("hidden"); planOpenKey=null; planMonthIdx=0; $("#planSearch").value=""; fillSellerSelect($("#planSellerSel"), planSeller); fillPlanMonths();
-    if($("#objOpenBtn")) $("#objOpenBtn").style.display=(VCTX==="mgr")?"":"none"; // Objetivo por línea: solo Gestión
+  function openPlan(){ $("#ventasPage").classList.add("hidden"); planOpenKey=null; planMonthIdx=0; $("#planSearch").value="";
+    var mgr=(VCTX==="mgr");
+    // Vendedor: solo su propia cartera (selector bloqueado). Gestor: selector completo.
+    if(mgr){ fillSellerSelect($("#planSellerSel"), (planSeller&&planSeller!=="")?planSeller:"__all__"); }
+    else if(current){ planSeller=current.id; $("#planSellerSel").innerHTML='<option value="'+current.id+'">'+esc(current.name)+'</option>'; $("#planSellerSel").value=current.id; }
+    if($("#planSellerSel")) $("#planSellerSel").disabled=!mgr;
+    // Defaults del gráfico: gestor completo (Ene→Dic); vendedor Sep→Dic
+    planMonFrom = mgr ? 1 : 9;
+    planMonTo   = 12;
+    fillPlanMonths();
+    if($("#objOpenBtn")) $("#objOpenBtn").style.display=mgr?"":"none"; // Objetivo por línea: solo Gestión
     $("#planPage").classList.remove("hidden"); renderPlan(); }
   function closePlan(){ $("#planPage").classList.add("hidden"); $("#ventasPage").classList.remove("hidden"); renderVentas(); }
   function renderPlan(){
-    var months=salesMonths();
-    renderPlanChart(months);
+    var months=editorMonths();
+    renderPlanChart();
     var q=norm($("#planSearch").value||""), list=planClients().filter(function(c){ return !q || norm(c.nome).indexOf(q)!==-1; });
     var curM=curMonthLabel(months), curTxt=curM?fmtMes(curM):"mes";
     var html="";
@@ -3141,7 +3162,9 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
     }).join("");
     var tot=rows.reduce(function(a,b){ return a+(+b.kg||0); },0);
     var info='<div class="pl-info"><div class="pl-info-r"><span>Total ya comprado</span><b>'+fmtGs(c.kg||0)+' kg</b></div>';
-    if(planMonthIdx>0){ var pL=months[planMonthIdx-1], pRz=(c.meses&&c.meses[planMonthIdx-1]!=null)?(+c.meses[planMonthIdx-1]||0):0;
+    var curMn2=parseInt((""+mLbl).split("-")[1],10)||0;
+    if(curMn2>1){ var y=planYear(), pL=y+"-"+(curMn2-1), bi=baseIdxByMnMap(), pk=bi[curMn2-1];
+      var pRz=(pk!=null && c.meses && c.meses[pk]!=null)?(+c.meses[pk]||0):0;
       info+='<div class="pl-info-r"><span>Comprado en '+esc(fmtMes(pL))+'</span><b>'+fmtGs(pRz)+' kg</b></div>';
       var pPlan=(doc.plan[pL]||[]).filter(function(r){ return (+r.kg||0)>0; });
       if(pPlan.length) info+='<div class="pl-info-sub">Planificado en '+esc(fmtMes(pL))+': '+pPlan.map(function(r){ return esc(r.l)+' '+fmtGs(r.kg); }).join(' · ')+'</div>';
@@ -3169,36 +3192,33 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
     $$(".pl-rm",ed).forEach(function(b){ b.addEventListener("click", function(){ rows.splice(+b.dataset.i,1); savePlan(key); renderPlan(); }); });
     $$(".pl-kg",ed).forEach(function(inp){ inp.addEventListener("input", function(){ rows[+inp.dataset.i].kg=numKg(inp.value);
       var t=rows.reduce(function(a,b){ return a+(+b.kg||0); },0); if($("#plTot")) $("#plTot").textContent=fmtGs(t)+" kg";
-      clearTimeout(_planSaveT); _planSaveT=setTimeout(function(){ savePlan(key); renderPlanChart(months); }, 700);
+      clearTimeout(_planSaveT); _planSaveT=setTimeout(function(){ savePlan(key); renderPlanChart(); }, 700);
     }); });
   }
-  function planSeriesFor(months){
-    // previsto, realizado y objetivo por mes, según el vendedor seleccionado
-    var n=months.length, pv=[], rz=[], ob=[];
-    for(var i=0;i<n;i++){ pv.push(0); rz.push(0); ob.push(0); }
+  function planSeriesFor(){
+    // previsto/realizado/objetivo por NÚMERO de mes (1..12), según el vendedor seleccionado
+    var y=planYear(), bi=baseIdxByMnMap();
+    var pv={}, rz={}, ob={}; for(var m=1;m<=12;m++){ pv[m]=0; rz[m]=0; ob[m]=0; }
     planClients().forEach(function(c){
       var doc=PLAN[planKey(c.nome,c.vendedor)];
-      months.forEach(function(mLbl,i){ if(doc&&doc.plan&&doc.plan[mLbl]) doc.plan[mLbl].forEach(function(r){ pv[i]+=(+r.kg||0); }); });
-      if(c.meses) for(var i=0;i<n;i++) rz[i]+=(+c.meses[i]||0);
+      if(doc&&doc.plan){ for(var m=1;m<=12;m++){ var lbl=y+"-"+m; if(doc.plan[lbl]) doc.plan[lbl].forEach(function(r){ pv[m]+=(+r.kg||0); }); } }
+      if(c.meses){ for(var m=1;m<=12;m++){ var k=bi[m]; if(k!=null) rz[m]+=(+c.meses[k]||0); } }
     });
     var objSellers=(planSeller==="__all__")?SELLERS.map(function(s){return s.id;}):[planSeller];
-    objSellers.forEach(function(sid){ var o=objSellerData(sid); if(!o) return; months.forEach(function(mLbl,i){ var mn=(parseInt((""+mLbl).split("-")[1],10)||(i+1))-1; OBJ_LINES.forEach(function(l){ if(o[l]&&o[l][mn]!=null) ob[i]+=(+o[l][mn]||0); }); }); });
-    return {pv:pv, rz:rz, ob:ob};
+    objSellers.forEach(function(sid){ var o=objSellerData(sid); if(!o) return; for(var m=1;m<=12;m++){ OBJ_LINES.forEach(function(l){ if(o[l]&&o[l][m-1]!=null) ob[m]+=(+o[l][m-1]||0); }); } });
+    return {pv:pv, rz:rz, ob:ob, year:y};
   }
-  function renderPlanChart(months){
+  function renderPlanChart(){
     var el=$("#planChart"); if(!el) return;
-    if(!months.length){ el.innerHTML='<div class="vp-empty">Importá la base (con meses) para ver el gráfico.</div>'; return; }
-    var s=planSeriesFor(months);
-    // Rango de meses según el filtro (por defecto: Enero .. mes actual). Meses sin dato en 0.
+    if(!salesMonths().length){ el.innerHTML='<div class="vp-empty">Importá la base (con meses) para ver el gráfico.</div>'; return; }
+    var s=planSeriesFor(), year=s.year;
+    // Rango del gráfico según el filtro (default por rol se fija en openPlan).
     var curMn=(new Date()).getMonth()+1;
     var fromM=planMonFrom||1, toM=planMonTo||curMn;
     if(fromM>toM){ var _t=fromM; fromM=toM; toM=_t; }
-    var year = months.length ? (""+months[0]).split("-")[0] : (""+(new Date().getFullYear()));
-    var mnIdx={}; months.forEach(function(lbl,i){ var mn=parseInt((""+lbl).split("-")[1],10); if(mn) mnIdx[mn]=i; });
     var groups=[], tPv=0,tRz=0,tOb=0;
     for(var m=fromM;m<=toM;m++){
-      var ii=mnIdx[m];
-      var pv=(ii!=null?(+s.pv[ii]||0):0), rz=(ii!=null?(+s.rz[ii]||0):0), ob=(ii!=null?(+s.ob[ii]||0):0);
+      var pv=(+s.pv[m]||0), rz=(+s.rz[m]||0), ob=(+s.ob[m]||0);
       groups.push({lab:fmtMes(year+"-"+m), pv:pv/1000, rz:rz/1000, ob:ob/1000});
       tPv+=pv; tRz+=rz; tOb+=ob;
     }
@@ -3356,10 +3376,6 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
     // apilado mensual por línea
     html+='<div class="chart-card" style="margin-top:11px"><div class="vp-ttl">Objetivo por mes · apilado por línea (kg)</div>'+opStack(per)+
       '<div style="display:flex;flex-wrap:wrap;gap:4px 12px;margin-top:6px">'+per.map(function(x){ return '<span style="display:inline-flex;align-items:center;gap:4px;font-size:11px"><span style="width:9px;height:9px;border-radius:2px;background:'+x.color+'"></span>'+esc(x.l)+'</span>'; }).join("")+'</div></div>';
-    // Objetivo vs Realizado mensual (se mantiene)
-    html+='<div class="chart-card" style="margin-top:11px"><div class="vp-ttl">Objetivo vs Realizado · toneladas/mes</div>'+
-      barsSVG(groups,["","Objetivo","Realizado"],tonTip,2,tonBarLbl,tonYLbl,function(d){ return d.pv>0?d.rz/d.pv*100:null; })+
-      '<div class="pl-legend"><span><i class="li-pv"></i>Objetivo</span><span><i class="li-rz"></i>Realizado</span><span style="color:var(--accent-deep)">% logro</span></div></div>';
     // simulación por línea (tabla)
     var GT='display:grid;grid-template-columns:1.5fr .55fr .9fr 1fr;gap:6px';
     html+='<div class="pl-sec" style="margin-top:14px">Simulación por línea</div>';
@@ -3380,8 +3396,8 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
   });
   if($("#vpPlanBtn")) $("#vpPlanBtn").addEventListener("click", openPlan);
   if($("#planBack")) $("#planBack").addEventListener("click", closePlan);
-  if($("#planMonFrom")) $("#planMonFrom").addEventListener("change", function(){ planMonFrom=+this.value||1; if(planMonFrom>planMonTo){ planMonTo=planMonFrom; var t=$("#planMonTo"); if(t) t.value=planMonTo; } renderPlanChart(salesMonths()); });
-  if($("#planMonTo")) $("#planMonTo").addEventListener("change", function(){ planMonTo=+this.value||12; if(planMonFrom>planMonTo){ planMonFrom=planMonTo; var f=$("#planMonFrom"); if(f) f.value=planMonFrom; } renderPlanChart(salesMonths()); });
+  if($("#planMonFrom")) $("#planMonFrom").addEventListener("change", function(){ planMonFrom=+this.value||1; if(planMonFrom>planMonTo){ planMonTo=planMonFrom; var t=$("#planMonTo"); if(t) t.value=planMonTo; } renderPlanChart(); });
+  if($("#planMonTo")) $("#planMonTo").addEventListener("change", function(){ planMonTo=+this.value||12; if(planMonFrom>planMonTo){ planMonFrom=planMonTo; var f=$("#planMonFrom"); if(f) f.value=planMonFrom; } renderPlanChart(); });
   if($("#planSearch")) $("#planSearch").addEventListener("input", function(){ renderPlan(); });
   function renderVentas(){
     var pool=ventasPool(), list=pool.list, labels=salesMonths();
