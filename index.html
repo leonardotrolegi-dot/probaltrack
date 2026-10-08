@@ -2737,6 +2737,9 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
   // Historial de versiones (changelog). Al agregar una mejora: sumar una entrada
   // arriba con la fecha y bumpear el número. APP_VERSION = la última entrada.
   var CHANGELOG = [
+    { v:"1.136", d:"08/10/2026", n:[
+        "Planificación (vendedor): el filtro de meses queda bloqueado en Septiembre→Diciembre (no se puede cambiar); en Gestión sigue libre."
+      ] },
     { v:"1.135", d:"08/10/2026", n:[
         "Planificación habilitada para vendedores: cargan su previsión de Octubre a Diciembre (solo su cartera).",
         "El gráfico del vendedor muestra Septiembre→Diciembre; para Gestión se mantiene completo (Ene→Dic).",
@@ -3129,10 +3132,12 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
     if(mgr){ fillSellerSelect($("#planSellerSel"), (planSeller&&planSeller!=="")?planSeller:"__all__"); }
     else if(current){ planSeller=current.id; $("#planSellerSel").innerHTML='<option value="'+current.id+'">'+esc(current.name)+'</option>'; $("#planSellerSel").value=current.id; }
     if($("#planSellerSel")) $("#planSellerSel").disabled=!mgr;
-    // Defaults del gráfico: gestor completo (Ene→Dic); vendedor Sep→Dic
+    // Gráfico: gestor completo y filtrable (Ene→Dic); vendedor bloqueado en Sep→Dic
     planMonFrom = mgr ? 1 : 9;
     planMonTo   = 12;
     fillPlanMonths();
+    if($("#planMonFrom")) $("#planMonFrom").disabled=!mgr;
+    if($("#planMonTo")) $("#planMonTo").disabled=!mgr;
     if($("#objOpenBtn")) $("#objOpenBtn").style.display=mgr?"":"none"; // Objetivo por línea: solo Gestión
     $("#planPage").classList.remove("hidden"); renderPlan(); }
   function closePlan(){ $("#planPage").classList.add("hidden"); $("#ventasPage").classList.remove("hidden"); renderVentas(); }
