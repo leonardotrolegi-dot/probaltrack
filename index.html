@@ -2633,8 +2633,8 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
       renderImpStatus();
     }, noop);
     dbh.collection("planning").onSnapshot(function(snap){
+      if(planEditingNow()) return; // no tocar PLAN/OBJ ni re-renderizar mientras el usuario edita (evita pisar lo que está cargando)
       PLAN={}; OBJ={}; snap.docs.forEach(function(d){ if(d.id==="__obj__"){ OBJ=(d.data()||{}).obj||{}; } else { PLAN[d.id]=d.data()||{}; } });
-      if(planEditingNow()) return; // no re-renderizar mientras el usuario escribe
       if($("#planPage") && !$("#planPage").classList.contains("hidden")) renderPlan();
       if($("#objPage") && !$("#objPage").classList.contains("hidden")) renderObj();
     }, noop);
@@ -2737,6 +2737,9 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
   // Historial de versiones (changelog). Al agregar una mejora: sumar una entrada
   // arriba con la fecha y bumpear el número. APP_VERSION = la última entrada.
   var CHANGELOG = [
+    { v:"1.138", d:"09/10/2026", n:[
+        "Planificación: arreglado que se borrara lo cargado (el número al tipear, o los meses ya hechos al cambiar de mes). Mientras un cliente está abierto, no se pisa lo que estás cargando."
+      ] },
     { v:"1.137", d:"08/10/2026", n:[
         "En las calculadoras de viabilidad, «ROI» se renombró a «TIR» (total, por mes y en el PDF)."
       ] },
@@ -3118,7 +3121,10 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
     fr.innerHTML=opts; to.innerHTML=opts;
     fr.value=planMonFrom; to.value=planMonTo;
   }
-  function planEditingNow(){ var a=document.activeElement; return a && (a.tagName==="INPUT"||a.tagName==="SELECT") && (a.closest("#planPage")||a.closest("#objPage")||a.closest("#objPersPage")); }
+  function planEditingNow(){
+    if(planOpenKey) return true; // hay un cliente abierto en Planificación: no pisar los datos locales
+    var a=document.activeElement; return a && (a.tagName==="INPUT"||a.tagName==="SELECT") && (a.closest("#planPage")||a.closest("#objPage")||a.closest("#objPersPage"));
+  }
   function planClients(){ return (planSeller==="__all__") ? CAT_CLI.slice() : clientsForSeller(planSeller); } // ordenado por kg desc
   function planYear(){ var b=salesMonths(); return b.length?(""+b[0]).split("-")[0]:(""+(new Date().getFullYear())); }
   function baseIdxByMnMap(){ var b=salesMonths(), map={}; b.forEach(function(lbl,i){ var mn=parseInt((""+lbl).split("-")[1],10); if(mn) map[mn]=i; }); return map; }
