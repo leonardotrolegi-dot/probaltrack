@@ -1785,7 +1785,7 @@
         </div>
         <div class="hrrow"><span class="k">Costo suplemento / día</span><span class="v hgs" id="dgCostDia">—</span></div>
         <div class="hrrow"><span class="k">Lucro por cabeza / día <small id="dgRealLbl" style="color:var(--ink-faint)"></small></span><span class="v" id="dgLucroRow">—</span></div>
-        <div class="hrrow"><span class="k">ROI sobre el suplemento <small style="color:var(--ink-faint)">· lucro ÷ costo</small></span><span class="v" id="dgRoi">—</span></div>
+        <div class="hrrow"><span class="k">TIR sobre el suplemento <small style="color:var(--ink-faint)">· lucro ÷ costo</small></span><span class="v" id="dgRoi">—</span></div>
         <div class="hint" id="dgHint"></div>
       </div>
 
@@ -2737,6 +2737,9 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
   // Historial de versiones (changelog). Al agregar una mejora: sumar una entrada
   // arriba con la fecha y bumpear el número. APP_VERSION = la última entrada.
   var CHANGELOG = [
+    { v:"1.137", d:"08/10/2026", n:[
+        "En las calculadoras de viabilidad, «ROI» se renombró a «TIR» (total, por mes y en el PDF)."
+      ] },
     { v:"1.136", d:"08/10/2026", n:[
         "Planificación (vendedor): el filtro de meses queda bloqueado en Septiembre→Diciembre (no se puede cambiar); en Gestión sigue libre."
       ] },
@@ -5470,8 +5473,8 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
       '<div class="hutil"'+(neg?' style="background:var(--danger)"':'')+'><span class="k">Utilidad del sistema</span><span class="v">Gs '+fmtGs(utilLote)+'</span></div>'+
       '<div class="hmline"><span>Utilidad <b>mensual</b> del lote</span><b>Gs '+fmtGs(meses?utilLote/meses:0)+'</b></div>'+
       '<div class="hpills">'+
-        '<div class="hpill"><b>'+dec1(roi)+'%</b><span>ROI total</span></div>'+
-        '<div class="hpill"><b>'+dec1(meses?roi/meses:0)+'%</b><span>ROI/mes</span></div>'+
+        '<div class="hpill"><b>'+dec1(roi)+'%</b><span>TIR total</span></div>'+
+        '<div class="hpill"><b>'+dec1(meses?roi/meses:0)+'%</b><span>TIR/mes</span></div>'+
         '<div class="hpill"><b>'+fmtGs(cab>0?utilLote/cab:0)+'</b><span>Gs/cabeza</span></div>'+
       '</div></div>';
     _rcData={cab:cab,pi0:pi0,pf:pf,pc:pc,pv:pv,totDias:totDias,totCons:totCons,totSupl:totSupl,addT:addT,sani:sani,flete:flete,pasto:pasto,pastoT:pastoT,mort:mort,costCab:costCab,ingCab:ingCab,vend:vend,ingLote:ingLote,costLote:costLote,utilLote:utilLote,meses:meses,roi:roi,det:det};
@@ -5550,7 +5553,7 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
     // utilidad destacada
     if(paint){ ctx.fillStyle=d.utilLote<0?"#b23b3b":A; roundRect(ctx,M,y-22,W-2*M,44,10); ctx.fill(); }
     txt("Utilidad del sistema", M+16, y+4, 13, "#fff"); txt("Gs "+fmtGs(d.utilLote), W-M-16, y+6, 20, "#fff", true, "right"); y+=44;
-    txt("Utilidad mensual: Gs "+fmtGs(d.meses?d.utilLote/d.meses:0)+"   ·   ROI "+dec1(d.roi)+"%   ·   ROI/mes "+dec1(d.meses?d.roi/d.meses:0)+"%   ·   Gs "+fmtGs(d.cab>0?d.utilLote/d.cab:0)+"/cabeza", M, y, 12, Ad, true); y+=30;
+    txt("Utilidad mensual: Gs "+fmtGs(d.meses?d.utilLote/d.meses:0)+"   ·   TIR "+dec1(d.roi)+"%   ·   TIR/mes "+dec1(d.meses?d.roi/d.meses:0)+"%   ·   Gs "+fmtGs(d.cab>0?d.utilLote/d.cab:0)+"/cabeza", M, y, 12, Ad, true); y+=30;
     txt("Generado por Probal Track · valores estimados", M, y, 10.5, faint); y+=20;
     return y;
   }
