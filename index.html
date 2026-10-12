@@ -1625,6 +1625,7 @@
         <div id="planChart"></div>
         <div class="pl-legend"><span><i class="li-pv"></i>Previsto</span><span><i class="li-rz"></i>Realizado</span><span><i class="li-ob"></i>Objetivo</span></div>
       </div>
+      <button class="pl-open" id="planXlsBtn" style="background:#1f7244;margin:0 0 12px">⬇ Exportar a Excel · Previsto vs Realizado</button>
       <input type="text" id="planSearch" class="vp-search" placeholder="Buscar cliente…" autocomplete="off" style="margin-bottom:10px">
       <div id="planList"></div>
     </div>
@@ -2737,6 +2738,10 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
   // Historial de versiones (changelog). Al agregar una mejora: sumar una entrada
   // arriba con la fecha y bumpear el número. APP_VERSION = la última entrada.
   var CHANGELOG = [
+    { v:"1.139", d:"12/10/2026", n:[
+        "Planificación: botón «Exportar a Excel» (Previsto vs Realizado por cliente, Oct→Dic, con filtros por Mes/Vendedor/Cliente y hoja de resumen del equipo).",
+        "Los campos numéricos aceptan «.» o «,» como separador decimal."
+      ] },
     { v:"1.138", d:"09/10/2026", n:[
         "Planificación: arreglado que se borrara lo cargado (el número al tipear, o los meses ya hechos al cambiar de mes). Mientras un cliente está abierto, no se pisa lo que estás cargando."
       ] },
@@ -3413,6 +3418,75 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
   if($("#planMonFrom")) $("#planMonFrom").addEventListener("change", function(){ planMonFrom=+this.value||1; if(planMonFrom>planMonTo){ planMonTo=planMonFrom; var t=$("#planMonTo"); if(t) t.value=planMonTo; } renderPlanChart(); });
   if($("#planMonTo")) $("#planMonTo").addEventListener("change", function(){ planMonTo=+this.value||12; if(planMonFrom>planMonTo){ planMonFrom=planMonTo; var f=$("#planMonFrom"); if(f) f.value=planMonFrom; } renderPlanChart(); });
   if($("#planSearch")) $("#planSearch").addEventListener("input", function(){ renderPlan(); });
+
+  // ---- Exportar Planificación a Excel (Previsto vs Realizado por cliente) ----
+  function planExportData(){
+    var sellers=(VCTX==="mgr")?SELLERS:(current?[current]:[]);
+    var y=planYear(), bi=baseIdxByMnMap(), MONS=[10,11,12]; // Oct, Nov, Dic
+    var rows=[], resumen=[], teamPrev=0, teamReal=0;
+    sellers.forEach(function(s){
+      var clients=clientsForSeller(s.id).slice().sort(function(a,b){ return (b.kg||0)-(a.kg||0); }); // por tamaño desc
+      var vPrev=0, vReal=0, cliCount=0;
+      clients.forEach(function(c){
+        var doc=PLAN[planKey(c.nome,c.vendedor)], any=false;
+        MONS.forEach(function(m){
+          var prev=0; if(doc&&doc.plan&&doc.plan[y+"-"+m]) doc.plan[y+"-"+m].forEach(function(r){ prev+=(+r.kg||0); });
+          var k=bi[m], real=(k!=null && c.meses && c.meses[k]!=null)?(+c.meses[k]||0):0;
+          if(prev>0 || real>0){
+            rows.push({vend:s.name, cli:c.nome, est:(c.estancia||c.loc||""), kgAno:(c.kg||0), mes:MESNOMS[m-1], prev:prev, real:real, saldo:real-prev, pct:(prev>0?real/prev:null)});
+            vPrev+=prev; vReal+=real; any=true;
+          }
+        });
+        if(any) cliCount++;
+      });
+      if(vPrev>0||vReal>0){ resumen.push({vend:s.name, cli:cliCount, prev:vPrev, real:vReal, saldo:vReal-vPrev, pct:(vPrev>0?vReal/vPrev:null)}); teamPrev+=vPrev; teamReal+=vReal; }
+    });
+    return {rows:rows, resumen:resumen, teamPrev:teamPrev, teamReal:teamReal};
+  }
+  function loadXLSX(cb){
+    if(window.XLSX && window.XLSX.utils){ cb(); return; }
+    var s=document.createElement("script");
+    s.src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js";
+    s.onload=function(){ cb(); };
+    s.onerror=function(){ toast("No se pudo cargar el exportador (¿sin internet?).", true); };
+    document.head.appendChild(s);
+  }
+  function exportPlanExcel(){
+    var btn=$("#planXlsBtn"); if(btn){ btn.disabled=true; btn.textContent="Generando…"; }
+    function done(){ if(btn){ btn.disabled=false; btn.textContent="⬇ Exportar a Excel · Previsto vs Realizado"; } }
+    loadXLSX(function(){
+      try{
+        var X=window.XLSX; var d=planExportData();
+        if(!d.rows.length){ toast("No hay planificación cargada para exportar.", true); done(); return; }
+        var HB={font:{bold:true},fill:{fgColor:{rgb:"EEF3EC"}}};
+        // Hoja 1 · Comparativo
+        var h1=["Vendedor","Cliente","Estancia","kg año","Mes","Previsto (kg)","Realizado (kg)","Saldo (R-P)","% Cumpl."];
+        var a1=[h1]; d.rows.forEach(function(r){ a1.push([r.vend,r.cli,r.est,r.kgAno,r.mes,r.prev,r.real,r.saldo,(r.pct!=null?r.pct:"")]); });
+        var ws1=X.utils.aoa_to_sheet(a1);
+        ws1['!cols']=[{wch:16},{wch:34},{wch:16},{wch:11},{wch:6},{wch:13},{wch:13},{wch:12},{wch:10}];
+        ws1['!autofilter']={ref:"A1:I"+a1.length};
+        for(var i=2;i<=a1.length;i++){ var c=ws1['I'+i]; if(c&&typeof c.v==='number') c.z='0%'; }
+        for(var ci=0;ci<h1.length;ci++){ var rf=X.utils.encode_cell({r:0,c:ci}); if(ws1[rf]) ws1[rf].s=HB; }
+        // Hoja 2 · Resumen equipo
+        var h2=["Vendedor","Clientes","Previsto (kg)","Realizado (kg)","Saldo (R-P)","% Cumpl."];
+        var a2=[h2];
+        a2.push(["TOTAL EQUIPO", d.resumen.reduce(function(a,x){return a+x.cli;},0), d.teamPrev, d.teamReal, d.teamReal-d.teamPrev, (d.teamPrev>0?d.teamReal/d.teamPrev:"")]);
+        d.resumen.forEach(function(r){ a2.push([r.vend,r.cli,r.prev,r.real,r.saldo,(r.pct!=null?r.pct:"")]); });
+        var ws2=X.utils.aoa_to_sheet(a2);
+        ws2['!cols']=[{wch:16},{wch:9},{wch:13},{wch:13},{wch:12},{wch:10}];
+        for(var j=2;j<=a2.length;j++){ var c2=ws2['F'+j]; if(c2&&typeof c2.v==='number') c2.z='0%'; }
+        for(var cj=0;cj<h2.length;cj++){ var rf2=X.utils.encode_cell({r:0,c:cj}); if(ws2[rf2]) ws2[rf2].s=HB; }
+        if(ws2['A2']) ws2['A2'].s={font:{bold:true},fill:{fgColor:{rgb:"E9F1E6"}}};
+        var wb=X.utils.book_new();
+        X.utils.book_append_sheet(wb, ws1, "Comparativo");
+        X.utils.book_append_sheet(wb, ws2, "Resumen equipo");
+        X.writeFile(wb, "Planificacion_PrevVsReal_"+todayISO()+".xlsx");
+        toast("Excel generado ✓");
+      }catch(e){ toast("Error al generar el Excel.", true); }
+      done();
+    });
+  }
+  if($("#planXlsBtn")) $("#planXlsBtn").addEventListener("click", exportPlanExcel);
   function renderVentas(){
     var pool=ventasPool(), list=pool.list, labels=salesMonths();
     $("#vpSeller").textContent = pool.label;
@@ -5411,7 +5485,22 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
 
   // ---------- HUB / HERRAMIENTAS (gestor) ----------
   var _logoImg=new Image(); try{ _logoImg.src=PROBAL_LOGO; }catch(e){}
-  function numPY(s){ if(s==null) return 0; s=(""+s).trim().replace(/\s/g,''); if(!s) return 0; s=s.replace(/\./g,'').replace(',','.'); var n=parseFloat(s); return isNaN(n)?0:n; }
+  // Acepta "." o "," como separador decimal (y como miles). Ej: 0.7 / 0,7 = 0,7 · 2.500 / 2,500 = 2500 · 1.234,56 / 1,234.56 = 1234,56
+  function numPY(s){
+    if(s==null) return 0;
+    s=(""+s).trim().replace(/[^\d.,\-]/g,''); if(!s) return 0;
+    var hasC=s.indexOf(',')>=0, hasD=s.indexOf('.')>=0;
+    if(hasC && hasD){
+      var dec=Math.max(s.lastIndexOf(','), s.lastIndexOf('.')); // el último separador es el decimal
+      s=s.slice(0,dec).replace(/[.,]/g,'')+'.'+s.slice(dec+1).replace(/[.,]/g,'');
+    } else if(hasC || hasD){
+      var sep=hasC?',':'.', parts=s.split(sep);
+      if(parts.length>2){ s=parts.join(''); }            // varios separadores → miles
+      else if(parts[1].length===3){ s=parts.join(''); }  // "2.500" → miles
+      else { s=parts[0]+'.'+parts[1]; }                   // decimal (0.7 / 1,50)
+    }
+    var n=parseFloat(s); return isNaN(n)?0:n;
+  }
   function fmtGs(n){ n=Math.round(n||0); var neg=n<0; n=Math.abs(n); return (neg?'-':'')+String(n).replace(/\B(?=(\d{3})+(?!\d))/g,'.'); }
   function dec1(n){ n=n||0; return n.toFixed(1).replace('.',','); }
   var rcStrategies=[{name:"Etapa 1", dias:"120", gan:"0,700", pct:"1,0", ps:"2.500"}];
