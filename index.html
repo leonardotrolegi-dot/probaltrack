@@ -1679,7 +1679,7 @@
       </button>
       <button class="tool" id="toolRecria">
         <div class="ic">🐂</div>
-        <div class="tt"><div class="t">Viabilidad Recría a pasto <span class="hbadge">Nuevo</span></div><div class="d">Simular engorde suplementado a campo</div></div>
+        <div class="tt"><div class="t">Proyecto de Viabilidad de Suplementación <span class="hbadge">Nuevo</span></div><div class="d">Simular engorde suplementado a campo</div></div>
         <span class="chev">›</span>
       </button>
       <button class="tool" id="toolDesafio">
@@ -1728,7 +1728,7 @@
 
   <!-- HERRAMIENTA: Viabilidad Recría a pasto -->
   <div id="recriaPage" class="ventas-page hidden">
-    <div class="vp-top"><button class="vp-back" id="recriaBack">‹ HUB</button><b>🐂 Recría a pasto</b></div>
+    <div class="vp-top"><button class="vp-back" id="recriaBack">‹ HUB</button><b>🐂 Proyecto de Viabilidad de Suplementación</b></div>
     <div class="hub-body">
       <img class="hub-logo" alt="Probal">
       <div class="hsec">Lote (sistema)</div>
@@ -2738,6 +2738,14 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
   // Historial de versiones (changelog). Al agregar una mejora: sumar una entrada
   // arriba con la fecha y bumpear el número. APP_VERSION = la última entrada.
   var CHANGELOG = [
+    { v:"1.141", d:"12/10/2026", n:[
+        "Exportación Excel con formato (encabezados, totales, saldo en rojo/verde, miles, bordes). Solo Gestión puede exportar.",
+        "Hoja «Resumen»: ahora por vendedor y mes, con Objetivo, Realizado, Previsto, Saldo (Objetivo−Realizado), % Logro y filtro de Mes."
+      ] },
+    { v:"1.140", d:"12/10/2026", n:[
+        "Herramienta «Viabilidad Recría a pasto» renombrada a «Proyecto de Viabilidad de Suplementación».",
+        "PDF mejorado: cada dato de la etapa y cada costo en su propia línea, y nuevo recuadro «Utilidad por cabeza» junto al de «Utilidad del sistema»."
+      ] },
     { v:"1.139", d:"12/10/2026", n:[
         "Planificación: botón «Exportar a Excel» (Previsto vs Realizado por cliente, Oct→Dic, con filtros por Mes/Vendedor/Cliente y hoja de resumen del equipo).",
         "Los campos numéricos aceptan «.» o «,» como separador decimal."
@@ -3153,6 +3161,7 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
     if($("#planMonFrom")) $("#planMonFrom").disabled=!mgr;
     if($("#planMonTo")) $("#planMonTo").disabled=!mgr;
     if($("#objOpenBtn")) $("#objOpenBtn").style.display=mgr?"":"none"; // Objetivo por línea: solo Gestión
+    if($("#planXlsBtn")) $("#planXlsBtn").style.display=mgr?"":"none"; // Exportar Excel: solo Gestión (por ahora)
     $("#planPage").classList.remove("hidden"); renderPlan(); }
   function closePlan(){ $("#planPage").classList.add("hidden"); $("#ventasPage").classList.remove("hidden"); renderVentas(); }
   function renderPlan(){
@@ -3419,29 +3428,38 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
   if($("#planMonTo")) $("#planMonTo").addEventListener("change", function(){ planMonTo=+this.value||12; if(planMonFrom>planMonTo){ planMonFrom=planMonTo; var f=$("#planMonFrom"); if(f) f.value=planMonFrom; } renderPlanChart(); });
   if($("#planSearch")) $("#planSearch").addEventListener("input", function(){ renderPlan(); });
 
-  // ---- Exportar Planificación a Excel (Previsto vs Realizado por cliente) ----
+  // ---- Exportar Planificación a Excel (solo Gestión) ----
   function planExportData(){
     var sellers=(VCTX==="mgr")?SELLERS:(current?[current]:[]);
-    var y=planYear(), bi=baseIdxByMnMap(), MONS=[10,11,12]; // Oct, Nov, Dic
-    var rows=[], resumen=[], teamPrev=0, teamReal=0;
+    var y=planYear(), bi=baseIdxByMnMap(), MONS=[10,11,12], curMn=(new Date()).getMonth()+1;
+    var rows=[], resumen=[], team={}; MONS.forEach(function(m){ team[m]={obj:0,real:0,prev:0}; });
     sellers.forEach(function(s){
       var clients=clientsForSeller(s.id).slice().sort(function(a,b){ return (b.kg||0)-(a.kg||0); }); // por tamaño desc
-      var vPrev=0, vReal=0, cliCount=0;
+      var o=objSellerData(s.id)||{};
+      // Comparativo: cliente (por tamaño) → mes
       clients.forEach(function(c){
-        var doc=PLAN[planKey(c.nome,c.vendedor)], any=false;
+        var doc=PLAN[planKey(c.nome,c.vendedor)];
         MONS.forEach(function(m){
           var prev=0; if(doc&&doc.plan&&doc.plan[y+"-"+m]) doc.plan[y+"-"+m].forEach(function(r){ prev+=(+r.kg||0); });
-          var k=bi[m], real=(k!=null && c.meses && c.meses[k]!=null)?(+c.meses[k]||0):0;
-          if(prev>0 || real>0){
-            rows.push({vend:s.name, cli:c.nome, est:(c.estancia||c.loc||""), kgAno:(c.kg||0), mes:MESNOMS[m-1], prev:prev, real:real, saldo:real-prev, pct:(prev>0?real/prev:null)});
-            vPrev+=prev; vReal+=real; any=true;
-          }
+          var k=bi[m], real=(k!=null&&c.meses&&c.meses[k]!=null)?(+c.meses[k]||0):0, fut=(m>curMn);
+          if(prev>0||real>0){ rows.push({vend:s.name, cli:c.nome, est:(c.estancia||c.loc||""), kgAno:(c.kg||0), mes:MESNOMS[m-1], prev:prev, real:(fut?"":real), saldo:(fut?"":real-prev), pct:(fut?"":(prev>0?real/prev:""))}); }
         });
-        if(any) cliCount++;
       });
-      if(vPrev>0||vReal>0){ resumen.push({vend:s.name, cli:cliCount, prev:vPrev, real:vReal, saldo:vReal-vPrev, pct:(vPrev>0?vReal/vPrev:null)}); teamPrev+=vPrev; teamReal+=vReal; }
+      // Resumen: por mes (con objetivo)
+      MONS.forEach(function(m){
+        var obj=0; OBJ_LINES.forEach(function(l){ if(o[l]&&o[l][m-1]!=null) obj+=(+o[l][m-1]||0); });
+        var real=0, prev=0;
+        clients.forEach(function(c){ var doc=PLAN[planKey(c.nome,c.vendedor)];
+          if(doc&&doc.plan&&doc.plan[y+"-"+m]) doc.plan[y+"-"+m].forEach(function(r){ prev+=(+r.kg||0); });
+          var k=bi[m]; if(k!=null&&c.meses&&c.meses[k]!=null) real+=(+c.meses[k]||0);
+        });
+        var fut=(m>curMn);
+        if(obj>0||real>0||prev>0) resumen.push({vend:s.name, mes:MESNOMS[m-1], obj:obj, real:(fut?"":real), prev:prev, saldo:(fut?"":obj-real), pct:(fut?"":(obj>0?real/obj:""))});
+        team[m].obj+=obj; team[m].real+=real; team[m].prev+=prev;
+      });
     });
-    return {rows:rows, resumen:resumen, teamPrev:teamPrev, teamReal:teamReal};
+    var totalRows=[]; MONS.forEach(function(m){ var t=team[m]; if(t.obj>0||t.real>0||t.prev>0){ var fut=(m>curMn); totalRows.push({vend:"TOTAL EQUIPO", mes:MESNOMS[m-1], obj:t.obj, real:(fut?"":t.real), prev:t.prev, saldo:(fut?"":t.obj-t.real), pct:(fut?"":(t.obj>0?t.real/t.obj:""))}); } });
+    return {rows:rows, resumen:totalRows.concat(resumen), totalCount:totalRows.length};
   }
   function loadXLSX(cb){
     if(window.XLSX && window.XLSX.utils){ cb(); return; }
@@ -3456,27 +3474,35 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
     function done(){ if(btn){ btn.disabled=false; btn.textContent="⬇ Exportar a Excel · Previsto vs Realizado"; } }
     loadXLSX(function(){
       try{
-        var X=window.XLSX; var d=planExportData();
+        var X=window.XLSX, d=planExportData();
         if(!d.rows.length){ toast("No hay planificación cargada para exportar.", true); done(); return; }
-        var HB={font:{bold:true},fill:{fgColor:{rgb:"EEF3EC"}}};
-        // Hoja 1 · Comparativo
+        var thin={style:"thin",color:{rgb:"DDE3DA"}}, BORD={top:thin,bottom:thin,left:thin,right:thin};
+        var HEAD={font:{bold:true,color:{rgb:"FFFFFF"},sz:11},fill:{fgColor:{rgb:"1F7244"}},alignment:{horizontal:"center",vertical:"center"},border:BORD};
+        function build(aoa, cols, numCols, pctCols, saldoCol, saldoSign, totalCount){
+          var ws=X.utils.aoa_to_sheet(aoa), nR=aoa.length, nC=aoa[0].length;
+          ws['!cols']=cols;
+          ws['!autofilter']={ref:X.utils.encode_range({s:{r:0,c:0},e:{r:nR-1,c:nC-1}})};
+          for(var R=0;R<nR;R++){ for(var C=0;C<nC;C++){
+            var addr=X.utils.encode_cell({r:R,c:C}), cell=ws[addr]; if(!cell){ cell={t:"s",v:""}; ws[addr]=cell; }
+            if(R===0){ cell.s=HEAD; continue; }
+            var isTot=totalCount && R<=totalCount;
+            var st = isTot ? {font:{bold:true,color:{rgb:"245334"}},fill:{fgColor:{rgb:"E9F1E6"}},border:BORD}
+                           : (R%2===0 ? {fill:{fgColor:{rgb:"FAFBF9"}},border:BORD} : {border:BORD});
+            if(numCols.indexOf(C)>=0 && typeof cell.v==='number') cell.z='#,##0';
+            if(pctCols.indexOf(C)>=0 && typeof cell.v==='number') cell.z='0%';
+            if(C===saldoCol && typeof cell.v==='number'){ var good=(saldoSign>0)?(cell.v>=0):(cell.v<=0); st=Object.assign({},st,{font:{bold:true,color:{rgb:good?"1F7244":"B23B3B"}}}); }
+            cell.s=st;
+          } }
+          return ws;
+        }
+        // Hoja 1 · Comparativo (Saldo = Realizado − Previsto; positivo = bueno)
         var h1=["Vendedor","Cliente","Estancia","kg año","Mes","Previsto (kg)","Realizado (kg)","Saldo (R-P)","% Cumpl."];
-        var a1=[h1]; d.rows.forEach(function(r){ a1.push([r.vend,r.cli,r.est,r.kgAno,r.mes,r.prev,r.real,r.saldo,(r.pct!=null?r.pct:"")]); });
-        var ws1=X.utils.aoa_to_sheet(a1);
-        ws1['!cols']=[{wch:16},{wch:34},{wch:16},{wch:11},{wch:6},{wch:13},{wch:13},{wch:12},{wch:10}];
-        ws1['!autofilter']={ref:"A1:I"+a1.length};
-        for(var i=2;i<=a1.length;i++){ var c=ws1['I'+i]; if(c&&typeof c.v==='number') c.z='0%'; }
-        for(var ci=0;ci<h1.length;ci++){ var rf=X.utils.encode_cell({r:0,c:ci}); if(ws1[rf]) ws1[rf].s=HB; }
-        // Hoja 2 · Resumen equipo
-        var h2=["Vendedor","Clientes","Previsto (kg)","Realizado (kg)","Saldo (R-P)","% Cumpl."];
-        var a2=[h2];
-        a2.push(["TOTAL EQUIPO", d.resumen.reduce(function(a,x){return a+x.cli;},0), d.teamPrev, d.teamReal, d.teamReal-d.teamPrev, (d.teamPrev>0?d.teamReal/d.teamPrev:"")]);
-        d.resumen.forEach(function(r){ a2.push([r.vend,r.cli,r.prev,r.real,r.saldo,(r.pct!=null?r.pct:"")]); });
-        var ws2=X.utils.aoa_to_sheet(a2);
-        ws2['!cols']=[{wch:16},{wch:9},{wch:13},{wch:13},{wch:12},{wch:10}];
-        for(var j=2;j<=a2.length;j++){ var c2=ws2['F'+j]; if(c2&&typeof c2.v==='number') c2.z='0%'; }
-        for(var cj=0;cj<h2.length;cj++){ var rf2=X.utils.encode_cell({r:0,c:cj}); if(ws2[rf2]) ws2[rf2].s=HB; }
-        if(ws2['A2']) ws2['A2'].s={font:{bold:true},fill:{fgColor:{rgb:"E9F1E6"}}};
+        var a1=[h1]; d.rows.forEach(function(r){ a1.push([r.vend,r.cli,r.est,r.kgAno,r.mes,r.prev,r.real,r.saldo,r.pct]); });
+        var ws1=build(a1,[{wch:16},{wch:34},{wch:16},{wch:11},{wch:6},{wch:13},{wch:13},{wch:12},{wch:10}],[3,5,6,7],[8],7,1,0);
+        // Hoja 2 · Resumen (Saldo = Objetivo − Realizado; positivo = falta = rojo)
+        var h2=["Vendedor","Mes","Objetivo (kg)","Realizado (kg)","Previsto (kg)","Saldo (Obj-Real)","% Logro"];
+        var a2=[h2]; d.resumen.forEach(function(r){ a2.push([r.vend,r.mes,r.obj,r.real,r.prev,r.saldo,r.pct]); });
+        var ws2=build(a2,[{wch:16},{wch:7},{wch:14},{wch:14},{wch:14},{wch:16},{wch:9}],[2,3,4,5],[6],5,-1,d.totalCount);
         var wb=X.utils.book_new();
         X.utils.book_append_sheet(wb, ws1, "Comparativo");
         X.utils.book_append_sheet(wb, ws2, "Resumen equipo");
@@ -5602,7 +5628,7 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
         if(_logoImg && _logoImg.complete && _logoImg.naturalWidth){ var ww=PW*SCALE*0.74, wh=_logoImg.naturalHeight*ww/_logoImg.naturalWidth; pctx.save(); pctx.globalAlpha=0.06; pctx.drawImage(_logoImg,(PW*SCALE-ww)/2,(PH*SCALE-wh)/2 + PH*SCALE*0.12,ww,wh); pctx.restore(); }
         var sy=p*PH*SCALE, sh=Math.min(PH*SCALE, bc.height-sy); if(sh>0) pctx.drawImage(bc,0,sy,PW*SCALE,sh,0,0,PW*SCALE,sh);
         pages.push({jpeg:b64ToBytes(pc.toDataURL("image/jpeg",0.9)), w:pc.width, h:pc.height}); }
-      var pdf=buildPDF(pages), fname="Viabilidad_Recria_"+todayISO()+".pdf";
+      var pdf=buildPDF(pages), fname="Proyecto_Viabilidad_Suplementacion_"+todayISO()+".pdf";
       if(!(window.claude && window.claude.use)){
         var blob=new Blob([pdf],{type:"application/pdf"}); var url=URL.createObjectURL(blob);
         var a=document.createElement("a"); a.href=url; a.download=fname; document.body.appendChild(a); a.click(); a.remove();
@@ -5617,12 +5643,13 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
     var W=794, M=48, y=44, A="#2f6b43", Ad="#245334", ink="#1a231d", faint="#7d887f", line="#e2e6dd";
     function txt(t,x,yy,sz,col,b,al){ if(paint){ ctx.fillStyle=col||ink; ctx.font=(b?"bold ":"")+sz+"px Arial, sans-serif"; ctx.textAlign=al||"left"; ctx.fillText(t,x,yy); } }
     function row(k,v,yy){ txt(k,M,yy,13,faint); txt(v,W-M,yy,14,ink,true,"right"); if(paint){ ctx.strokeStyle=line; ctx.beginPath(); ctx.moveTo(M,yy+8); ctx.lineTo(W-M,yy+8); ctx.stroke(); } }
+    function erow(k,v,yy){ txt(k,M+16,yy,11.5,faint); txt(""+v,W-M,yy,12,ink,true,"right"); if(paint){ ctx.strokeStyle="#eef0ea"; ctx.beginPath(); ctx.moveTo(M+16,yy+6); ctx.lineTo(W-M,yy+6); ctx.stroke(); } }
     // logo (con altura reservada para no superponer el título)
     var lw=150, lh=42;
     if(_logoImg && _logoImg.naturalWidth) lh=_logoImg.naturalHeight*lw/_logoImg.naturalWidth;
     if(paint && _logoImg && _logoImg.complete && _logoImg.naturalWidth){ ctx.drawImage(_logoImg, (W-lw)/2, y, lw, lh); }
     y+=lh+24;
-    txt("Viabilidad Recría a pasto", W/2, y, 20, Ad, true, "center"); y+=22;
+    txt("Proyecto de Viabilidad de Suplementación", W/2, y, 18, Ad, true, "center"); y+=22;
     txt("Simulación de Suplementación · "+fmtDate(todayISO()), W/2, y, 12, faint, false, "center"); y+=28;
     // lote
     txt("LOTE", M, y, 11, A, true); y+=18;
@@ -5632,12 +5659,18 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
     // estrategias
     txt("ESTRATEGIAS", M, y, 11, A, true); y+=18;
     d.det.forEach(function(e,i){
-      txt((i+1)+". "+e.name, M, y, 13.5, Ad, true); txt(fmtGs(e.pini)+" → "+fmtGs(e.pf)+" kg", W-M, y, 12.5, ink, false, "right"); y+=17;
-      txt(e.dias+" días · "+dec1(e.gan)+" kg/día · "+dec1(e.pct)+"% PV · supl. Gs "+fmtGs(e.ps)+"/kg", M, y, 11.5, faint); y+=15;
-      txt("Consumo "+dec1(e.cons)+" kg · Costo Gs "+fmtGs(e.cs), M, y, 11.5, faint); if(paint){ ctx.strokeStyle=line; ctx.beginPath(); ctx.moveTo(M,y+8); ctx.lineTo(W-M,y+8); ctx.stroke(); } y+=26;
+      txt((i+1)+". "+e.name, M, y, 13.5, Ad, true); txt(fmtGs(e.pini)+" → "+fmtGs(e.pf)+" kg", W-M, y, 12.5, ink, false, "right"); y+=20;
+      erow("Días", e.dias, y); y+=17;
+      erow("Ganancia diaria", dec1(e.gan)+" kg/día", y); y+=17;
+      erow("Consumo", dec1(e.pct)+"% PV", y); y+=17;
+      erow("Precio suplemento", "Gs "+fmtGs(e.ps)+"/kg", y); y+=17;
+      erow("Consumo total", dec1(e.cons)+" kg", y); y+=17;
+      erow("Costo suplemento", "Gs "+fmtGs(e.cs), y); y+=24;
     });
     if(d.addT>0){ txt("COSTOS ADICIONALES", M, y, 11, A, true); y+=18;
-      row("Sanidad · Flete · Pasto ("+d.totDias+" días)", "Gs "+fmtGs(d.sani)+" · "+fmtGs(d.flete)+" · "+fmtGs(d.pastoT), y); y+=26;
+      if(d.sani>0){ row("Sanidad", "Gs "+fmtGs(d.sani), y); y+=26; }
+      if(d.flete>0){ row("Flete", "Gs "+fmtGs(d.flete), y); y+=26; }
+      if(d.pastoT>0){ row("Pasto ("+d.totDias+" días)", "Gs "+fmtGs(d.pastoT), y); y+=26; }
     }
     y+=6; txt("RESULTADO", M, y, 11, A, true); y+=18;
     row("Costo total por cabeza", "Gs "+fmtGs(d.costCab), y); y+=26;
@@ -5645,10 +5678,13 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
     row("Animales vendidos", fmtGs(d.vend)+" de "+fmtGs(d.cab), y); y+=26;
     row("Ingreso del lote", "Gs "+fmtGs(d.ingLote), y); y+=26;
     row("Costo del lote", "Gs "+fmtGs(d.costLote), y); y+=34;
-    // utilidad destacada
+    // utilidad destacada — del sistema y por cabeza (dos recuadros verdes grandes)
+    var utilCab=d.cab>0?d.utilLote/d.cab:0;
     if(paint){ ctx.fillStyle=d.utilLote<0?"#b23b3b":A; roundRect(ctx,M,y-22,W-2*M,44,10); ctx.fill(); }
-    txt("Utilidad del sistema", M+16, y+4, 13, "#fff"); txt("Gs "+fmtGs(d.utilLote), W-M-16, y+6, 20, "#fff", true, "right"); y+=44;
-    txt("Utilidad mensual: Gs "+fmtGs(d.meses?d.utilLote/d.meses:0)+"   ·   TIR "+dec1(d.roi)+"%   ·   TIR/mes "+dec1(d.meses?d.roi/d.meses:0)+"%   ·   Gs "+fmtGs(d.cab>0?d.utilLote/d.cab:0)+"/cabeza", M, y, 12, Ad, true); y+=30;
+    txt("Utilidad del sistema", M+16, y+4, 13, "#fff"); txt("Gs "+fmtGs(d.utilLote), W-M-16, y+6, 20, "#fff", true, "right"); y+=54;
+    if(paint){ ctx.fillStyle=utilCab<0?"#b23b3b":"#355e3b"; roundRect(ctx,M,y-22,W-2*M,44,10); ctx.fill(); }
+    txt("Utilidad por cabeza", M+16, y+4, 13, "#fff"); txt("Gs "+fmtGs(Math.round(utilCab)), W-M-16, y+6, 20, "#fff", true, "right"); y+=44;
+    txt("Utilidad mensual: Gs "+fmtGs(d.meses?d.utilLote/d.meses:0)+"   ·   TIR "+dec1(d.roi)+"%   ·   TIR/mes "+dec1(d.meses?d.roi/d.meses:0)+"%", M, y, 12, Ad, true); y+=30;
     txt("Generado por Probal Track · valores estimados", M, y, 10.5, faint); y+=20;
     return y;
   }
