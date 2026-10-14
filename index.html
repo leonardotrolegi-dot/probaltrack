@@ -315,6 +315,11 @@
   :root[data-theme="dark"] .hub-logo{filter:invert(1) brightness(1.6)}
   .hub-h{font-size:17px;font-weight:800;margin:2px 2px 2px}
   .hub-s{font-size:12px;color:var(--ink-faint);margin:0 2px 13px}
+  .egseg{display:inline-flex;border:1.5px solid var(--line);border-radius:11px;overflow:hidden}
+  .egseg button{border:none;background:var(--surface);font-size:14px;font-weight:800;padding:9px 18px;color:var(--ink-faint);cursor:pointer;font-family:inherit}
+  .egseg button.on{background:var(--accent);color:#fff}
+  .eg-be{background:#d9a520;color:#3a2d00;border-radius:13px;padding:13px 15px;display:flex;justify-content:space-between;align-items:center;margin-top:10px}
+  .eg-be .k{font-size:13px;font-weight:700}.eg-be .v{font-size:21px;font-weight:800;font-variant-numeric:tabular-nums}
   .tool{display:flex;align-items:center;gap:12px;width:100%;text-align:left;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:13px;margin-bottom:10px;box-shadow:var(--shadow);font-family:inherit;cursor:pointer}
   .tool .ic{width:42px;height:42px;border-radius:11px;background:var(--accent);color:#fff;display:grid;place-items:center;font-size:20px;flex:none}
   .tool .ic svg{width:25px;height:25px}
@@ -1677,6 +1682,11 @@
         <div class="tt"><div class="t">Potencial de la venta <span class="hbadge">Nuevo</span></div><div class="d">Comisión por producto según el consumo del lote</div></div>
         <span class="chev">›</span>
       </button>
+      <button class="tool" id="toolEngGrano">
+        <div class="ic">🌽</div>
+        <div class="tt"><div class="t">Engorde grano entero <span class="hbadge">Nuevo</span></div><div class="d">¿Hasta cuánto pagar el maíz para que convenga?</div></div>
+        <span class="chev">›</span>
+      </button>
       <button class="tool" id="toolRecria">
         <div class="ic">🐂</div>
         <div class="tt"><div class="t">Proyecto de Viabilidad de Suplementación <span class="hbadge">Nuevo</span></div><div class="d">Simular engorde suplementado a campo</div></div>
@@ -1723,6 +1733,46 @@
       <div class="pl-sec">Comparar productos</div>
       <div id="potProds" style="display:flex;gap:9px;overflow-x:auto;padding:13px 2px 4px"></div>
       <div class="hint" id="potCtx" style="margin-top:11px"></div>
+    </div>
+  </div>
+
+  <!-- HERRAMIENTA: Engorde grano entero -->
+  <div id="engGranoPage" class="ventas-page hidden">
+    <div class="vp-top"><button class="vp-back" id="eggBack">‹ HUB</button><b>🌽 Engorde grano entero</b></div>
+    <div class="hub-body">
+      <img class="hub-logo" alt="Probal">
+      <div class="hub-h">Engorde grano entero</div>
+      <div class="hub-s">¿Hasta cuánto podés pagar el kilo de maíz para que el engorde con grano entero sea rentable?</div>
+
+      <div class="hsec">Animal</div>
+      <div class="hf"><label>Moneda (compra y venta)</label><div class="egseg" id="eggMoneda"><button type="button" data-c="GS" class="on">Gs</button><button type="button" data-c="USD">US$</button></div></div>
+      <div class="hf hidden" id="eggFxWrap"><label>Tipo de cambio</label><div class="hinp"><input id="eggFx" inputmode="decimal" value="7.300"><span class="hu">Gs/US$</span></div></div>
+      <div class="hf"><label>Peso de entrada</label><div class="hinp"><input id="eggPe" inputmode="decimal" value="300"><span class="hu">kg</span></div></div>
+      <div class="hf"><label>Precio de compra <small style="color:var(--ink-faint)">· por kg vivo</small></label><div class="hinp"><input id="eggPc" inputmode="decimal" value="14.000"><span class="hu" id="eggUc">Gs/kg</span></div></div>
+      <div class="hf"><label id="eggPvLabel">Precio de venta <small style="color:var(--ink-faint)">· por kg de carcasa</small></label><div class="hinp"><input id="eggPv" inputmode="decimal" value="30.000"><span class="hu" id="eggUv">Gs/kg</span></div></div>
+      <div class="two">
+        <div class="hf"><label>Ganancia de peso</label><div class="hinp"><input id="eggGan" inputmode="decimal" value="1,400"><span class="hu">kg/día</span></div></div>
+        <div class="hf"><label>Días de engorde</label><div class="hinp"><input id="eggDias" inputmode="numeric" value="90"><span class="hu">días</span></div></div>
+      </div>
+      <div class="hf"><label>¿Vender por carcasa (rendimiento)?</label><div class="egseg" id="eggRendYN"><button type="button" data-v="SI" class="on">Sí</button><button type="button" data-v="NO">No</button></div></div>
+      <div class="hf" id="eggRendWrap"><label>Rendimiento de carcasa</label><div class="hinp"><input id="eggRend" inputmode="decimal" value="55"><span class="hu">% PV</span></div></div>
+
+      <div class="hsec">Dieta <span class="opt">· 85% maíz + 15% núcleo</span></div>
+      <div class="two">
+        <div class="hf"><label>Precio del maíz</label><div class="hinp"><input id="eggMaiz" inputmode="decimal" value="2.000"><span class="hu">Gs/kg</span></div></div>
+        <div class="hf"><label>Precio del núcleo</label><div class="hinp"><input id="eggNucleo" inputmode="decimal" value="6.000"><span class="hu">Gs/kg</span></div></div>
+      </div>
+      <div class="hf"><label>Consumo de dieta</label><div class="hinp"><input id="eggCons" inputmode="decimal" value="9"><span class="hu">kg/día</span></div></div>
+
+      <div class="hsec">Otros costos · por cabeza</div>
+      <div class="two">
+        <div class="hf"><label>Costo operativo</label><div class="hinp"><input id="eggOpd" inputmode="decimal" value="500"><span class="hu">Gs/día</span></div></div>
+        <div class="hf"><label>Costo sanitario</label><div class="hinp"><input id="eggSani" inputmode="decimal" value="40.000"><span class="hu">Gs/cab</span></div></div>
+      </div>
+
+      <div id="eggRes" class="hres"></div>
+      <button class="btn-pdf" id="eggPDF" style="margin-top:12px">📄 Exportar PDF (para WhatsApp)</button>
+      <div class="hint" style="margin-top:12px">La dieta = 85% maíz + 15% núcleo. El «maíz máximo» es el precio que hace <b>empatar</b> la operación (utilidad = 0): por encima perdés, por debajo ganás.</div>
     </div>
   </div>
 
@@ -2738,6 +2788,10 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
   // Historial de versiones (changelog). Al agregar una mejora: sumar una entrada
   // arriba con la fecha y bumpear el número. APP_VERSION = la última entrada.
   var CHANGELOG = [
+    { v:"1.143", d:"14/10/2026", n:[
+        "Nueva herramienta del HUB: «Engorde grano entero» 🌽 — calcula hasta cuánto pagar el kilo de maíz para que el engorde convenga (punto de empate), con TIR, rendimiento Sí/No, moneda Gs/US$ y gráfico.",
+        "Exportación a PDF de «Engorde grano entero» (mismo modelo: logo al fondo, una página, gráfico al final)."
+      ] },
     { v:"1.142", d:"12/10/2026", n:[
         "Corregido un error de cálculo en las calculadoras: valores como «0,700» (0,7) se interpretaban como 700. La coma vuelve a ser siempre decimal."
       ] },
@@ -5894,6 +5948,147 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
   if($("#toolCreep")) $("#toolCreep").addEventListener("click", openCreep);
   if($("#cfBack")) $("#cfBack").addEventListener("click", function(){ $("#creepPage").classList.add("hidden"); openHub(); });
   ["cfPeso","cfGan","cfDias","cfCons","cfSupl","cfOtros","cfPagado","cfVenta","cfAnim"].forEach(function(id){ var el=$("#"+id); if(el) el.addEventListener("input", computeCreep); });
+
+  // ===== Engorde grano entero =====
+  var egCur="GS", egUseRend=true, _egData=null;
+  function egNiceStep(range,target){ if(range<=0) return 1; var raw=range/target, mag=Math.pow(10,Math.floor(Math.log10(raw))), nn=raw/mag; var st=nn<1.5?1:nn<3?2:nn<7?5:10; return st*mag; }
+  function egKShort(v){ var a=Math.abs(v); if(a>=1e6) return (Math.round(v/1e5)/10).toString().replace(".",",")+"M"; if(a>=1000) return Math.round(v/1000)+"k"; return ""+Math.round(v); }
+  function egData(){
+    var fx=numPY($("#eggFx").value)||1, k=(egCur==="USD"?fx:1);
+    var pe=numPY($("#eggPe").value), gan=numPY($("#eggGan").value), dias=numPY($("#eggDias").value), rend=numPY($("#eggRend").value)/100;
+    var pc=numPY($("#eggPc").value)*k, pv=numPY($("#eggPv").value)*k;
+    var maiz=numPY($("#eggMaiz").value), nucleo=numPY($("#eggNucleo").value), cons=numPY($("#eggCons").value);
+    var opd=numPY($("#eggOpd").value), sani=numPY($("#eggSani").value);
+    var rendF=egUseRend?rend:1, dietaKg=0.85*maiz+0.15*nucleo, pf=pe+gan*dias, car=pf*rendF, totDieta=cons*dias;
+    var ingreso=car*pv, compra=pe*pc, costoDieta=totDieta*dietaKg, costoOp=opd*dias, costoSani=sani;
+    var costosEng=costoDieta+costoOp+costoSani, util=ingreso-compra-costosEng, inv=compra+costosEng;
+    var meses=dias/30, tir=inv>0?util/inv*100:0, tirMes=meses>0?tir/meses:0;
+    var A=ingreso-compra-0.15*nucleo*totDieta-costoOp-costoSani, B=0.85*totDieta, be=B>0?A/B:0;
+    return {fx:fx,cur:egCur,useRend:egUseRend,pe:pe,gan:gan,dias:dias,rend:rend,pc:pc,pv:pv,maiz:maiz,nucleo:nucleo,cons:cons,opd:opd,sani:sani,dietaKg:dietaKg,pf:pf,car:car,totDieta:totDieta,ingreso:ingreso,compra:compra,costoDieta:costoDieta,costoOp:costoOp,costoSani:costoSani,costosEng:costosEng,util:util,inv:inv,tir:tir,tirMes:tirMes,be:be};
+  }
+  function egM(d,v){ return (d.cur==="USD"?fmtGs(Math.round(v/d.fx)):fmtGs(Math.round(v))); }
+  function egCS(d){ return d.cur==="USD"?"US$ ":"Gs "; }
+  // rango del gráfico (compartido por SVG y PDF)
+  function egChartRange(d){
+    var maiz=d.maiz, be=d.be, ref=be>0?be:(maiz||1);
+    var xmin=Math.max(0,Math.min(maiz,ref)*0.75), xmax=Math.max(ref,maiz)*1.15; if(xmax<=xmin)xmax=xmin+1000;
+    var xstep=egNiceStep(xmax-xmin,5); xmin=Math.floor(xmin/xstep)*xstep; xmax=Math.ceil(xmax/xstep)*xstep;
+    function uAt(m){ return d.ingreso-d.compra-d.costoOp-d.costoSani-d.totDieta*(0.85*m+0.15*d.nucleo); }
+    var y0=uAt(xmin),y1=uAt(xmax), ystep=egNiceStep(Math.abs(y0-y1),6);
+    var ymax=Math.ceil(Math.max(y0,y1,0)/ystep)*ystep, ymin=Math.floor(Math.min(y0,y1,0)/ystep)*ystep; if(ymax<=ymin){ymax=ystep;ymin=-ystep;}
+    return {uAt:uAt,xmin:xmin,xmax:xmax,xstep:xstep,ymin:ymin,ymax:ymax,ystep:ystep};
+  }
+  function egChartSVG(d){
+    var W=360,H=232,pL=54,pR=14,pT=18,pB=40,iw=W-pL-pR,ih=H-pT-pB, maiz=d.maiz,be=d.be, R=egChartRange(d);
+    function X(m){return pL+((m-R.xmin)/(R.xmax-R.xmin))*iw;} function Y(u){return pT+ih-((u-R.ymin)/(R.ymax-R.ymin))*ih;}
+    var s='<svg viewBox="0 0 '+W+' '+H+'" width="100%">';
+    for(var mv=R.xmin;mv<=R.xmax+0.5;mv+=R.xstep){var x=X(mv);s+='<line x1="'+x.toFixed(1)+'" y1="'+pT+'" x2="'+x.toFixed(1)+'" y2="'+(pT+ih)+'" stroke="#edf0ea" stroke-dasharray="2 3"/><text x="'+x.toFixed(1)+'" y="'+(pT+ih+13)+'" fill="#9aa39a" font-size="8.5" text-anchor="middle">'+fmtGs(Math.round(mv))+'</text>';}
+    for(var uv=R.ymin;uv<=R.ymax+0.5;uv+=R.ystep){var y=Y(uv),z=(Math.abs(uv)<1e-6);s+='<line x1="'+pL+'" y1="'+y.toFixed(1)+'" x2="'+(W-pR)+'" y2="'+y.toFixed(1)+'" stroke="'+(z?'#b7c0ae':'#edf0ea')+'" stroke-width="'+(z?1.2:1)+'"'+(z?'':' stroke-dasharray="2 3"')+'/><text x="'+(pL-5)+'" y="'+(y+3).toFixed(1)+'" fill="#9aa39a" font-size="8.5" text-anchor="end">'+egKShort(uv)+'</text>';}
+    s+='<line x1="'+X(R.xmin)+'" y1="'+Y(R.uAt(R.xmin))+'" x2="'+X(R.xmax)+'" y2="'+Y(R.uAt(R.xmax))+'" stroke="#2f6b43" stroke-width="2.6"/>';
+    if(be>=R.xmin&&be<=R.xmax){s+='<line x1="'+X(be)+'" y1="'+pT+'" x2="'+X(be)+'" y2="'+(pT+ih)+'" stroke="#d9a520" stroke-width="1.6" stroke-dasharray="4 3"/><circle cx="'+X(be)+'" cy="'+Y(0)+'" r="4" fill="#d9a520"/><text x="'+X(be)+'" y="'+(pT-4)+'" fill="#b5830f" font-size="9.5" font-weight="700" text-anchor="middle">empate · Gs '+fmtGs(Math.round(be))+'</text>';}
+    if(maiz>=R.xmin&&maiz<=R.xmax){var ua=R.uAt(maiz);s+='<line x1="'+X(maiz)+'" y1="'+(pT+ih)+'" x2="'+X(maiz)+'" y2="'+Y(ua)+'" stroke="#1f6091" stroke-width="1.2" stroke-dasharray="3 3"/><line x1="'+pL+'" y1="'+Y(ua)+'" x2="'+X(maiz)+'" y2="'+Y(ua)+'" stroke="#1f6091" stroke-width="1.2" stroke-dasharray="3 3"/><circle cx="'+X(maiz)+'" cy="'+Y(ua)+'" r="4.5" fill="#1f6091"/><text x="'+(X(maiz)+6)+'" y="'+(Y(ua)-6)+'" fill="#1f6091" font-size="9" font-weight="700">hoy: '+fmtGs(Math.round(ua))+'</text>';}
+    s+='<text x="'+(pL+iw/2)+'" y="'+(H-4)+'" fill="#7d887f" font-size="9" text-anchor="middle">Precio del maíz (Gs/kg)</text>';
+    return s+'</svg>';
+  }
+  function computeEngGrano(){
+    var d=egData(); _egData=d; var el=$("#eggRes"); if(!el) return; var cs=egCS(d), neg=d.util<0;
+    var html='<div class="hrt">'+fmtGs(d.dias)+' días · peso final '+dec1(d.pf)+' kg'+(d.useRend?(' · carcasa '+dec1(d.car)+' kg'):'')+'</div>'+
+      '<div class="hrrow"><span class="k">Ingreso por venta</span><span class="v good">'+cs+egM(d,d.ingreso)+'</span></div>'+
+      '<div class="hrrow"><span class="k">Costo de compra</span><span class="v">'+cs+egM(d,d.compra)+'</span></div>'+
+      '<div class="hrrow"><span class="k">Costos de engorde <small style="color:var(--ink-faint)">dieta + operativo + sanitario</small></span><span class="v">'+cs+egM(d,d.costosEng)+'</span></div>'+
+      '<div class="hrrow"><span class="k">Dieta (85% maíz + 15% núcleo)</span><span class="v">Gs '+fmtGs(Math.round(d.dietaKg))+'/kg</span></div>'+
+      '<div class="hutil"'+(neg?' style="background:var(--danger)"':'')+'><span class="k">Utilidad / animal</span><span class="v">'+cs+egM(d,d.util)+'</span></div>'+
+      '<div class="hmline"><span>TIR de la operación</span><b>'+dec1(d.tir)+'%  ·  '+dec1(d.tirMes)+'% /mes</b></div>'+
+      '<div class="eg-be"><span class="k">Maíz máximo para que convenga</span><span class="v">'+(d.be>0?('Gs '+fmtGs(Math.round(d.be))+'/kg'):'—')+'</span></div>'+
+      '<div class="chart-card" style="margin-top:12px"><div class="vp-ttl">Utilidad por animal según el precio del maíz</div>'+egChartSVG(d)+'</div>';
+    el.innerHTML=html;
+  }
+  function openEngGrano(){ $("#hubPage").classList.add("hidden"); $$(".hub-logo").forEach(function(i){ if(!i.src) i.src=PROBAL_LOGO; }); computeEngGrano(); $("#engGranoPage").classList.remove("hidden"); }
+  if($("#toolEngGrano")) $("#toolEngGrano").addEventListener("click", openEngGrano);
+  if($("#eggBack")) $("#eggBack").addEventListener("click", function(){ $("#engGranoPage").classList.add("hidden"); openHub(); });
+  if($("#eggMoneda")) $$("#eggMoneda button").forEach(function(b){ b.addEventListener("click", function(){ egCur=b.dataset.c; $$("#eggMoneda button").forEach(function(x){x.classList.toggle("on",x===b);}); var u=(egCur==="USD")?"US$/kg":"Gs/kg"; $("#eggUc").textContent=u; $("#eggUv").textContent=u; $("#eggFxWrap").classList.toggle("hidden",egCur!=="USD"); computeEngGrano(); }); });
+  if($("#eggRendYN")) $$("#eggRendYN button").forEach(function(b){ b.addEventListener("click", function(){ egUseRend=(b.dataset.v==="SI"); $$("#eggRendYN button").forEach(function(x){x.classList.toggle("on",x===b);}); $("#eggRendWrap").classList.toggle("hidden",!egUseRend); $("#eggPvLabel").innerHTML=egUseRend?'Precio de venta <small style="color:var(--ink-faint)">· por kg de carcasa</small>':'Precio de venta <small style="color:var(--ink-faint)">· por kg vivo</small>'; computeEngGrano(); }); });
+  ["eggFx","eggPe","eggPc","eggPv","eggGan","eggDias","eggRend","eggMaiz","eggNucleo","eggCons","eggOpd","eggSani"].forEach(function(id){ var e=$("#"+id); if(e) e.addEventListener("input", computeEngGrano); });
+
+  // ----- PDF Engorde grano entero -----
+  function drawEgChartCanvas(ctx, d, ox, oy, Wc, Hc){
+    var pL=ox+58,pR=ox+Wc-10,pT=oy+16,pB=oy+Hc-26,iw=pR-pL,ih=pB-pT, maiz=d.maiz,be=d.be, R=egChartRange(d);
+    function X(m){return pL+((m-R.xmin)/(R.xmax-R.xmin))*iw;} function Y(u){return pB-((u-R.ymin)/(R.ymax-R.ymin))*ih;}
+    function dl(x1,y1,x2,y2,col,w,dash){ ctx.save(); ctx.strokeStyle=col; ctx.lineWidth=w||1; if(dash) ctx.setLineDash(dash); ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.stroke(); ctx.restore(); }
+    function tx(t,x,y,sz,col,al,b){ ctx.fillStyle=col; ctx.font=(b?"bold ":"")+sz+"px Arial, sans-serif"; ctx.textAlign=al||"left"; ctx.fillText(t,x,y); }
+    var mv,uv;
+    for(mv=R.xmin;mv<=R.xmax+0.5;mv+=R.xstep){ var x=X(mv); dl(x,pT,x,pB,"#e4e8df",1,[2,3]); tx(fmtGs(Math.round(mv)),x,pB+13,10,"#9aa39a","center"); }
+    for(uv=R.ymin;uv<=R.ymax+0.5;uv+=R.ystep){ var y=Y(uv),z=(Math.abs(uv)<1e-6); dl(pL,y,pR,y,z?"#b7c0ae":"#e4e8df",z?1.3:1,z?null:[2,3]); tx(egKShort(uv),pL-6,y+3.5,10,"#9aa39a","right"); }
+    dl(X(R.xmin),Y(R.uAt(R.xmin)),X(R.xmax),Y(R.uAt(R.xmax)),"#2f6b43",2.8);
+    if(be>=R.xmin&&be<=R.xmax){ dl(X(be),pT,X(be),pB,"#d9a520",1.6,[4,3]); ctx.fillStyle="#d9a520"; ctx.beginPath(); ctx.arc(X(be),Y(0),4,0,7); ctx.fill(); tx("empate · Gs "+fmtGs(Math.round(be)),X(be),pT-4,10.5,"#b5830f","center",true); }
+    if(maiz>=R.xmin&&maiz<=R.xmax){ var ua=R.uAt(maiz); dl(X(maiz),pB,X(maiz),Y(ua),"#1f6091",1.3,[3,3]); dl(pL,Y(ua),X(maiz),Y(ua),"#1f6091",1.3,[3,3]); ctx.fillStyle="#1f6091"; ctx.beginPath(); ctx.arc(X(maiz),Y(ua),4.5,0,7); ctx.fill(); tx("hoy: "+fmtGs(Math.round(ua)),X(maiz)+7,Y(ua)-7,10,"#1f6091","left",true); }
+    tx("Precio del maíz (Gs/kg)",(pL+pR)/2,pB+26,10,"#7d887f","center");
+  }
+  function drawEngGrano(ctx, d, paint){
+    var W=794, M=48, y=44, A="#2f6b43", Ad="#245334", ink="#1a231d", faint="#7d887f", line="#e2e6dd";
+    function txt(t,x,yy,sz,col,b,al){ if(paint){ ctx.fillStyle=col||ink; ctx.font=(b?"bold ":"")+sz+"px Arial, sans-serif"; ctx.textAlign=al||"left"; ctx.fillText(t,x,yy); } }
+    function row(k,v,yy){ txt(k,M,yy,13,faint); txt(v,W-M,yy,14,ink,true,"right"); if(paint){ ctx.strokeStyle=line; ctx.beginPath(); ctx.moveTo(M,yy+8); ctx.lineTo(W-M,yy+8); ctx.stroke(); } }
+    var lw=150, lh=42; if(_logoImg && _logoImg.naturalWidth) lh=_logoImg.naturalHeight*lw/_logoImg.naturalWidth;
+    if(paint && _logoImg && _logoImg.complete && _logoImg.naturalWidth){ ctx.drawImage(_logoImg,(W-lw)/2,y,lw,lh); }
+    y+=lh+22;
+    txt("Engorde grano entero", W/2, y, 20, Ad, true, "center"); y+=22;
+    txt("Simulación de engorde · "+fmtDate(todayISO()), W/2, y, 12, faint, false, "center"); y+=26;
+    var cs=egCS(d);
+    txt("ANIMAL", M, y, 11, A, true); y+=18;
+    row("Peso de entrada", fmtGs(d.pe)+" kg", y); y+=26;
+    row("Ganancia · días", dec1(d.gan)+" kg/día · "+fmtGs(d.dias)+" días", y); y+=26;
+    row("Peso final", dec1(d.pf)+" kg", y); y+=26;
+    if(d.useRend){ row("Rendimiento · carcasa", dec1(d.rend*100)+"% · "+dec1(d.car)+" kg", y); y+=26; }
+    row("Precio de compra", cs+egM(d,d.pc)+(d.cur==="USD"?"":"")+" /kg vivo", y); y+=26;
+    row("Precio de venta", cs+egM(d,d.pv)+" /kg "+(d.useRend?"carcasa":"vivo"), y); y+=30;
+    txt("DIETA · 85% maíz + 15% núcleo", M, y, 11, A, true); y+=18;
+    row("Precio del maíz", "Gs "+fmtGs(d.maiz)+" /kg", y); y+=26;
+    row("Precio del núcleo", "Gs "+fmtGs(d.nucleo)+" /kg", y); y+=26;
+    row("Consumo de dieta", dec1(d.cons)+" kg/día · total "+fmtGs(Math.round(d.totDieta))+" kg", y); y+=26;
+    row("Costo de la dieta", "Gs "+fmtGs(Math.round(d.dietaKg))+" /kg", y); y+=30;
+    txt("RESULTADO (por cabeza)", M, y, 11, A, true); y+=18;
+    row("Ingreso por venta", cs+egM(d,d.ingreso), y); y+=26;
+    row("Costo de compra", cs+egM(d,d.compra), y); y+=26;
+    row("Costo de dieta", cs+egM(d,d.costoDieta), y); y+=26;
+    row("Costo operativo · sanitario", cs+egM(d,d.costoOp)+" · "+cs+egM(d,d.costoSani), y); y+=34;
+    var neg=d.util<0;
+    if(paint){ ctx.fillStyle=neg?"#b23b3b":A; roundRect(ctx,M,y-22,W-2*M,44,10); ctx.fill(); }
+    txt("Utilidad por cabeza", M+16, y+4, 13, "#fff"); txt(cs+egM(d,d.util), W-M-16, y+6, 20, "#fff", true, "right"); y+=54;
+    if(paint){ ctx.fillStyle="#d9a520"; roundRect(ctx,M,y-22,W-2*M,44,10); ctx.fill(); }
+    txt("Maíz máximo para que convenga (empate)", M+16, y+4, 12.5, "#3a2d00"); txt(d.be>0?("Gs "+fmtGs(Math.round(d.be))+"/kg"):"—", W-M-16, y+6, 19, "#3a2d00", true, "right"); y+=44;
+    txt("TIR de la operación: "+dec1(d.tir)+"%   ·   "+dec1(d.tirMes)+"% /mes", M, y, 12, Ad, true); y+=28;
+    txt("UTILIDAD SEGÚN EL PRECIO DEL MAÍZ", M, y, 11, A, true); y+=10;
+    if(paint) drawEgChartCanvas(ctx, d, M, y, W-2*M, 250);
+    y+=258;
+    txt("Generado por Probal Track · valores estimados", M, y, 10.5, faint); y+=20;
+    return y;
+  }
+  function engGranoPDF(){
+    var d=_egData||egData(); if(!d){ toast("Complete los datos primero.", true); return; }
+    var btn=$("#eggPDF"), old=btn?btn.textContent:""; if(btn){ btn.disabled=true; btn.textContent="Generando…"; }
+    try{
+      var PW=794, SCALE=2, PH=1123;
+      var mc=document.createElement("canvas"); mc.width=PW*SCALE; mc.height=10; var mctx=mc.getContext("2d"); mctx.scale(SCALE,SCALE);
+      var H=Math.ceil(drawEngGrano(mctx,d,false))+20;
+      var bc=document.createElement("canvas"); bc.width=PW*SCALE; bc.height=H*SCALE; var bctx=bc.getContext("2d"); bctx.scale(SCALE,SCALE);
+      drawEngGrano(bctx,d,true);
+      var nP=Math.max(1,Math.ceil(H/PH)), pages=[];
+      for(var p=0;p<nP;p++){ var pc=document.createElement("canvas"); pc.width=PW*SCALE; pc.height=PH*SCALE; var pctx=pc.getContext("2d"); pctx.fillStyle="#fff"; pctx.fillRect(0,0,pc.width,pc.height);
+        if(_logoImg && _logoImg.complete && _logoImg.naturalWidth){ var ww=PW*SCALE*0.74, wh=_logoImg.naturalHeight*ww/_logoImg.naturalWidth; pctx.save(); pctx.globalAlpha=0.06; pctx.drawImage(_logoImg,(PW*SCALE-ww)/2,(PH*SCALE-wh)/2 + PH*SCALE*0.12,ww,wh); pctx.restore(); }
+        var sy=p*PH*SCALE, sh=Math.min(PH*SCALE, bc.height-sy); if(sh>0) pctx.drawImage(bc,0,sy,PW*SCALE,sh,0,0,PW*SCALE,sh);
+        pages.push({jpeg:b64ToBytes(pc.toDataURL("image/jpeg",0.9)), w:pc.width, h:pc.height}); }
+      var pdf=buildPDF(pages), fname="Engorde_grano_entero_"+todayISO()+".pdf";
+      if(!(window.claude && window.claude.use)){
+        var blob=new Blob([pdf],{type:"application/pdf"}); var url=URL.createObjectURL(blob);
+        var a=document.createElement("a"); a.href=url; a.download=fname; document.body.appendChild(a); a.click(); a.remove();
+        setTimeout(function(){ URL.revokeObjectURL(url); },3000); toast("PDF generado ✓"); if(btn){btn.disabled=false; btn.textContent=old;} return;
+      }
+      var pd; try{ pd=window.claude.use("downloads"); }catch(e){ pd=null; }
+      if(!pd){ toast("Exportar PDF no disponible aquí.", true); if(btn){btn.disabled=false; btn.textContent=old;} return; }
+      Promise.resolve(pd).then(function(dl){ dl.save({filename:fname,data:pdf}).then(function(){ toast("PDF generado ✓"); }).catch(function(){ toast("No se pudo guardar.", true); }); if(btn){btn.disabled=false; btn.textContent=old;} });
+    }catch(e){ toast("No se pudo generar el PDF.", true); if(btn){btn.disabled=false; btn.textContent=old;} }
+  }
+  if($("#eggPDF")) $("#eggPDF").addEventListener("click", engGranoPDF);
 
   // ---- HERRAMIENTA: Potencial de la venta (comisión por producto según consumo del lote) ----
   var potProds=[{l:"Sup. minerales",cs:150},{l:"Balanceados",cs:2000},{l:"Concentrado",cs:800}];
