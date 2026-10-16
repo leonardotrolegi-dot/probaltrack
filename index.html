@@ -1606,6 +1606,7 @@
         <div class="vp-ttl" id="vpTtl">Todos mis clientes</div>
         <div id="vpChart"></div>
       </div>
+      <button class="pl-open" id="vpXlsBtn" style="margin-top:10px">⬇ Exportar ventas a Excel (toneladas)</button>
     </div>
   </div>
 
@@ -1763,6 +1764,7 @@
         <div class="hf"><label>Precio del núcleo</label><div class="hinp"><input id="eggNucleo" inputmode="decimal" value="6.000"><span class="hu">Gs/kg</span></div></div>
       </div>
       <div class="hf"><label>Consumo de dieta</label><div class="hinp"><input id="eggCons" inputmode="decimal" value="9"><span class="hu">kg/día</span></div></div>
+      <div class="hf"><label>Cabezas del lote <small style="color:var(--ink-faint)">· para demanda de insumos</small></label><div class="hinp"><input id="eggCab" inputmode="numeric" value="50"><span class="hu">cab</span></div></div>
 
       <div class="hsec">Otros costos · por cabeza</div>
       <div class="two">
@@ -1772,7 +1774,7 @@
 
       <div id="eggRes" class="hres"></div>
       <button class="btn-pdf" id="eggPDF" style="margin-top:12px">📄 Exportar PDF (para WhatsApp)</button>
-      <div class="hint" style="margin-top:12px">La dieta = 85% maíz + 15% núcleo. El «maíz máximo» es el precio que hace <b>empatar</b> la operación (utilidad = 0): por encima perdés, por debajo ganás.</div>
+      <div class="hint" style="margin-top:12px">La dieta = 85% maíz + 15% núcleo. El «maíz máximo» es el precio que llega al <b>punto de equilibrio</b> (utilidad = 0): por encima perdés, por debajo ganás.</div>
     </div>
   </div>
 
@@ -1782,14 +1784,18 @@
     <div class="hub-body">
       <img class="hub-logo" alt="Probal">
       <div class="hsec">Lote (sistema)</div>
+      <div class="hf"><label>Moneda (compra y venta)</label><div class="egseg" id="rcMoneda"><button type="button" data-c="GS" class="on">Gs</button><button type="button" data-c="USD">US$</button></div></div>
+      <div class="hf hidden" id="rcFxWrap"><label>Tipo de cambio</label><div class="hinp"><input id="rcFx" inputmode="decimal" value="7.300"><span class="hu">Gs/US$</span></div></div>
       <div class="two">
         <div class="hf"><label>Cabezas</label><div class="hinp"><input id="rcCab" inputmode="numeric" value="50"><span class="hu">cab</span></div></div>
         <div class="hf"><label>Peso inicial</label><div class="hinp"><input id="rcPeso" inputmode="numeric" value="180"><span class="hu">kg</span></div></div>
       </div>
       <div class="two">
-        <div class="hf"><label>Precio compra</label><div class="hinp"><input id="rcCompra" inputmode="numeric" value="13.000"><span class="hu">Gs/kg</span></div></div>
-        <div class="hf"><label>Precio venta final</label><div class="hinp"><input id="rcVenta" inputmode="numeric" value="15.000"><span class="hu">Gs/kg</span></div></div>
+        <div class="hf"><label>Precio compra</label><div class="hinp"><input id="rcCompra" inputmode="numeric" value="13.000"><span class="hu" id="rcUc">Gs/kg</span></div></div>
+        <div class="hf"><label id="rcVentaLabel">Precio venta <small style="color:var(--ink-faint)">· por kg vivo</small></label><div class="hinp"><input id="rcVenta" inputmode="numeric" value="15.000"><span class="hu" id="rcUv">Gs/kg</span></div></div>
       </div>
+      <div class="hf"><label>¿Vender por carcasa (rendimiento)?</label><div class="egseg" id="rcRendYN"><button type="button" data-v="SI">Sí</button><button type="button" data-v="NO" class="on">No</button></div></div>
+      <div class="hf hidden" id="rcRendWrap"><label>Rendimiento de carcasa</label><div class="hinp"><input id="rcRend" inputmode="decimal" value="54"><span class="hu">% PV</span></div></div>
 
       <div class="hsec">Estrategias de suplementación <span class="opt">· hasta 4</span></div>
       <div id="rcStrats"></div>
@@ -2788,6 +2794,11 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
   // Historial de versiones (changelog). Al agregar una mejora: sumar una entrada
   // arriba con la fecha y bumpear el número. APP_VERSION = la última entrada.
   var CHANGELOG = [
+    { v:"1.144", d:"16/10/2026", n:[
+        "Suplementación: selector de moneda (Gs/US$), opción «vender por carcasa» (rendimiento, por defecto No) y gráfico de «utilidad por cabeza según el precio de compra» con el precio máximo de compra (punto de equilibrio). También en el PDF.",
+        "Engorde grano entero: «empate» pasa a llamarse «punto de equilibrio», y nueva «Demanda de insumos» (kg de maíz y núcleo del período, por cabeza y por lote).",
+        "Ventas: botón para exportar a Excel las ventas por cliente y mes en toneladas."
+      ] },
     { v:"1.143", d:"14/10/2026", n:[
         "Nueva herramienta del HUB: «Engorde grano entero» 🌽 — calcula hasta cuánto pagar el kilo de maíz para que el engorde convenga (punto de empate), con TIR, rendimiento Sí/No, moneda Gs/US$ y gráfico.",
         "Exportación a PDF de «Engorde grano entero» (mismo modelo: logo al fondo, una página, gráfico al final)."
@@ -3570,6 +3581,51 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
     });
   }
   if($("#planXlsBtn")) $("#planXlsBtn").addEventListener("click", exportPlanExcel);
+
+  // ---- Exportar mis ventas a Excel (toneladas, por cliente × mes) ----
+  function exportVentasExcel(){
+    var btn=$("#vpXlsBtn"), lbl="⬇ Exportar ventas a Excel (toneladas)"; if(btn){ btn.disabled=true; btn.textContent="Generando…"; }
+    function done(){ if(btn){ btn.disabled=false; btn.textContent=lbl; } }
+    loadXLSX(function(){
+      try{
+        var X=window.XLSX, pool=ventasPool(), list=pool.list||[], labels=salesMonths();
+        if(!list.length || !labels.length){ toast("No hay ventas para exportar todavía.", true); done(); return; }
+        var used=[]; labels.forEach(function(lb,i){ if(list.some(function(c){ return c.meses && (+c.meses[i]||0)!==0; })) used.push(i); });
+        if(!used.length){ toast("No hay ventas para exportar todavía.", true); done(); return; }
+        var thin={style:"thin",color:{rgb:"DDE3DA"}}, BORD={top:thin,bottom:thin,left:thin,right:thin};
+        var HEAD={font:{bold:true,color:{rgb:"FFFFFF"},sz:11},fill:{fgColor:{rgb:"1F7244"}},alignment:{horizontal:"center",vertical:"center"},border:BORD};
+        var head=["Cliente"].concat(used.map(function(i){return fmtMes(labels[i]);})).concat(["Total (t)"]);
+        var aoa=[head], colTot=used.map(function(){return 0;}), grand=0;
+        var rows=list.slice().sort(function(a,b){ return (b.kg||0)-(a.kg||0); });
+        rows.forEach(function(c){
+          var r=[c.nome||""], tot=0;
+          used.forEach(function(i,j){ var t=(c.meses?(+c.meses[i]||0):0)/1000; r.push(t); tot+=t; colTot[j]+=t; });
+          r.push(tot); grand+=tot; aoa.push(r);
+        });
+        aoa.push(["TOTAL"].concat(colTot).concat([grand]));
+        var ws=X.utils.aoa_to_sheet(aoa), nR=aoa.length, nC=aoa[0].length;
+        var cols=[{wch:34}]; used.forEach(function(){ cols.push({wch:8}); }); cols.push({wch:10}); ws['!cols']=cols;
+        ws['!autofilter']={ref:X.utils.encode_range({s:{r:0,c:0},e:{r:nR-1,c:nC-1}})};
+        for(var R=0;R<nR;R++){ for(var C=0;C<nC;C++){
+          var addr=X.utils.encode_cell({r:R,c:C}), cell=ws[addr]; if(!cell){ cell={t:"s",v:""}; ws[addr]=cell; }
+          if(R===0){ cell.s=HEAD; continue; }
+          var isTot=(R===nR-1);
+          var st=isTot?{font:{bold:true,color:{rgb:"245334"}},fill:{fgColor:{rgb:"E9F1E6"}},border:BORD}:(R%2===0?{fill:{fgColor:{rgb:"FAFBF9"}},border:BORD}:{border:BORD});
+          if(C>0 && typeof cell.v==='number') cell.z='#,##0.0';
+          if(C===0) st=Object.assign({},st,{alignment:{horizontal:"left"}});
+          cell.s=st;
+        } }
+        var wb=X.utils.book_new(); X.utils.book_append_sheet(wb, ws, "Ventas (t)");
+        var who=(current&&current.name)?current.name:(pool.label||"ventas");
+        who=(""+who).replace(/[^\wÀ-ſ]+/g,"_").replace(/^_+|_+$/g,"").slice(0,24)||"ventas";
+        X.writeFile(wb, "Ventas_toneladas_"+who+"_"+todayISO()+".xlsx");
+        toast("Excel generado ✓");
+      }catch(e){ toast("Error al generar el Excel.", true); }
+      done();
+    });
+  }
+  if($("#vpXlsBtn")) $("#vpXlsBtn").addEventListener("click", exportVentasExcel);
+
   function renderVentas(){
     var pool=ventasPool(), list=pool.list, labels=salesMonths();
     $("#vpSeller").textContent = pool.label;
@@ -5590,7 +5646,28 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
   function fmtGs(n){ n=Math.round(n||0); var neg=n<0; n=Math.abs(n); return (neg?'-':'')+String(n).replace(/\B(?=(\d{3})+(?!\d))/g,'.'); }
   function dec1(n){ n=n||0; return n.toFixed(1).replace('.',','); }
   var rcStrategies=[{name:"Etapa 1", dias:"120", gan:"0,700", pct:"1,0", ps:"2.500"}];
-  var _rcData=null;
+  var _rcData=null, rcCur="GS", rcUseRend=false;
+  function rcCS(cur){ return cur==="USD"?"US$ ":"Gs "; }
+  function rcMv(v,cur,fx){ return cur==="USD"?fmtGs(Math.round(v/(fx||1))):fmtGs(Math.round(v)); }
+  function rcNf(v){ return Math.abs(v)<100 ? (Math.round(v*100)/100).toString().replace('.',',') : fmtGs(v); }
+  function rcChartSVG(d){
+    var W=360,H=232,pL=54,pR=14,pT=18,pB=40,iw=W-pL-pR,ih=H-pT-pB, cs=rcCS(d.cur);
+    function uAt(X){ return (d.ingCabVend - (X*d.k)*d.pi0 - d.totSupl - d.addT)/d.k; }
+    var hoy=d.pcIn, be=d.beDisp, ref=be>0?be:(hoy||1), lo=0.95, hi=1.05;
+    var xmin=Math.max(0,Math.min(hoy,ref)*lo), xmax=Math.max(ref,hoy)*hi; if(xmax<=xmin)xmax=xmin+1000;
+    var xstep=egNiceStep(xmax-xmin,5); xmin=Math.floor(xmin/xstep)*xstep; xmax=Math.ceil(xmax/xstep)*xstep;
+    var y0=uAt(xmin),y1=uAt(xmax), ystep=egNiceStep(Math.abs(y0-y1),6);
+    var ymax=Math.ceil(Math.max(y0,y1,0)/ystep)*ystep, ymin=Math.floor(Math.min(y0,y1,0)/ystep)*ystep; if(ymax<=ymin){ymax=ystep;ymin=-ystep;}
+    function X(m){return pL+((m-xmin)/(xmax-xmin))*iw;} function Y(u){return pT+ih-((u-ymin)/(ymax-ymin))*ih;}
+    var s='<svg viewBox="0 0 '+W+' '+H+'" width="100%">';
+    for(var mv=xmin;mv<=xmax+0.5;mv+=xstep){var x=X(mv);s+='<line x1="'+x.toFixed(1)+'" y1="'+pT+'" x2="'+x.toFixed(1)+'" y2="'+(pT+ih)+'" stroke="#edf0ea" stroke-dasharray="2 3"/><text x="'+x.toFixed(1)+'" y="'+(pT+ih+13)+'" fill="#9aa39a" font-size="8.5" text-anchor="middle">'+rcNf(mv)+'</text>';}
+    for(var uv=ymin;uv<=ymax+0.5;uv+=ystep){var y=Y(uv),z=(Math.abs(uv)<1e-6);s+='<line x1="'+pL+'" y1="'+y.toFixed(1)+'" x2="'+(W-pR)+'" y2="'+y.toFixed(1)+'" stroke="'+(z?'#b7c0ae':'#edf0ea')+'" stroke-width="'+(z?1.2:1)+'"'+(z?'':' stroke-dasharray="2 3"')+'/><text x="'+(pL-5)+'" y="'+(y+3).toFixed(1)+'" fill="#9aa39a" font-size="8.5" text-anchor="end">'+egKShort(uv)+'</text>';}
+    s+='<line x1="'+X(xmin)+'" y1="'+Y(uAt(xmin))+'" x2="'+X(xmax)+'" y2="'+Y(uAt(xmax))+'" stroke="#2f6b43" stroke-width="2.6"/>';
+    if(be>=xmin&&be<=xmax){s+='<line x1="'+X(be)+'" y1="'+pT+'" x2="'+X(be)+'" y2="'+(pT+ih)+'" stroke="#d9a520" stroke-width="1.6" stroke-dasharray="4 3"/><circle cx="'+X(be)+'" cy="'+Y(0)+'" r="4" fill="#d9a520"/><text x="'+X(be)+'" y="'+(pT-4)+'" fill="#b5830f" font-size="9.5" font-weight="700" text-anchor="middle">punto de equilibrio · '+cs+rcNf(be)+'</text>';}
+    if(hoy>=xmin&&hoy<=xmax){var ua=uAt(hoy);s+='<line x1="'+X(hoy)+'" y1="'+(pT+ih)+'" x2="'+X(hoy)+'" y2="'+Y(ua)+'" stroke="#1f6091" stroke-width="1.2" stroke-dasharray="3 3"/><line x1="'+pL+'" y1="'+Y(ua)+'" x2="'+X(hoy)+'" y2="'+Y(ua)+'" stroke="#1f6091" stroke-width="1.2" stroke-dasharray="3 3"/><circle cx="'+X(hoy)+'" cy="'+Y(ua)+'" r="4.5" fill="#1f6091"/><text x="'+(X(hoy)+6)+'" y="'+(Y(ua)-6)+'" fill="#1f6091" font-size="9" font-weight="700">hoy: '+fmtGs(Math.round(ua))+'</text>';}
+    s+='<text x="'+(pL+iw/2)+'" y="'+(H-4)+'" fill="#7d887f" font-size="9" text-anchor="middle">Precio de compra ('+cs.trim()+'/kg)</text>';
+    return s+'</svg>';
+  }
   function renderStrats(){
     $("#rcStrats").innerHTML = rcStrategies.map(function(st,i){
       var first=i===0;
@@ -5622,43 +5699,52 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
     var add=$("#rcAdd"); add.disabled = rcStrategies.length>=4; add.textContent = "＋ Agregar estrategia ("+rcStrategies.length+"/4)";
   }
   function computeRecria(){
-    var cab=numPY($("#rcCab").value), pi0=numPY($("#rcPeso").value), pc=numPY($("#rcCompra").value), pv=numPY($("#rcVenta").value);
+    var fx=numPY($("#rcFx").value)||1, k=(rcCur==="USD"?fx:1), cs=rcCS(rcCur);
+    function m(v){ return rcMv(v,rcCur,fx); }
+    var cab=numPY($("#rcCab").value), pi0=numPY($("#rcPeso").value);
+    var pcIn=numPY($("#rcCompra").value), pvIn=numPY($("#rcVenta").value), pc=pcIn*k, pv=pvIn*k;
+    var rend=numPY($("#rcRend").value), rendF=rcUseRend?rend/100:1;
     var sani=numPY($("#rcSani").value), flete=numPY($("#rcFlete").value), pasto=numPY($("#rcPasto").value), mort=numPY($("#rcMort").value);
     var peso=pi0, totDias=0, totSupl=0, totCons=0, cards=$$("#rcStrats .estr"), det=[];
     rcStrategies.forEach(function(st,i){
       var dias=Math.max(0,Math.round(numPY(st.dias))), gan=numPY(st.gan), pct=numPY(st.pct), ps=numPY(st.ps);
       var pini=peso, cons=0;
       for(var d=1;d<=dias;d++){ cons += (peso + gan*(d-0.5)) * pct/100; }
-      var pf=peso+gan*dias, cs=cons*ps;
-      var c=cards[i]; if(c){ c.querySelector(".es-pini").value=fmtGs(pini); c.querySelector(".es-pf").textContent=fmtGs(pf)+" kg"; c.querySelector(".es-cs").textContent="Gs "+fmtGs(cs); }
-      det.push({name:st.name||("Etapa "+(i+1)), dias:dias, pini:pini, pf:pf, gan:gan, pct:pct, ps:ps, cons:cons, cs:cs});
-      peso=pf; totDias+=dias; totSupl+=cs; totCons+=cons;
+      var pf=peso+gan*dias, csu=cons*ps;
+      var c=cards[i]; if(c){ c.querySelector(".es-pini").value=fmtGs(pini); c.querySelector(".es-pf").textContent=fmtGs(pf)+" kg"; c.querySelector(".es-cs").textContent="Gs "+fmtGs(csu); }
+      det.push({name:st.name||("Etapa "+(i+1)), dias:dias, pini:pini, pf:pf, gan:gan, pct:pct, ps:ps, cons:cons, cs:csu});
+      peso=pf; totDias+=dias; totSupl+=csu; totCons+=cons;
     });
-    var pf=peso, compra=pi0*pc, pastoT=pasto*totDias, addT=sani+flete+pastoT;
-    var costCab=compra+totSupl+addT, ingCab=pf*pv;
+    var pf=peso, carc=pf*rendF, compra=pi0*pc, pastoT=pasto*totDias, addT=sani+flete+pastoT;
+    var costCab=compra+totSupl+addT, ingCab=carc*pv;
     var muertos=cab*mort/100, vend=cab-muertos;
     var ingLote=vend*ingCab, costLote=cab*costCab, utilLote=ingLote-costLote;
     var meses=totDias>0?totDias/30:0, roi=costLote>0?utilLote/costLote*100:0, neg=utilLote<0;
+    var ingCabVend=(cab>0?vend/cab:1)*ingCab, beDisp=(pi0>0?(ingCabVend-totSupl-addT)/(pi0*k):0);
+    _rcData={cab:cab,pi0:pi0,pf:pf,pc:pc,pv:pv,pcIn:pcIn,pvIn:pvIn,cur:rcCur,fx:fx,k:k,useRend:rcUseRend,rend:rend,rendF:rendF,carc:carc,totDias:totDias,totCons:totCons,totSupl:totSupl,addT:addT,sani:sani,flete:flete,pasto:pasto,pastoT:pastoT,mort:mort,costCab:costCab,ingCab:ingCab,vend:vend,ingLote:ingLote,costLote:costLote,utilLote:utilLote,meses:meses,roi:roi,ingCabVend:ingCabVend,beDisp:beDisp,det:det};
     $("#rcRes").innerHTML =
       '<div class="hres">'+
       '<div class="hrt">Sistema · '+rcStrategies.length+' estrategia'+(rcStrategies.length!==1?'s':'')+' · '+totDias+' días · ~'+dec1(meses)+' meses</div>'+
       '<div class="hrrow"><span class="k">Peso final</span><span class="v">'+fmtGs(pf)+' kg <small>· desde '+fmtGs(pi0)+'</small></span></div>'+
+      (rcUseRend?'<div class="hrrow"><span class="k">Carcasa ('+dec1(rend)+'%)</span><span class="v">'+dec1(carc)+' kg</span></div>':'')+
       '<div class="hrrow"><span class="k">Consumo suplemento total</span><span class="v">'+dec1(totCons)+' kg</span></div>'+
-      '<div class="hrrow"><span class="k">Costo suplemento total</span><span class="v hgs">Gs '+fmtGs(totSupl)+'</span></div>'+
-      (addT>0?'<div class="hrrow"><span class="k">Costos adicionales /cab</span><span class="v hgs">Gs '+fmtGs(addT)+'</span></div>':'')+
-      '<div class="hrrow"><span class="k">Costo total /cab</span><span class="v hgs">Gs '+fmtGs(costCab)+'</span></div>'+
-      '<div class="hrrow"><span class="k">Ingreso por venta /cab</span><span class="v hgs">Gs '+fmtGs(ingCab)+'</span></div>'+
+      '<div class="hrrow"><span class="k">Costo suplemento total</span><span class="v hgs">'+cs+m(totSupl)+'</span></div>'+
+      (addT>0?'<div class="hrrow"><span class="k">Costos adicionales /cab</span><span class="v hgs">'+cs+m(addT)+'</span></div>':'')+
+      '<div class="hrrow"><span class="k">Costo total /cab</span><span class="v hgs">'+cs+m(costCab)+'</span></div>'+
+      '<div class="hrrow"><span class="k">Ingreso por venta /cab</span><span class="v hgs">'+cs+m(ingCab)+'</span></div>'+
       '<div class="hrt" style="margin-top:11px">Del lote · '+fmtGs(vend)+' vendidos de '+fmtGs(cab)+'</div>'+
-      '<div class="hrrow"><span class="k">Ingreso del lote</span><span class="v hgs">Gs '+fmtGs(ingLote)+'</span></div>'+
-      '<div class="hrrow"><span class="k">Costo del lote</span><span class="v hgs">Gs '+fmtGs(costLote)+'</span></div>'+
-      '<div class="hutil"'+(neg?' style="background:var(--danger)"':'')+'><span class="k">Utilidad del sistema</span><span class="v">Gs '+fmtGs(utilLote)+'</span></div>'+
-      '<div class="hmline"><span>Utilidad <b>mensual</b> del lote</span><b>Gs '+fmtGs(meses?utilLote/meses:0)+'</b></div>'+
+      '<div class="hrrow"><span class="k">Ingreso del lote</span><span class="v hgs">'+cs+m(ingLote)+'</span></div>'+
+      '<div class="hrrow"><span class="k">Costo del lote</span><span class="v hgs">'+cs+m(costLote)+'</span></div>'+
+      '<div class="hutil"'+(neg?' style="background:var(--danger)"':'')+'><span class="k">Utilidad del sistema</span><span class="v">'+cs+m(utilLote)+'</span></div>'+
+      '<div class="hmline"><span>Utilidad <b>mensual</b> del lote</span><b>'+cs+m(meses?utilLote/meses:0)+'</b></div>'+
       '<div class="hpills">'+
         '<div class="hpill"><b>'+dec1(roi)+'%</b><span>TIR total</span></div>'+
         '<div class="hpill"><b>'+dec1(meses?roi/meses:0)+'%</b><span>TIR/mes</span></div>'+
-        '<div class="hpill"><b>'+fmtGs(cab>0?utilLote/cab:0)+'</b><span>Gs/cabeza</span></div>'+
-      '</div></div>';
-    _rcData={cab:cab,pi0:pi0,pf:pf,pc:pc,pv:pv,totDias:totDias,totCons:totCons,totSupl:totSupl,addT:addT,sani:sani,flete:flete,pasto:pasto,pastoT:pastoT,mort:mort,costCab:costCab,ingCab:ingCab,vend:vend,ingLote:ingLote,costLote:costLote,utilLote:utilLote,meses:meses,roi:roi,det:det};
+        '<div class="hpill"><b>'+m(cab>0?utilLote/cab:0)+'</b><span>'+cs.trim()+'/cabeza</span></div>'+
+      '</div>'+
+      '<div class="eg-be" style="margin-top:12px"><span class="k">Precio máximo de compra (equilibrio)</span><span class="v">'+cs+rcNf(beDisp)+'/kg</span></div>'+
+      '<div class="chart-card" style="margin-top:12px"><div class="vp-ttl">Utilidad por cabeza según el precio de compra</div>'+rcChartSVG(_rcData)+'</div>'+
+      '</div>';
   }
   function openHub(){ $$(".hub-logo").forEach(function(i){ if(!i.src) i.src=PROBAL_LOGO; }); $("#hubPage").classList.remove("hidden"); }
   function openRecria(){ $("#hubPage").classList.add("hidden"); renderStrats(); computeRecria(); $("#recriaPage").classList.remove("hidden"); }
@@ -5668,7 +5754,9 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
   if($("#toolRecria")) $("#toolRecria").addEventListener("click", openRecria);
   if($("#recriaBack")) $("#recriaBack").addEventListener("click", function(){ $("#recriaPage").classList.add("hidden"); openHub(); });
   if($("#rcAdd")) $("#rcAdd").addEventListener("click", function(){ if(rcStrategies.length<4){ rcStrategies.push({name:"Etapa "+(rcStrategies.length+1), dias:"30", gan:"0,700", pct:"1,0", ps:"2.500"}); renderStrats(); computeRecria(); } });
-  ["rcCab","rcPeso","rcCompra","rcVenta","rcSani","rcFlete","rcPasto","rcMort"].forEach(function(id){ var el=$("#"+id); if(el) el.addEventListener("input", computeRecria); });
+  ["rcCab","rcPeso","rcCompra","rcVenta","rcFx","rcRend","rcSani","rcFlete","rcPasto","rcMort"].forEach(function(id){ var el=$("#"+id); if(el) el.addEventListener("input", computeRecria); });
+  if($("#rcMoneda")) $$("#rcMoneda button").forEach(function(b){ b.addEventListener("click", function(){ rcCur=b.dataset.c; $$("#rcMoneda button").forEach(function(x){x.classList.toggle("on",x===b);}); var u=(rcCur==="USD")?"US$/kg":"Gs/kg"; if($("#rcUc"))$("#rcUc").textContent=u; if($("#rcUv"))$("#rcUv").textContent=u; $("#rcFxWrap").classList.toggle("hidden",rcCur!=="USD"); computeRecria(); }); });
+  if($("#rcRendYN")) $$("#rcRendYN button").forEach(function(b){ b.addEventListener("click", function(){ rcUseRend=(b.dataset.v==="SI"); $$("#rcRendYN button").forEach(function(x){x.classList.toggle("on",x===b);}); $("#rcRendWrap").classList.toggle("hidden",!rcUseRend); if($("#rcVentaLabel"))$("#rcVentaLabel").innerHTML=rcUseRend?'Precio venta <small style="color:var(--ink-faint)">· por kg carcasa</small>':'Precio venta <small style="color:var(--ink-faint)">· por kg vivo</small>'; computeRecria(); }); });
   $$(".hub-logo").forEach(function(i){ i.src=PROBAL_LOGO; });
   // ----- PDF de la calculadora -----
   function recriaPDF(){
@@ -5699,8 +5787,28 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
       Promise.resolve(pd).then(function(dl){ dl.save({filename:fname,data:pdf}).then(function(){ toast("PDF generado ✓"); }).catch(function(){ toast("No se pudo guardar.", true); }); btn.disabled=false; btn.textContent=old; });
     }catch(e){ toast("No se pudo generar el PDF.", true); btn.disabled=false; btn.textContent=old; }
   }
+  function drawRcChartCanvas(ctx, d, ox, oy, Wc, Hc){
+    var pL=ox+58,pR=ox+Wc-10,pT=oy+16,pB=oy+Hc-26,iw=pR-pL,ih=pB-pT, cs=rcCS(d.cur);
+    function uAt(X){ return (d.ingCabVend - (X*d.k)*d.pi0 - d.totSupl - d.addT)/d.k; }
+    var hoy=d.pcIn, be=d.beDisp, ref=be>0?be:(hoy||1), lo=0.95, hi=1.05;
+    var xmin=Math.max(0,Math.min(hoy,ref)*lo), xmax=Math.max(ref,hoy)*hi; if(xmax<=xmin)xmax=xmin+1000;
+    var xstep=egNiceStep(xmax-xmin,5); xmin=Math.floor(xmin/xstep)*xstep; xmax=Math.ceil(xmax/xstep)*xstep;
+    var y0=uAt(xmin),y1=uAt(xmax), ystep=egNiceStep(Math.abs(y0-y1),6);
+    var ymax=Math.ceil(Math.max(y0,y1,0)/ystep)*ystep, ymin=Math.floor(Math.min(y0,y1,0)/ystep)*ystep; if(ymax<=ymin){ymax=ystep;ymin=-ystep;}
+    function X(mm){return pL+((mm-xmin)/(xmax-xmin))*iw;} function Y(u){return pB-((u-ymin)/(ymax-ymin))*ih;}
+    function dl(x1,y1,x2,y2,col,w,dash){ ctx.save(); ctx.strokeStyle=col; ctx.lineWidth=w||1; if(dash) ctx.setLineDash(dash); ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.stroke(); ctx.restore(); }
+    function tx(t,x,y,sz,col,al,b){ ctx.fillStyle=col; ctx.font=(b?"bold ":"")+sz+"px Arial, sans-serif"; ctx.textAlign=al||"left"; ctx.fillText(t,x,y); }
+    var mv,uv;
+    for(mv=xmin;mv<=xmax+0.5;mv+=xstep){ var x=X(mv); dl(x,pT,x,pB,"#e4e8df",1,[2,3]); tx(rcNf(mv),x,pB+13,10,"#9aa39a","center"); }
+    for(uv=ymin;uv<=ymax+0.5;uv+=ystep){ var yy=Y(uv),z=(Math.abs(uv)<1e-6); dl(pL,yy,pR,yy,z?"#b7c0ae":"#e4e8df",z?1.3:1,z?null:[2,3]); tx(egKShort(uv),pL-6,yy+3.5,10,"#9aa39a","right"); }
+    dl(X(xmin),Y(uAt(xmin)),X(xmax),Y(uAt(xmax)),"#2f6b43",2.8);
+    if(be>=xmin&&be<=xmax){ dl(X(be),pT,X(be),pB,"#d9a520",1.6,[4,3]); ctx.fillStyle="#d9a520"; ctx.beginPath(); ctx.arc(X(be),Y(0),4,0,7); ctx.fill(); tx("punto de equilibrio · "+cs+rcNf(be),X(be),pT-4,10.5,"#b5830f","center",true); }
+    if(hoy>=xmin&&hoy<=xmax){ var ua=uAt(hoy); dl(X(hoy),pB,X(hoy),Y(ua),"#1f6091",1.3,[3,3]); dl(pL,Y(ua),X(hoy),Y(ua),"#1f6091",1.3,[3,3]); ctx.fillStyle="#1f6091"; ctx.beginPath(); ctx.arc(X(hoy),Y(ua),4.5,0,7); ctx.fill(); tx("hoy: "+fmtGs(Math.round(ua)),X(hoy)+7,Y(ua)-7,10,"#1f6091","left",true); }
+    tx("Precio de compra ("+cs.trim()+"/kg)",(pL+pR)/2,pB+26,10,"#7d887f","center");
+  }
   function drawRecria(ctx, d, paint){
     var W=794, M=48, y=44, A="#2f6b43", Ad="#245334", ink="#1a231d", faint="#7d887f", line="#e2e6dd";
+    var cs=rcCS(d.cur); function mm(v){ return rcMv(v,d.cur,d.fx); }
     function txt(t,x,yy,sz,col,b,al){ if(paint){ ctx.fillStyle=col||ink; ctx.font=(b?"bold ":"")+sz+"px Arial, sans-serif"; ctx.textAlign=al||"left"; ctx.fillText(t,x,yy); } }
     function row(k,v,yy){ txt(k,M,yy,13,faint); txt(v,W-M,yy,14,ink,true,"right"); if(paint){ ctx.strokeStyle=line; ctx.beginPath(); ctx.moveTo(M,yy+8); ctx.lineTo(W-M,yy+8); ctx.stroke(); } }
     function erow(k,v,yy){ txt(k,M+16,yy,11.5,faint); txt(""+v,W-M,yy,12,ink,true,"right"); if(paint){ ctx.strokeStyle="#eef0ea"; ctx.beginPath(); ctx.moveTo(M+16,yy+6); ctx.lineTo(W-M,yy+6); ctx.stroke(); } }
@@ -5714,8 +5822,10 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
     // lote
     txt("LOTE", M, y, 11, A, true); y+=18;
     row("Cabezas", fmtGs(d.cab)+"  ·  Peso inicial "+fmtGs(d.pi0)+" kg", y); y+=26;
-    row("Precio compra", "Gs "+fmtGs(d.pc)+"/kg", y); y+=26;
-    row("Precio venta (final)", "Gs "+fmtGs(d.pv)+"/kg", y); y+=30;
+    row("Precio compra", cs+rcNf(d.pcIn)+"/kg", y); y+=26;
+    row("Precio venta ("+(d.useRend?"carcasa":"vivo")+")", cs+rcNf(d.pvIn)+"/kg", y); y+=26;
+    if(d.useRend){ row("Rendimiento · carcasa", dec1(d.rend)+"% · "+dec1(d.carc)+" kg", y); y+=26; }
+    y+=4;
     // estrategias
     txt("ESTRATEGIAS", M, y, 11, A, true); y+=18;
     d.det.forEach(function(e,i){
@@ -5733,18 +5843,24 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
       if(d.pastoT>0){ row("Pasto ("+d.totDias+" días)", "Gs "+fmtGs(d.pastoT), y); y+=26; }
     }
     y+=6; txt("RESULTADO", M, y, 11, A, true); y+=18;
-    row("Costo total por cabeza", "Gs "+fmtGs(d.costCab), y); y+=26;
-    row("Ingreso por venta / cabeza", "Gs "+fmtGs(d.ingCab), y); y+=26;
+    row("Costo total por cabeza", cs+mm(d.costCab), y); y+=26;
+    row("Ingreso por venta / cabeza", cs+mm(d.ingCab), y); y+=26;
     row("Animales vendidos", fmtGs(d.vend)+" de "+fmtGs(d.cab), y); y+=26;
-    row("Ingreso del lote", "Gs "+fmtGs(d.ingLote), y); y+=26;
-    row("Costo del lote", "Gs "+fmtGs(d.costLote), y); y+=34;
+    row("Ingreso del lote", cs+mm(d.ingLote), y); y+=26;
+    row("Costo del lote", cs+mm(d.costLote), y); y+=34;
     // utilidad destacada — del sistema y por cabeza (dos recuadros verdes grandes)
     var utilCab=d.cab>0?d.utilLote/d.cab:0;
     if(paint){ ctx.fillStyle=d.utilLote<0?"#b23b3b":A; roundRect(ctx,M,y-22,W-2*M,44,10); ctx.fill(); }
-    txt("Utilidad del sistema", M+16, y+4, 13, "#fff"); txt("Gs "+fmtGs(d.utilLote), W-M-16, y+6, 20, "#fff", true, "right"); y+=54;
+    txt("Utilidad del sistema", M+16, y+4, 13, "#fff"); txt(cs+mm(d.utilLote), W-M-16, y+6, 20, "#fff", true, "right"); y+=54;
     if(paint){ ctx.fillStyle=utilCab<0?"#b23b3b":"#355e3b"; roundRect(ctx,M,y-22,W-2*M,44,10); ctx.fill(); }
-    txt("Utilidad por cabeza", M+16, y+4, 13, "#fff"); txt("Gs "+fmtGs(Math.round(utilCab)), W-M-16, y+6, 20, "#fff", true, "right"); y+=44;
-    txt("Utilidad mensual: Gs "+fmtGs(d.meses?d.utilLote/d.meses:0)+"   ·   TIR "+dec1(d.roi)+"%   ·   TIR/mes "+dec1(d.meses?d.roi/d.meses:0)+"%", M, y, 12, Ad, true); y+=30;
+    txt("Utilidad por cabeza", M+16, y+4, 13, "#fff"); txt(cs+mm(utilCab), W-M-16, y+6, 20, "#fff", true, "right"); y+=44;
+    txt("Utilidad mensual: "+cs+mm(d.meses?d.utilLote/d.meses:0)+"   ·   TIR "+dec1(d.roi)+"%   ·   TIR/mes "+dec1(d.meses?d.roi/d.meses:0)+"%", M, y, 12, Ad, true); y+=30;
+    // precio máximo de compra (equilibrio)
+    if(paint){ ctx.fillStyle="#d9a520"; roundRect(ctx,M,y-22,W-2*M,44,10); ctx.fill(); }
+    txt("Precio máximo de compra (equilibrio)", M+16, y+4, 12.5, "#3a2d00"); txt(cs+rcNf(d.beDisp)+"/kg", W-M-16, y+6, 19, "#3a2d00", true, "right"); y+=44;
+    txt("UTILIDAD POR CABEZA SEGÚN EL PRECIO DE COMPRA", M, y, 11, A, true); y+=10;
+    if(paint) drawRcChartCanvas(ctx, d, M, y, W-2*M, 250);
+    y+=258;
     txt("Generado por Probal Track · valores estimados", M, y, 10.5, faint); y+=20;
     return y;
   }
@@ -5985,7 +6101,7 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
     for(var mv=R.xmin;mv<=R.xmax+0.5;mv+=R.xstep){var x=X(mv);s+='<line x1="'+x.toFixed(1)+'" y1="'+pT+'" x2="'+x.toFixed(1)+'" y2="'+(pT+ih)+'" stroke="#edf0ea" stroke-dasharray="2 3"/><text x="'+x.toFixed(1)+'" y="'+(pT+ih+13)+'" fill="#9aa39a" font-size="8.5" text-anchor="middle">'+fmtGs(Math.round(mv))+'</text>';}
     for(var uv=R.ymin;uv<=R.ymax+0.5;uv+=R.ystep){var y=Y(uv),z=(Math.abs(uv)<1e-6);s+='<line x1="'+pL+'" y1="'+y.toFixed(1)+'" x2="'+(W-pR)+'" y2="'+y.toFixed(1)+'" stroke="'+(z?'#b7c0ae':'#edf0ea')+'" stroke-width="'+(z?1.2:1)+'"'+(z?'':' stroke-dasharray="2 3"')+'/><text x="'+(pL-5)+'" y="'+(y+3).toFixed(1)+'" fill="#9aa39a" font-size="8.5" text-anchor="end">'+egKShort(uv)+'</text>';}
     s+='<line x1="'+X(R.xmin)+'" y1="'+Y(R.uAt(R.xmin))+'" x2="'+X(R.xmax)+'" y2="'+Y(R.uAt(R.xmax))+'" stroke="#2f6b43" stroke-width="2.6"/>';
-    if(be>=R.xmin&&be<=R.xmax){s+='<line x1="'+X(be)+'" y1="'+pT+'" x2="'+X(be)+'" y2="'+(pT+ih)+'" stroke="#d9a520" stroke-width="1.6" stroke-dasharray="4 3"/><circle cx="'+X(be)+'" cy="'+Y(0)+'" r="4" fill="#d9a520"/><text x="'+X(be)+'" y="'+(pT-4)+'" fill="#b5830f" font-size="9.5" font-weight="700" text-anchor="middle">empate · Gs '+fmtGs(Math.round(be))+'</text>';}
+    if(be>=R.xmin&&be<=R.xmax){s+='<line x1="'+X(be)+'" y1="'+pT+'" x2="'+X(be)+'" y2="'+(pT+ih)+'" stroke="#d9a520" stroke-width="1.6" stroke-dasharray="4 3"/><circle cx="'+X(be)+'" cy="'+Y(0)+'" r="4" fill="#d9a520"/><text x="'+X(be)+'" y="'+(pT-4)+'" fill="#b5830f" font-size="9.5" font-weight="700" text-anchor="middle">punto de equilibrio · Gs '+fmtGs(Math.round(be))+'</text>';}
     if(maiz>=R.xmin&&maiz<=R.xmax){var ua=R.uAt(maiz);s+='<line x1="'+X(maiz)+'" y1="'+(pT+ih)+'" x2="'+X(maiz)+'" y2="'+Y(ua)+'" stroke="#1f6091" stroke-width="1.2" stroke-dasharray="3 3"/><line x1="'+pL+'" y1="'+Y(ua)+'" x2="'+X(maiz)+'" y2="'+Y(ua)+'" stroke="#1f6091" stroke-width="1.2" stroke-dasharray="3 3"/><circle cx="'+X(maiz)+'" cy="'+Y(ua)+'" r="4.5" fill="#1f6091"/><text x="'+(X(maiz)+6)+'" y="'+(Y(ua)-6)+'" fill="#1f6091" font-size="9" font-weight="700">hoy: '+fmtGs(Math.round(ua))+'</text>';}
     s+='<text x="'+(pL+iw/2)+'" y="'+(H-4)+'" fill="#7d887f" font-size="9" text-anchor="middle">Precio del maíz (Gs/kg)</text>';
     return s+'</svg>';
@@ -5999,8 +6115,16 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
       '<div class="hrrow"><span class="k">Dieta (85% maíz + 15% núcleo)</span><span class="v">Gs '+fmtGs(Math.round(d.dietaKg))+'/kg</span></div>'+
       '<div class="hutil"'+(neg?' style="background:var(--danger)"':'')+'><span class="k">Utilidad / animal</span><span class="v">'+cs+egM(d,d.util)+'</span></div>'+
       '<div class="hmline"><span>TIR de la operación</span><b>'+dec1(d.tir)+'%  ·  '+dec1(d.tirMes)+'% /mes</b></div>'+
-      '<div class="eg-be"><span class="k">Maíz máximo para que convenga</span><span class="v">'+(d.be>0?('Gs '+fmtGs(Math.round(d.be))+'/kg'):'—')+'</span></div>'+
-      '<div class="chart-card" style="margin-top:12px"><div class="vp-ttl">Utilidad por animal según el precio del maíz</div>'+egChartSVG(d)+'</div>';
+      '<div class="eg-be"><span class="k">Maíz máximo para que convenga</span><span class="v">'+(d.be>0?('Gs '+fmtGs(Math.round(d.be))+'/kg'):'—')+'</span></div>';
+    var maizKg=d.totDieta*0.85, nucleoKg=d.totDieta*0.15, cab=Math.max(1,Math.round(numPY($("#eggCab").value)));
+    html+='<div class="hrt" style="margin-top:11px">Demanda de insumos · '+fmtGs(d.dias)+' días</div>'+
+      '<div class="hrrow"><span class="k">Maíz / cabeza</span><span class="v">'+dec1(maizKg)+' kg</span></div>'+
+      '<div class="hrrow"><span class="k">Núcleo / cabeza</span><span class="v">'+dec1(nucleoKg)+' kg</span></div>'+
+      '<div class="hrrow"><span class="k">Dieta total / cabeza</span><span class="v">'+dec1(d.totDieta)+' kg</span></div>'+
+      (cab>1?('<div class="hrrow"><span class="k">Maíz · lote <small style="color:var(--ink-faint)">'+fmtGs(cab)+' cab</small></span><span class="v hgs">'+fmtGs(Math.round(maizKg*cab))+' kg</span></div>'+
+        '<div class="hrrow"><span class="k">Núcleo · lote</span><span class="v hgs">'+fmtGs(Math.round(nucleoKg*cab))+' kg</span></div>'+
+        '<div class="hrrow"><span class="k">Dieta · lote</span><span class="v hgs">'+fmtGs(Math.round(d.totDieta*cab))+' kg</span></div>'):'');
+    html+='<div class="chart-card" style="margin-top:12px"><div class="vp-ttl">Utilidad por animal según el precio del maíz</div>'+egChartSVG(d)+'</div>';
     el.innerHTML=html;
   }
   function openEngGrano(){ $("#hubPage").classList.add("hidden"); $$(".hub-logo").forEach(function(i){ if(!i.src) i.src=PROBAL_LOGO; }); computeEngGrano(); $("#engGranoPage").classList.remove("hidden"); }
@@ -6008,7 +6132,7 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
   if($("#eggBack")) $("#eggBack").addEventListener("click", function(){ $("#engGranoPage").classList.add("hidden"); openHub(); });
   if($("#eggMoneda")) $$("#eggMoneda button").forEach(function(b){ b.addEventListener("click", function(){ egCur=b.dataset.c; $$("#eggMoneda button").forEach(function(x){x.classList.toggle("on",x===b);}); var u=(egCur==="USD")?"US$/kg":"Gs/kg"; $("#eggUc").textContent=u; $("#eggUv").textContent=u; $("#eggFxWrap").classList.toggle("hidden",egCur!=="USD"); computeEngGrano(); }); });
   if($("#eggRendYN")) $$("#eggRendYN button").forEach(function(b){ b.addEventListener("click", function(){ egUseRend=(b.dataset.v==="SI"); $$("#eggRendYN button").forEach(function(x){x.classList.toggle("on",x===b);}); $("#eggRendWrap").classList.toggle("hidden",!egUseRend); $("#eggPvLabel").innerHTML=egUseRend?'Precio de venta <small style="color:var(--ink-faint)">· por kg de carcasa</small>':'Precio de venta <small style="color:var(--ink-faint)">· por kg vivo</small>'; computeEngGrano(); }); });
-  ["eggFx","eggPe","eggPc","eggPv","eggGan","eggDias","eggRend","eggMaiz","eggNucleo","eggCons","eggOpd","eggSani"].forEach(function(id){ var e=$("#"+id); if(e) e.addEventListener("input", computeEngGrano); });
+  ["eggFx","eggPe","eggPc","eggPv","eggGan","eggDias","eggRend","eggMaiz","eggNucleo","eggCons","eggCab","eggOpd","eggSani"].forEach(function(id){ var e=$("#"+id); if(e) e.addEventListener("input", computeEngGrano); });
 
   // ----- PDF Engorde grano entero -----
   function drawEgChartCanvas(ctx, d, ox, oy, Wc, Hc){
@@ -6020,7 +6144,7 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
     for(mv=R.xmin;mv<=R.xmax+0.5;mv+=R.xstep){ var x=X(mv); dl(x,pT,x,pB,"#e4e8df",1,[2,3]); tx(fmtGs(Math.round(mv)),x,pB+13,10,"#9aa39a","center"); }
     for(uv=R.ymin;uv<=R.ymax+0.5;uv+=R.ystep){ var y=Y(uv),z=(Math.abs(uv)<1e-6); dl(pL,y,pR,y,z?"#b7c0ae":"#e4e8df",z?1.3:1,z?null:[2,3]); tx(egKShort(uv),pL-6,y+3.5,10,"#9aa39a","right"); }
     dl(X(R.xmin),Y(R.uAt(R.xmin)),X(R.xmax),Y(R.uAt(R.xmax)),"#2f6b43",2.8);
-    if(be>=R.xmin&&be<=R.xmax){ dl(X(be),pT,X(be),pB,"#d9a520",1.6,[4,3]); ctx.fillStyle="#d9a520"; ctx.beginPath(); ctx.arc(X(be),Y(0),4,0,7); ctx.fill(); tx("empate · Gs "+fmtGs(Math.round(be)),X(be),pT-4,10.5,"#b5830f","center",true); }
+    if(be>=R.xmin&&be<=R.xmax){ dl(X(be),pT,X(be),pB,"#d9a520",1.6,[4,3]); ctx.fillStyle="#d9a520"; ctx.beginPath(); ctx.arc(X(be),Y(0),4,0,7); ctx.fill(); tx("punto de equilibrio · Gs "+fmtGs(Math.round(be)),X(be),pT-4,10.5,"#b5830f","center",true); }
     if(maiz>=R.xmin&&maiz<=R.xmax){ var ua=R.uAt(maiz); dl(X(maiz),pB,X(maiz),Y(ua),"#1f6091",1.3,[3,3]); dl(pL,Y(ua),X(maiz),Y(ua),"#1f6091",1.3,[3,3]); ctx.fillStyle="#1f6091"; ctx.beginPath(); ctx.arc(X(maiz),Y(ua),4.5,0,7); ctx.fill(); tx("hoy: "+fmtGs(Math.round(ua)),X(maiz)+7,Y(ua)-7,10,"#1f6091","left",true); }
     tx("Precio del maíz (Gs/kg)",(pL+pR)/2,pB+26,10,"#7d887f","center");
   }
@@ -6045,7 +6169,11 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
     row("Precio del maíz", "Gs "+fmtGs(d.maiz)+" /kg", y); y+=26;
     row("Precio del núcleo", "Gs "+fmtGs(d.nucleo)+" /kg", y); y+=26;
     row("Consumo de dieta", dec1(d.cons)+" kg/día · total "+fmtGs(Math.round(d.totDieta))+" kg", y); y+=26;
-    row("Costo de la dieta", "Gs "+fmtGs(Math.round(d.dietaKg))+" /kg", y); y+=30;
+    row("Costo de la dieta", "Gs "+fmtGs(Math.round(d.dietaKg))+" /kg", y); y+=26;
+    var egcab=Math.max(1,Math.round(numPY(($("#eggCab")||{}).value)));
+    row("Demanda · maíz / núcleo (cab)", dec1(d.totDieta*0.85)+" kg · "+dec1(d.totDieta*0.15)+" kg", y); y+=26;
+    if(egcab>1){ row("Demanda · lote ("+fmtGs(egcab)+" cab)", "maíz "+fmtGs(Math.round(d.totDieta*0.85*egcab))+" kg · núcleo "+fmtGs(Math.round(d.totDieta*0.15*egcab))+" kg", y); y+=26; }
+    y+=4;
     txt("RESULTADO (por cabeza)", M, y, 11, A, true); y+=18;
     row("Ingreso por venta", cs+egM(d,d.ingreso), y); y+=26;
     row("Costo de compra", cs+egM(d,d.compra), y); y+=26;
