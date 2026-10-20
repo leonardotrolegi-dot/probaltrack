@@ -2440,7 +2440,7 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
     "Francisco":"7412","Rossmaryo":"3856","Matías":"2093","Edgar":"6178",
     "PROBAL":"5240","Mauricio":"9317","Patrício":"4085","Alessandro":"1769",
     "Rodolfo":"8534","Billie":"6902","Thatyany":"3427","Martin":"5691","Pré venta":"8160",
-    "Gabriel":"3571"
+    "Gabriel":"3571","José Ignacio":"5083"
   };
   function slug(s){ return s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/[^a-z0-9]+/g,"_").replace(/^_|_$/g,""); }
   // Vendedores desactivados: NO entran en SELLERS, así desaparecen de la pantalla de
@@ -2464,6 +2464,8 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
   if(SELLER_BY["rossmaryo"]) SELLER_BY["rossmaryo"].name="José Palacio";
   // Gabriel: vendedor nuevo (aún sin clientes en la base; hará prospección). Cuenta normal.
   if(!SELLER_BY["gabriel"]){ var _gb={id:"gabriel", name:"Gabriel", role:"Comercial", pin:PINS["Gabriel"]||"3571", color:SELLER_COLORS[SELLERS.length%SELLER_COLORS.length]}; SELLERS.push(_gb); SELLER_BY["gabriel"]=_gb; KEY["gabriel"]=[]; }
+  // José Ignacio: vendedor nuevo (aún sin clientes en la base; hará prospección). Cuenta normal.
+  if(!SELLER_BY["jose_ignacio"]){ var _ji={id:"jose_ignacio", name:"José Ignacio", role:"Comercial", pin:PINS["José Ignacio"]||"5083", color:SELLER_COLORS[SELLERS.length%SELLER_COLORS.length]}; SELLERS.push(_ji); SELLER_BY["jose_ignacio"]=_ji; KEY["jose_ignacio"]=[]; }
   var PROSPECTOS_FALLBACK=[];
   var NAME2ID={}; SELLERS.forEach(function(s){ NAME2ID[slug(s.name)]=s.id; NAME2ID[s.id]=s.id; }); NAME2ID["rossmaryo"]="rossmaryo";
   var GESTOR = {id:"gestion", name:"Gestión", role:"Gestión", color:"#3a3f52"};
@@ -2794,6 +2796,9 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
   // Historial de versiones (changelog). Al agregar una mejora: sumar una entrada
   // arriba con la fecha y bumpear el número. APP_VERSION = la última entrada.
   var CHANGELOG = [
+    { v:"1.145", d:"20/10/2026", n:[
+        "Nuevo vendedor: José Ignacio (aún sin clientes; usará prospección). Cuenta normal con PIN propio."
+      ] },
     { v:"1.144", d:"16/10/2026", n:[
         "Suplementación: selector de moneda (Gs/US$), opción «vender por carcasa» (rendimiento, por defecto No) y gráfico de «utilidad por cabeza según el precio de compra» con el precio máximo de compra (punto de equilibrio). También en el PDF.",
         "Engorde grano entero: «empate» pasa a llamarse «punto de equilibrio», y nueva «Demanda de insumos» (kg de maíz y núcleo del período, por cabeza y por lote).",
