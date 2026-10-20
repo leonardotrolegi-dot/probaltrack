@@ -2796,6 +2796,10 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
   // Historial de versiones (changelog). Al agregar una mejora: sumar una entrada
   // arriba con la fecha y bumpear el número. APP_VERSION = la última entrada.
   var CHANGELOG = [
+    { v:"1.146", d:"20/10/2026", n:[
+        "Exportar Excel (Previsto vs Realizado): ahora salen TODOS los clientes de la cartera, con lo comprado acumulado (kg), aunque no tengan previsión cargada (previsto = 0).",
+        "La exportación a Excel ya está disponible también para los vendedores (cada uno exporta su propia cartera)."
+      ] },
     { v:"1.145", d:"20/10/2026", n:[
         "Nuevo vendedor: José Ignacio (aún sin clientes; usará prospección). Cuenta normal con PIN propio."
       ] },
@@ -3234,7 +3238,7 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
     if($("#planMonFrom")) $("#planMonFrom").disabled=!mgr;
     if($("#planMonTo")) $("#planMonTo").disabled=!mgr;
     if($("#objOpenBtn")) $("#objOpenBtn").style.display=mgr?"":"none"; // Objetivo por línea: solo Gestión
-    if($("#planXlsBtn")) $("#planXlsBtn").style.display=mgr?"":"none"; // Exportar Excel: solo Gestión (por ahora)
+    if($("#planXlsBtn")) $("#planXlsBtn").style.display=""; // Exportar Excel: Gestión y vendedores (cada uno su cartera)
     $("#planPage").classList.remove("hidden"); renderPlan(); }
   function closePlan(){ $("#planPage").classList.add("hidden"); $("#ventasPage").classList.remove("hidden"); renderVentas(); }
   function renderPlan(){
@@ -3515,7 +3519,9 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
         MONS.forEach(function(m){
           var prev=0; if(doc&&doc.plan&&doc.plan[y+"-"+m]) doc.plan[y+"-"+m].forEach(function(r){ prev+=(+r.kg||0); });
           var k=bi[m], real=(k!=null&&c.meses&&c.meses[k]!=null)?(+c.meses[k]||0):0, fut=(m>curMn);
-          if(prev>0||real>0){ rows.push({vend:s.name, cli:c.nome, est:(c.estancia||c.loc||""), kgAno:(c.kg||0), mes:MESNOMS[m-1], prev:prev, real:(fut?"":real), saldo:(fut?"":real-prev), pct:(fut?"":(prev>0?real/prev:""))}); }
+          // Incluir TODOS los clientes de la cartera: en meses no futuros siempre se agrega la fila
+          // (previsto 0 si no cargó previsión); meses futuros solo si hay previsto o realizado.
+          if(!fut || prev>0 || real>0){ rows.push({vend:s.name, cli:c.nome, est:(c.estancia||c.loc||""), kgAno:(c.kg||0), mes:MESNOMS[m-1], prev:prev, real:(fut?"":real), saldo:(fut?"":real-prev), pct:(fut?"":(prev>0?real/prev:""))}); }
         });
       });
       // Resumen: por mes (con objetivo)
@@ -3569,9 +3575,9 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
           return ws;
         }
         // Hoja 1 · Comparativo (Saldo = Realizado − Previsto; positivo = bueno)
-        var h1=["Vendedor","Cliente","Estancia","kg año","Mes","Previsto (kg)","Realizado (kg)","Saldo (R-P)","% Cumpl."];
+        var h1=["Vendedor","Cliente","Estancia","Comprado acum. (kg)","Mes","Previsto (kg)","Realizado (kg)","Saldo (R-P)","% Cumpl."];
         var a1=[h1]; d.rows.forEach(function(r){ a1.push([r.vend,r.cli,r.est,r.kgAno,r.mes,r.prev,r.real,r.saldo,r.pct]); });
-        var ws1=build(a1,[{wch:16},{wch:34},{wch:16},{wch:11},{wch:6},{wch:13},{wch:13},{wch:12},{wch:10}],[3,5,6,7],[8],7,1,0);
+        var ws1=build(a1,[{wch:16},{wch:34},{wch:16},{wch:18},{wch:6},{wch:13},{wch:13},{wch:12},{wch:10}],[3,5,6,7],[8],7,1,0);
         // Hoja 2 · Resumen (Saldo = Objetivo − Realizado; positivo = falta = rojo)
         var h2=["Vendedor","Mes","Objetivo (kg)","Realizado (kg)","Previsto (kg)","Saldo (Obj-Real)","% Logro"];
         var a2=[h2]; d.resumen.forEach(function(r){ a2.push([r.vend,r.mes,r.obj,r.real,r.prev,r.saldo,r.pct]); });
