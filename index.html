@@ -943,6 +943,19 @@
   .mr-pend{margin-left:auto;flex:none;font-size:10.5px;font-weight:700;color:var(--ink-faint);text-transform:uppercase;letter-spacing:.03em}
   .mr-line.mr-over .mr-pend{color:#b23b3b}
   .mr-line.mr-over .mr-date{color:#b23b3b;font-weight:700}
+  .mr-wrap{border-bottom:1px solid var(--line)}
+  .mr-wrap:last-child{border-bottom:0}
+  .mr-chev{flex:none;margin-left:7px;color:var(--ink-faint);font-size:10px;transition:transform .15s}
+  .mr-wrap.open .mr-chev{transform:rotate(180deg)}
+  .mr-acts{display:none;flex-wrap:wrap;gap:7px;align-items:center;padding:2px 2px 11px}
+  .mr-wrap.open .mr-acts{display:flex}
+  .mra-date{border:1px solid var(--line);border-radius:8px;padding:7px 9px;font-size:13px;font-variant-numeric:tabular-nums;background:#fff;color:var(--ink)}
+  .mra-btn{border:0;border-radius:8px;padding:8px 12px;font-size:12.5px;font-weight:700;cursor:pointer}
+  .mra-btn.fin{background:var(--accent-soft);color:var(--accent)}
+  .mra-btn.res{background:#1f6091;color:#fff}
+  .mra-btn.can{background:color-mix(in srgb,#b23b3b 13%,transparent);color:#b23b3b}
+  .mra-btn.gray{background:var(--line);color:var(--ink)}
+  .mra-confirm{font-size:12.5px;color:#b23b3b;font-weight:700;margin-right:2px}
   /* calendario (gestor) */
   .rtoggle{display:flex;background:var(--surface-2);border:1.5px solid var(--line);border-radius:12px;padding:4px;margin:12px 0}
   .rtoggle-b{flex:1;border:0;background:transparent;color:var(--ink-soft);font-family:inherit;font-size:13.5px;font-weight:700;padding:8px 4px;border-radius:9px;cursor:pointer}
@@ -2796,6 +2809,10 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
   // Historial de versiones (changelog). Al agregar una mejora: sumar una entrada
   // arriba con la fecha y bumpear el número. APP_VERSION = la última entrada.
   var CHANGELOG = [
+    { v:"1.147", d:"23/10/2026", n:[
+        "Visitas retrasadas (vendedor): al tocar una visita ahora podés reagendarla a una nueva fecha, finalizarla o cancelarla, directo desde la lista.",
+        "La lista de «retrasadas» muestra solo las visitas con fecha vencida."
+      ] },
     { v:"1.146", d:"20/10/2026", n:[
         "Exportar Excel (Previsto vs Realizado): ahora salen TODOS los clientes de la cartera, con lo comprado acumulado (kg), aunque no tengan previsión cargada (previsto = 0).",
         "La exportación a Excel ya está disponible también para los vendedores (cada uno exporta su propia cartera)."
@@ -4825,11 +4842,47 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
   }
   function renderSellerPend(){
     var el=$("#sPendWrap"); if(!el) return;
-    var pend=pendingItemsFor(current.id);
+    var pend=pendingItemsFor(current.id).filter(function(it){ return it.fecha && it.fecha<todayISO(); });
     if(!pend.length){ el.innerHTML='<div class="sec-label" style="margin-top:18px">Visitas retrasadas</div><div class="rday-empty">Sin visitas retrasadas. 🎉</div>'; return; }
-    el.innerHTML='<div class="sec-label" style="margin-top:18px">Visitas retrasadas ('+pend.length+') — toque para finalizar</div>'+
-      '<div class="mr-days">'+pend.map(function(it){ return pendRowHTML(it,""); }).join("")+'</div>';
-    $$(".mr-line",el).forEach(function(row,i){ row.style.cursor="pointer"; row.addEventListener("click", function(){ realizarVisita(pend[i]); }); });
+    el.innerHTML='<div class="sec-label" style="margin-top:18px">Visitas retrasadas ('+pend.length+') — toque para reagendar, finalizar o cancelar</div>'+
+      '<div class="mr-days">'+pend.map(function(it,i){
+        var a=it.motivo==="Cliente";
+        return '<div class="mr-wrap" data-i="'+i+'">'+
+          '<div class="mr-line mr-over">'+
+            '<span class="mr-date">'+(it.fecha?shortDate(it.fecha):'—')+'</span>'+
+            '<span class="mr-item '+(a?"a":"p")+'">'+esc(it.cliente)+'</span>'+
+            '<span class="mr-pend">retrasada</span><span class="mr-chev">▾</span>'+
+          '</div>'+
+          '<div class="mr-acts">'+
+            '<button class="mra-btn fin" data-act="fin">✓ Finalizar</button>'+
+            '<input type="date" class="mra-date" value="'+todayISO()+'">'+
+            '<button class="mra-btn res" data-act="res">📅 Reagendar</button>'+
+            '<button class="mra-btn can" data-act="can">✕ Cancelar</button>'+
+          '</div>'+
+        '</div>';
+      }).join("")+'</div>';
+    function refresh(){ renderSellerPend(); renderSellerRuta(); }
+    $$(".mr-wrap",el).forEach(function(wrap){
+      var it=pend[+wrap.dataset.i], line=wrap.querySelector(".mr-line");
+      line.style.cursor="pointer";
+      line.addEventListener("click", function(){
+        var was=wrap.classList.contains("open");
+        $$(".mr-wrap",el).forEach(function(w){ w.classList.remove("open"); });
+        if(!was) wrap.classList.add("open");
+      });
+      wrap.querySelector('[data-act="fin"]').addEventListener("click", function(e){ e.stopPropagation(); realizarVisita(it); });
+      wrap.querySelector('[data-act="res"]').addEventListener("click", function(e){ e.stopPropagation();
+        var nd=wrap.querySelector(".mra-date").value; if(!nd){ toast("Elegí una fecha.", true); return; }
+        it.sellerId=it.sellerId||current.id; it.fecha=nd; putRoute(it);
+        toast("Reagendada para "+fmtDate(nd)+" ✓"); refresh();
+      });
+      wrap.querySelector('[data-act="can"]').addEventListener("click", function(e){ e.stopPropagation();
+        var acts=wrap.querySelector(".mr-acts");
+        acts.innerHTML='<span class="mra-confirm">¿Cancelar la visita?</span><button class="mra-btn can" data-y="1">Sí, cancelar</button><button class="mra-btn gray" data-n="1">No</button>';
+        acts.querySelector('[data-y]').addEventListener("click", function(ev){ ev.stopPropagation(); delRoute(it.sellerId||current.id, it.id); toast("Visita cancelada."); refresh(); });
+        acts.querySelector('[data-n]').addEventListener("click", function(ev){ ev.stopPropagation(); refresh(); });
+      });
+    });
   }
   function renderMgrPend(){
     var el=$("#mPendWrap"); if(!el) return;
