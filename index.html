@@ -2475,8 +2475,13 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
   // Cambio SOLO de etiqueta de login/pantalla: Rossmaryo -> José Palacio (id "rossmaryo",
   // ventas, PIN y demás datos intactos).
   if(SELLER_BY["rossmaryo"]) SELLER_BY["rossmaryo"].name="José Palacio";
-  // Gabriel: vendedor nuevo (aún sin clientes en la base; hará prospección). Cuenta normal.
-  if(!SELLER_BY["gabriel"]){ var _gb={id:"gabriel", name:"Gabriel", role:"Comercial", pin:PINS["Gabriel"]||"3571", color:SELLER_COLORS[SELLERS.length%SELLER_COLORS.length]}; SELLERS.push(_gb); SELLER_BY["gabriel"]=_gb; KEY["gabriel"]=[]; }
+  // Transición Gabriel → Matías (oct-2026): Gabriel asume el lugar de Matías.
+  // La cuenta de Matías (id "matias" = conserva su cartera) pasa a llamarse "Gabriel",
+  // con el PIN que Gabriel ya usaba (3571). Lo que Gabriel registró en su cuenta vieja
+  // ("gabriel": visitas/rutas) se consolida bajo "matias" en memoria (ver absorbGabriel),
+  // y sus clientes/prospectos (vendedor "Gabriel") se emparejan vía MATCH_MULTI.
+  // NO se crea una cuenta "gabriel" aparte y NO se modifican datos en Firebase.
+  if(SELLER_BY["matias"]){ SELLER_BY["matias"].name="Gabriel"; SELLER_BY["matias"].pin="3571"; }
   // José Ignacio: vendedor nuevo (aún sin clientes en la base; hará prospección). Cuenta normal.
   if(!SELLER_BY["jose_ignacio"]){ var _ji={id:"jose_ignacio", name:"José Ignacio", role:"Comercial", pin:PINS["José Ignacio"]||"5083", color:SELLER_COLORS[SELLERS.length%SELLER_COLORS.length]}; SELLERS.push(_ji); SELLER_BY["jose_ignacio"]=_ji; KEY["jose_ignacio"]=[]; }
   var PROSPECTOS_FALLBACK=[];
@@ -2667,11 +2672,23 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
   function visitsFor(id){ return (DB[id] || []).slice(); }
 
   // ---------- CAMADA DE DADOS (db compartilhado ou localStorage) ----------
+  // Transición Gabriel→Matías: consolida en memoria la actividad (visitas/rutas) de la
+  // cuenta vieja "gabriel" bajo "matias" (que ahora se llama Gabriel). No toca Firebase.
+  function absorbGabriel(g){
+    if(g && g["gabriel"] && g["gabriel"].length){
+      if(!g["matias"]) g["matias"]=[];
+      g["gabriel"].forEach(function(o){ o.sellerId="matias"; g["matias"].push(o); });
+    }
+    if(g) delete g["gabriel"];
+    return g;
+  }
+  // prospectos/clientes guardan vendedor = ID del vendedor → remapear la cuenta vieja
+  function gabToMatias(x){ return x==="gabriel" ? "matias" : (x||""); }
   function groupBySeller(docs){
     var g={};
     docs.forEach(function(d){ var v=d.data()||{}, o={}; for(var k in v) o[k]=v[k]; o.id=d.id;
       var sid=o.sellerId||"?"; if(!g[sid]) g[sid]=[]; g[sid].push(o); });
-    return g;
+    return absorbGabriel(g);
   }
   function reRenderCurrent(){
     try{
@@ -2685,15 +2702,15 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
       }
     }catch(e){}
   }
-  function localBoot(){ DB=seedIfEmpty(); ROUTES=loadRoutes(); try{ PLAN=JSON.parse(localStorage.getItem("pt_plan")||"{}")||{}; }catch(e){ PLAN={}; } try{ OBJ=JSON.parse(localStorage.getItem("pt_obj")||"{}")||{}; }catch(e){ OBJ={}; } reRenderCurrent(); if(!current && !isManager && autoMgr()) enterManager(); }
+  function localBoot(){ DB=absorbGabriel(seedIfEmpty()); ROUTES=absorbGabriel(loadRoutes()); try{ PLAN=JSON.parse(localStorage.getItem("pt_plan")||"{}")||{}; }catch(e){ PLAN={}; } try{ OBJ=JSON.parse(localStorage.getItem("pt_obj")||"{}")||{}; }catch(e){ OBJ={}; } reRenderCurrent(); if(!current && !isManager && autoMgr()) enterManager(); }
   function subscribeDB(){
     dbh.collection("visits").onSnapshot(function(snap){ DB=groupBySeller(snap.docs); reRenderCurrent(); }, noop);
     dbh.collection("routes").onSnapshot(function(snap){ ROUTES=groupBySeller(snap.docs); reRenderCurrent(); }, noop);
     dbh.collection("catalog").onSnapshot(function(snap){
       var cli=[], pro=[], kg={};
       snap.docs.forEach(function(d){ var v=d.data()||{};
-        if(v.tipo==="Prospecto"){ pro.push({nome:v.nome, loc:(v.estancia||"")+(v.ciudad?(v.estancia?", ":"")+v.ciudad:""), vendedor:v.vendedor||"", createdBy:v.createdBy||"", createdTs:v.createdTs||0}); }
-        else { cli.push({nome:v.nome, loc:"", kg:v.kg||0, vendedor:v.vendedor||"", meses:v.meses||null}); if(v.kg) kg[v.nome]=v.kg; }
+        if(v.tipo==="Prospecto"){ pro.push({nome:v.nome, loc:(v.estancia||"")+(v.ciudad?(v.estancia?", ":"")+v.ciudad:""), vendedor:gabToMatias(v.vendedor), createdBy:gabToMatias(v.createdBy), createdTs:v.createdTs||0}); }
+        else { cli.push({nome:v.nome, loc:"", kg:v.kg||0, vendedor:gabToMatias(v.vendedor), meses:v.meses||null}); if(v.kg) kg[v.nome]=v.kg; }
       });
       cli.sort(function(a,b){ return (b.kg||0)-(a.kg||0); });
       pro.sort(function(a,b){ return a.nome<b.nome?-1:1; });
@@ -2809,6 +2826,9 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
   // Historial de versiones (changelog). Al agregar una mejora: sumar una entrada
   // arriba con la fecha y bumpear el número. APP_VERSION = la última entrada.
   var CHANGELOG = [
+    { v:"1.149", d:"26/10/2026", n:[
+        "Gabriel asume el lugar de Matías: el acceso de Matías pasa a llamarse «Gabriel» (conserva su cartera) y suma lo que Gabriel ya había registrado. El acceso usa el PIN de Gabriel."
+      ] },
     { v:"1.148", d:"26/10/2026", n:[
         "Corregido un error en las calculadoras (Suplementación y Engorde grano entero): con ciertos valores el gráfico generaba miles de líneas y la app se trababa / los campos quedaban congelados. Ahora el gráfico siempre es liviano y el cálculo no se cuelga aunque se escriban valores grandes."
       ] },
@@ -3141,14 +3161,16 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
   // Alias de nombre para casar ventas/clientes: en la base las ventas de José Palacio
   // figuran con el vendedor "Rossmaryo" (se le cambió solo el nombre de login).
   var MATCH_ALIAS = { "jose palacio":"rossmaryo" };
+  // Un login que debe emparejar datos de VARIOS nombres (transición Gabriel→Matías:
+  // el login "Gabriel" toma la cartera de Matías y además lo que creó como "Gabriel").
+  var MATCH_MULTI = { "gabriel":["gabriel","matias"] };
   function sellerMatchName(appName, vendName){
     if(!appName || !vendName) return false;
     var a=norm(appName), b=norm(vendName);
     if(MATCH_ALIAS[a]) a=MATCH_ALIAS[a]; // usar el nombre con el que figuran los datos
-    if(a===b) return true;
-    var at=a.split(/\s+/).filter(Boolean), bt=b.split(/\s+/).filter(Boolean);
-    if(!at.length) return false;
-    return at.every(function(t){ return bt.indexOf(t)!==-1; });
+    function one(x){ if(x===b) return true; var xt=x.split(/\s+/).filter(Boolean), bt=b.split(/\s+/).filter(Boolean); if(!xt.length) return false; return xt.every(function(t){ return bt.indexOf(t)!==-1; }); }
+    if(MATCH_MULTI[a]) return MATCH_MULTI[a].some(one);
+    return one(a);
   }
   function sellerMatch(vendName){ return current ? sellerMatchName(current.name, vendName) : false; }
   function misClientes(){
