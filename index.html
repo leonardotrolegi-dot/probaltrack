@@ -2809,6 +2809,9 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
   // Historial de versiones (changelog). Al agregar una mejora: sumar una entrada
   // arriba con la fecha y bumpear el número. APP_VERSION = la última entrada.
   var CHANGELOG = [
+    { v:"1.148", d:"26/10/2026", n:[
+        "Corregido un error en las calculadoras (Suplementación y Engorde grano entero): con ciertos valores el gráfico generaba miles de líneas y la app se trababa / los campos quedaban congelados. Ahora el gráfico siempre es liviano y el cálculo no se cuelga aunque se escriban valores grandes."
+      ] },
     { v:"1.147", d:"23/10/2026", n:[
         "Visitas retrasadas (vendedor): al tocar una visita ahora podés reagendarla a una nueva fecha, finalizarla o cancelarla, directo desde la lista.",
         "La lista de «retrasadas» muestra solo las visitas con fecha vencida."
@@ -5720,12 +5723,12 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
     var hoy=d.pcIn, be=d.beDisp, ref=be>0?be:(hoy||1), lo=0.95, hi=1.05;
     var xmin=Math.max(0,Math.min(hoy,ref)*lo), xmax=Math.max(ref,hoy)*hi; if(xmax<=xmin)xmax=xmin+1000;
     var xstep=egNiceStep(xmax-xmin,5); xmin=Math.floor(xmin/xstep)*xstep; xmax=Math.ceil(xmax/xstep)*xstep;
-    var y0=uAt(xmin),y1=uAt(xmax), ystep=egNiceStep(Math.abs(y0-y1),6);
-    var ymax=Math.ceil(Math.max(y0,y1,0)/ystep)*ystep, ymin=Math.floor(Math.min(y0,y1,0)/ystep)*ystep; if(ymax<=ymin){ymax=ystep;ymin=-ystep;}
+    var y0=uAt(xmin),y1=uAt(xmax), ylo=Math.min(y0,y1,0), yhi=Math.max(y0,y1,0), ystep=egNiceStep(yhi-ylo,6);
+    var ymax=Math.ceil(yhi/ystep)*ystep, ymin=Math.floor(ylo/ystep)*ystep; if(ymax<=ymin){ymax=ystep;ymin=-ystep;}
     function X(m){return pL+((m-xmin)/(xmax-xmin))*iw;} function Y(u){return pT+ih-((u-ymin)/(ymax-ymin))*ih;}
     var s='<svg viewBox="0 0 '+W+' '+H+'" width="100%">';
-    for(var mv=xmin;mv<=xmax+0.5;mv+=xstep){var x=X(mv);s+='<line x1="'+x.toFixed(1)+'" y1="'+pT+'" x2="'+x.toFixed(1)+'" y2="'+(pT+ih)+'" stroke="#edf0ea" stroke-dasharray="2 3"/><text x="'+x.toFixed(1)+'" y="'+(pT+ih+13)+'" fill="#9aa39a" font-size="8.5" text-anchor="middle">'+rcNf(mv)+'</text>';}
-    for(var uv=ymin;uv<=ymax+0.5;uv+=ystep){var y=Y(uv),z=(Math.abs(uv)<1e-6);s+='<line x1="'+pL+'" y1="'+y.toFixed(1)+'" x2="'+(W-pR)+'" y2="'+y.toFixed(1)+'" stroke="'+(z?'#b7c0ae':'#edf0ea')+'" stroke-width="'+(z?1.2:1)+'"'+(z?'':' stroke-dasharray="2 3"')+'/><text x="'+(pL-5)+'" y="'+(y+3).toFixed(1)+'" fill="#9aa39a" font-size="8.5" text-anchor="end">'+egKShort(uv)+'</text>';}
+    for(var mv=xmin,_gi=0;mv<=xmax+0.5&&_gi<120;mv+=xstep,_gi++){var x=X(mv);s+='<line x1="'+x.toFixed(1)+'" y1="'+pT+'" x2="'+x.toFixed(1)+'" y2="'+(pT+ih)+'" stroke="#edf0ea" stroke-dasharray="2 3"/><text x="'+x.toFixed(1)+'" y="'+(pT+ih+13)+'" fill="#9aa39a" font-size="8.5" text-anchor="middle">'+rcNf(mv)+'</text>';}
+    for(var uv=ymin,_gj=0;uv<=ymax+0.5&&_gj<120;uv+=ystep,_gj++){var y=Y(uv),z=(Math.abs(uv)<1e-6);s+='<line x1="'+pL+'" y1="'+y.toFixed(1)+'" x2="'+(W-pR)+'" y2="'+y.toFixed(1)+'" stroke="'+(z?'#b7c0ae':'#edf0ea')+'" stroke-width="'+(z?1.2:1)+'"'+(z?'':' stroke-dasharray="2 3"')+'/><text x="'+(pL-5)+'" y="'+(y+3).toFixed(1)+'" fill="#9aa39a" font-size="8.5" text-anchor="end">'+egKShort(uv)+'</text>';}
     s+='<line x1="'+X(xmin)+'" y1="'+Y(uAt(xmin))+'" x2="'+X(xmax)+'" y2="'+Y(uAt(xmax))+'" stroke="#2f6b43" stroke-width="2.6"/>';
     if(be>=xmin&&be<=xmax){s+='<line x1="'+X(be)+'" y1="'+pT+'" x2="'+X(be)+'" y2="'+(pT+ih)+'" stroke="#d9a520" stroke-width="1.6" stroke-dasharray="4 3"/><circle cx="'+X(be)+'" cy="'+Y(0)+'" r="4" fill="#d9a520"/><text x="'+X(be)+'" y="'+(pT-4)+'" fill="#b5830f" font-size="9.5" font-weight="700" text-anchor="middle">punto de equilibrio · '+cs+rcNf(be)+'</text>';}
     if(hoy>=xmin&&hoy<=xmax){var ua=uAt(hoy);s+='<line x1="'+X(hoy)+'" y1="'+(pT+ih)+'" x2="'+X(hoy)+'" y2="'+Y(ua)+'" stroke="#1f6091" stroke-width="1.2" stroke-dasharray="3 3"/><line x1="'+pL+'" y1="'+Y(ua)+'" x2="'+X(hoy)+'" y2="'+Y(ua)+'" stroke="#1f6091" stroke-width="1.2" stroke-dasharray="3 3"/><circle cx="'+X(hoy)+'" cy="'+Y(ua)+'" r="4.5" fill="#1f6091"/><text x="'+(X(hoy)+6)+'" y="'+(Y(ua)-6)+'" fill="#1f6091" font-size="9" font-weight="700">hoy: '+fmtGs(Math.round(ua))+'</text>';}
@@ -5772,8 +5775,9 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
     var peso=pi0, totDias=0, totSupl=0, totCons=0, cards=$$("#rcStrats .estr"), det=[];
     rcStrategies.forEach(function(st,i){
       var dias=Math.max(0,Math.round(numPY(st.dias))), gan=numPY(st.gan), pct=numPY(st.pct), ps=numPY(st.ps);
-      var pini=peso, cons=0;
-      for(var d=1;d<=dias;d++){ cons += (peso + gan*(d-0.5)) * pct/100; }
+      var pini=peso;
+      // forma cerrada de Σ (peso + gan*(d-0.5))*pct/100  (evita loop con «días» enormes)
+      var cons=(pct/100)*(dias*peso + gan*dias*dias/2);
       var pf=peso+gan*dias, csu=cons*ps;
       var c=cards[i]; if(c){ c.querySelector(".es-pini").value=fmtGs(pini); c.querySelector(".es-pf").textContent=fmtGs(pf)+" kg"; c.querySelector(".es-cs").textContent="Gs "+fmtGs(csu); }
       det.push({name:st.name||("Etapa "+(i+1)), dias:dias, pini:pini, pf:pf, gan:gan, pct:pct, ps:ps, cons:cons, cs:csu});
@@ -5857,8 +5861,8 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
     var hoy=d.pcIn, be=d.beDisp, ref=be>0?be:(hoy||1), lo=0.95, hi=1.05;
     var xmin=Math.max(0,Math.min(hoy,ref)*lo), xmax=Math.max(ref,hoy)*hi; if(xmax<=xmin)xmax=xmin+1000;
     var xstep=egNiceStep(xmax-xmin,5); xmin=Math.floor(xmin/xstep)*xstep; xmax=Math.ceil(xmax/xstep)*xstep;
-    var y0=uAt(xmin),y1=uAt(xmax), ystep=egNiceStep(Math.abs(y0-y1),6);
-    var ymax=Math.ceil(Math.max(y0,y1,0)/ystep)*ystep, ymin=Math.floor(Math.min(y0,y1,0)/ystep)*ystep; if(ymax<=ymin){ymax=ystep;ymin=-ystep;}
+    var y0=uAt(xmin),y1=uAt(xmax), ylo=Math.min(y0,y1,0), yhi=Math.max(y0,y1,0), ystep=egNiceStep(yhi-ylo,6);
+    var ymax=Math.ceil(yhi/ystep)*ystep, ymin=Math.floor(ylo/ystep)*ystep; if(ymax<=ymin){ymax=ystep;ymin=-ystep;}
     function X(mm){return pL+((mm-xmin)/(xmax-xmin))*iw;} function Y(u){return pB-((u-ymin)/(ymax-ymin))*ih;}
     function dl(x1,y1,x2,y2,col,w,dash){ ctx.save(); ctx.strokeStyle=col; ctx.lineWidth=w||1; if(dash) ctx.setLineDash(dash); ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.stroke(); ctx.restore(); }
     function tx(t,x,y,sz,col,al,b){ ctx.fillStyle=col; ctx.font=(b?"bold ":"")+sz+"px Arial, sans-serif"; ctx.textAlign=al||"left"; ctx.fillText(t,x,y); }
@@ -6154,16 +6158,16 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
     var xmin=Math.max(0,Math.min(maiz,ref)*0.75), xmax=Math.max(ref,maiz)*1.15; if(xmax<=xmin)xmax=xmin+1000;
     var xstep=egNiceStep(xmax-xmin,5); xmin=Math.floor(xmin/xstep)*xstep; xmax=Math.ceil(xmax/xstep)*xstep;
     function uAt(m){ return d.ingreso-d.compra-d.costoOp-d.costoSani-d.totDieta*(0.85*m+0.15*d.nucleo); }
-    var y0=uAt(xmin),y1=uAt(xmax), ystep=egNiceStep(Math.abs(y0-y1),6);
-    var ymax=Math.ceil(Math.max(y0,y1,0)/ystep)*ystep, ymin=Math.floor(Math.min(y0,y1,0)/ystep)*ystep; if(ymax<=ymin){ymax=ystep;ymin=-ystep;}
+    var y0=uAt(xmin),y1=uAt(xmax), ylo=Math.min(y0,y1,0), yhi=Math.max(y0,y1,0), ystep=egNiceStep(yhi-ylo,6);
+    var ymax=Math.ceil(yhi/ystep)*ystep, ymin=Math.floor(ylo/ystep)*ystep; if(ymax<=ymin){ymax=ystep;ymin=-ystep;}
     return {uAt:uAt,xmin:xmin,xmax:xmax,xstep:xstep,ymin:ymin,ymax:ymax,ystep:ystep};
   }
   function egChartSVG(d){
     var W=360,H=232,pL=54,pR=14,pT=18,pB=40,iw=W-pL-pR,ih=H-pT-pB, maiz=d.maiz,be=d.be, R=egChartRange(d);
     function X(m){return pL+((m-R.xmin)/(R.xmax-R.xmin))*iw;} function Y(u){return pT+ih-((u-R.ymin)/(R.ymax-R.ymin))*ih;}
     var s='<svg viewBox="0 0 '+W+' '+H+'" width="100%">';
-    for(var mv=R.xmin;mv<=R.xmax+0.5;mv+=R.xstep){var x=X(mv);s+='<line x1="'+x.toFixed(1)+'" y1="'+pT+'" x2="'+x.toFixed(1)+'" y2="'+(pT+ih)+'" stroke="#edf0ea" stroke-dasharray="2 3"/><text x="'+x.toFixed(1)+'" y="'+(pT+ih+13)+'" fill="#9aa39a" font-size="8.5" text-anchor="middle">'+fmtGs(Math.round(mv))+'</text>';}
-    for(var uv=R.ymin;uv<=R.ymax+0.5;uv+=R.ystep){var y=Y(uv),z=(Math.abs(uv)<1e-6);s+='<line x1="'+pL+'" y1="'+y.toFixed(1)+'" x2="'+(W-pR)+'" y2="'+y.toFixed(1)+'" stroke="'+(z?'#b7c0ae':'#edf0ea')+'" stroke-width="'+(z?1.2:1)+'"'+(z?'':' stroke-dasharray="2 3"')+'/><text x="'+(pL-5)+'" y="'+(y+3).toFixed(1)+'" fill="#9aa39a" font-size="8.5" text-anchor="end">'+egKShort(uv)+'</text>';}
+    for(var mv=R.xmin,_gi=0;mv<=R.xmax+0.5&&_gi<120;mv+=R.xstep,_gi++){var x=X(mv);s+='<line x1="'+x.toFixed(1)+'" y1="'+pT+'" x2="'+x.toFixed(1)+'" y2="'+(pT+ih)+'" stroke="#edf0ea" stroke-dasharray="2 3"/><text x="'+x.toFixed(1)+'" y="'+(pT+ih+13)+'" fill="#9aa39a" font-size="8.5" text-anchor="middle">'+fmtGs(Math.round(mv))+'</text>';}
+    for(var uv=R.ymin,_gj=0;uv<=R.ymax+0.5&&_gj<120;uv+=R.ystep,_gj++){var y=Y(uv),z=(Math.abs(uv)<1e-6);s+='<line x1="'+pL+'" y1="'+y.toFixed(1)+'" x2="'+(W-pR)+'" y2="'+y.toFixed(1)+'" stroke="'+(z?'#b7c0ae':'#edf0ea')+'" stroke-width="'+(z?1.2:1)+'"'+(z?'':' stroke-dasharray="2 3"')+'/><text x="'+(pL-5)+'" y="'+(y+3).toFixed(1)+'" fill="#9aa39a" font-size="8.5" text-anchor="end">'+egKShort(uv)+'</text>';}
     s+='<line x1="'+X(R.xmin)+'" y1="'+Y(R.uAt(R.xmin))+'" x2="'+X(R.xmax)+'" y2="'+Y(R.uAt(R.xmax))+'" stroke="#2f6b43" stroke-width="2.6"/>';
     if(be>=R.xmin&&be<=R.xmax){s+='<line x1="'+X(be)+'" y1="'+pT+'" x2="'+X(be)+'" y2="'+(pT+ih)+'" stroke="#d9a520" stroke-width="1.6" stroke-dasharray="4 3"/><circle cx="'+X(be)+'" cy="'+Y(0)+'" r="4" fill="#d9a520"/><text x="'+X(be)+'" y="'+(pT-4)+'" fill="#b5830f" font-size="9.5" font-weight="700" text-anchor="middle">punto de equilibrio · Gs '+fmtGs(Math.round(be))+'</text>';}
     if(maiz>=R.xmin&&maiz<=R.xmax){var ua=R.uAt(maiz);s+='<line x1="'+X(maiz)+'" y1="'+(pT+ih)+'" x2="'+X(maiz)+'" y2="'+Y(ua)+'" stroke="#1f6091" stroke-width="1.2" stroke-dasharray="3 3"/><line x1="'+pL+'" y1="'+Y(ua)+'" x2="'+X(maiz)+'" y2="'+Y(ua)+'" stroke="#1f6091" stroke-width="1.2" stroke-dasharray="3 3"/><circle cx="'+X(maiz)+'" cy="'+Y(ua)+'" r="4.5" fill="#1f6091"/><text x="'+(X(maiz)+6)+'" y="'+(Y(ua)-6)+'" fill="#1f6091" font-size="9" font-weight="700">hoy: '+fmtGs(Math.round(ua))+'</text>';}
