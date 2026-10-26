@@ -2484,6 +2484,11 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
   if(SELLER_BY["matias"]){ SELLER_BY["matias"].name="Gabriel"; SELLER_BY["matias"].pin="3571"; }
   // José Ignacio: vendedor nuevo (aún sin clientes en la base; hará prospección). Cuenta normal.
   if(!SELLER_BY["jose_ignacio"]){ var _ji={id:"jose_ignacio", name:"José Ignacio", role:"Comercial", pin:PINS["José Ignacio"]||"5083", color:SELLER_COLORS[SELLERS.length%SELLER_COLORS.length]}; SELLERS.push(_ji); SELLER_BY["jose_ignacio"]=_ji; KEY["jose_ignacio"]=[]; }
+  // Matías NUEVO (oct-2026): arranca de cero una región. La cuenta vieja "matias" ahora es Gabriel,
+  // así que esta usa un id propio ("matias2") y su PIN de siempre (2093). Arranca VACÍA:
+  // sus prospectos/visitas/rutas son por id (matias2) y, para clientes, se empareja por "matias2"
+  // (MATCH_ALIAS["matias"]="matias2") para NO tomar la cartera vieja (que quedó en Gabriel).
+  if(!SELLER_BY["matias2"]){ var _m2={id:"matias2", name:"Matías", role:"Comercial", pin:(PINS["Matías"]||"2093"), color:SELLER_COLORS[SELLERS.length%SELLER_COLORS.length]}; SELLERS.push(_m2); SELLER_BY["matias2"]=_m2; KEY["matias2"]=[]; }
   var PROSPECTOS_FALLBACK=[];
   var NAME2ID={}; SELLERS.forEach(function(s){ NAME2ID[slug(s.name)]=s.id; NAME2ID[s.id]=s.id; }); NAME2ID["rossmaryo"]="rossmaryo";
   var GESTOR = {id:"gestion", name:"Gestión", role:"Gestión", color:"#3a3f52"};
@@ -2826,6 +2831,9 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
   // Historial de versiones (changelog). Al agregar una mejora: sumar una entrada
   // arriba con la fecha y bumpear el número. APP_VERSION = la última entrada.
   var CHANGELOG = [
+    { v:"1.150", d:"26/10/2026", n:[
+        "Nuevo acceso para Matías (empieza una región desde cero): cuenta vacía, con su PIN de siempre. Arranca sin clientes ni historial, para prospección. La cartera anterior quedó en Gabriel."
+      ] },
     { v:"1.149", d:"26/10/2026", n:[
         "Gabriel asume el lugar de Matías: el acceso de Matías pasa a llamarse «Gabriel» (conserva su cartera) y suma lo que Gabriel ya había registrado. El acceso usa el PIN de Gabriel."
       ] },
@@ -3160,7 +3168,9 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
   // completo (col. A). Casan si cada palabra del nombre corto está en el completo.
   // Alias de nombre para casar ventas/clientes: en la base las ventas de José Palacio
   // figuran con el vendedor "Rossmaryo" (se le cambió solo el nombre de login).
-  var MATCH_ALIAS = { "jose palacio":"rossmaryo" };
+  // "matias" (login del Matías nuevo) empareja clientes por su id propio "matias2", para que
+  // arranque vacío y NO tome la cartera vieja (vendedor "Matías"), que quedó en Gabriel.
+  var MATCH_ALIAS = { "jose palacio":"rossmaryo", "matias":"matias2" };
   // Un login que debe emparejar datos de VARIOS nombres (transición Gabriel→Matías:
   // el login "Gabriel" toma la cartera de Matías y además lo que creó como "Gabriel").
   var MATCH_MULTI = { "gabriel":["gabriel","matias"] };
