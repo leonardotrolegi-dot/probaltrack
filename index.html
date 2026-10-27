@@ -2103,6 +2103,16 @@
           <div class="admin-note" id="impStatus">Clientes: hoja “base kg” (col. A = nombre, col. O = kg). Prospectos: nombre, estancia, vendedor.</div>
         </div>
 
+        <div class="admin-card">
+          <div class="admin-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="16" y2="17"/></svg> Reporte semanal del equipo</div>
+          <div class="admin-row" style="align-items:center;gap:9px;flex-wrap:wrap">
+            <label style="font-size:12.5px;color:var(--ink-faint);font-weight:600">Día:</label>
+            <input type="date" id="wrDate" class="ev-inp" style="max-width:168px">
+            <button class="btn-sec" id="wrBtn" style="background:#1f7244;color:#fff;border-color:#1f7244">⬇ Generar PDF</button>
+          </div>
+          <div class="admin-note">Toma la semana (lun–dom) del día elegido, con todos los vendedores (una hoja cada uno). Si está en curso, agrega la proyección de lo agendado que falta.</div>
+        </div>
+
         <div class="kpis" id="mKpi"></div>
         <div id="mTeam"></div>
       </section>
@@ -2831,6 +2841,10 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
   // Historial de versiones (changelog). Al agregar una mejora: sumar una entrada
   // arriba con la fecha y bumpear el número. APP_VERSION = la última entrada.
   var CHANGELOG = [
+    { v:"1.151", d:"27/10/2026", n:[
+        "Gestión: nuevo «Reporte semanal del equipo» en PDF. Elegís un día → toma su semana (lun–dom), una hoja por vendedor con visitas, clientes visitados, prospectos creados/visitados, agenda y estado de prospecciones.",
+        "Si la semana está en curso, agrega la proyección de lo agendado que falta. Incluye kg del mes (referencia) por vendedor."
+      ] },
     { v:"1.150", d:"26/10/2026", n:[
         "Nuevo acceso para Matías (empieza una región desde cero): cuenta vacía, con su PIN de siempre. Arranca sin clientes ni historial, para prospección. La cartera anterior quedó en Gabriel."
       ] },
@@ -3644,6 +3658,187 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
     });
   }
   if($("#planXlsBtn")) $("#planXlsBtn").addEventListener("click", exportPlanExcel);
+
+  // ===== Reporte semanal del equipo (PDF, una hoja por vendedor) =====
+  function weekBoundsISO(selISO){
+    var d=new Date(selISO+"T00:00:00"); if(isNaN(d)) d=new Date();
+    var dow=(d.getDay()+6)%7; // 0=lunes
+    var mon=new Date(d); mon.setDate(d.getDate()-dow);
+    var sun=new Date(mon); sun.setDate(mon.getDate()+6);
+    return {start:localISO(mon), end:localISO(sun), mon:mon, sun:sun};
+  }
+  function wrRange(mon,sun){
+    var mN=MESNOMS[mon.getMonth()].slice(0,3).toLowerCase(), sN=MESNOMS[sun.getMonth()].slice(0,3).toLowerCase();
+    if(mon.getMonth()===sun.getMonth()) return mon.getDate()+"–"+sun.getDate()+" "+sN+" "+sun.getFullYear();
+    return mon.getDate()+" "+mN+" – "+sun.getDate()+" "+sN+" "+sun.getFullYear();
+  }
+  function visResultWR(v){
+    if(v.motivo==="Prospecto"){
+      var sit=(typeof normSit==="function")?normSit(v.situacao||"Activo"):(v.situacao||"Activo");
+      if(sit==="Venta cerrada") return {t:"Venta cerrada", cls:"win"};
+      if(sit==="Perdido") return {t:"Perdido"+(v.perdida&&v.perdida.motivo?" · "+v.perdida.motivo:""), cls:"perd"};
+      if(sit==="Congelado") return {t:"Congelado", cls:"cong"};
+      return {t:"Seguimiento", cls:"no"};
+    }
+    if((v.situacao||"")==="Perdido") return {t:"Perdido"+(v.perdida&&v.perdida.motivo?" · "+v.perdida.motivo:""), cls:"perd"};
+    return {t:"Visitado", cls:"ok"};
+  }
+  function weeklyReportData(selISO){
+    var wb=weekBoundsISO(selISO), start=wb.start, end=wb.end, today=todayISO();
+    var inWeek=function(d){ return d && d>=start && d<=end; };
+    var curMn=parseInt(selISO.split("-")[1],10), bi=baseIdxByMnMap(), kgIdx=bi[curMn];
+    var closed=(end<today), inProgress=!closed;
+    var asOf=(today<start)?start:(today>end?end:today);
+    function byFecha(a,b){ return (a.fecha||"")<(b.fecha||"")?-1:1; }
+    function byD(a,b){ return (a.d||"")<(b.d||"")?-1:1; }
+    var sellers=SELLERS.map(function(s){
+      var vs=visitsFor(s.id).filter(function(v){ return !v.stateChange && inWeek(v.data); });
+      var cliVis=vs.filter(function(v){return v.motivo==="Cliente";}).sort(function(a,b){return (a.data||"")<(b.data||"")?-1:1;})
+        .map(function(v){ return {d:v.data, nome:v.cliente, tag:visResultWR(v)}; });
+      var proVis=vs.filter(function(v){return v.motivo==="Prospecto";}).sort(function(a,b){return (a.data||"")<(b.data||"")?-1:1;})
+        .map(function(v){ return {d:v.data, nome:v.cliente, tag:visResultWR(v)}; });
+      var created=CAT_PRO.filter(function(p){ return p.vendedor===s.id && p.createdTs && inWeek(localISO(new Date(p.createdTs))); })
+        .map(function(p){ return {d:localISO(new Date(p.createdTs)), nome:p.nome}; }).sort(byD);
+      var kgMes=0; if(kgIdx!=null) clientsForSeller(s.id).forEach(function(c){ if(c.meses && c.meses[kgIdx]!=null) kgMes+=(+c.meses[kgIdx]||0); });
+      var pendVis=pendingItemsFor(s.id).filter(function(it){ return inWeek(it.fecha); });
+      var events=routeFor(s.id).filter(function(it){ return it.kind==="evento" && inWeek(it.fecha); });
+      var upcoming=pendVis.concat(events).filter(function(it){ return it.fecha>=today; }).sort(byFecha)
+        .map(function(it){ if(it.kind==="evento") return {d:it.fecha, nome:(it.tipo||"Evento")+(it.titulo?": "+it.titulo:""), tag:{t:"Evento",cls:"ev"}};
+          return {d:it.fecha, nome:it.cliente, tag:(it.motivo==="Cliente"?{t:"Cliente",cls:"cli"}:{t:"Prospecto",cls:"pro"})}; });
+      var retrasadasN=pendVis.filter(function(it){ return it.fecha<today; }).length;
+      var st; try{ st=prospStates(visitsFor(s.id), prospUniverse(s.id)); }catch(e){ st={activo:0,pausado:0,perdido:0,vend:0}; }
+      return {seller:s, realizadas:vs.length, cliVis:cliVis, proVis:proVis, created:created, kgMes:kgMes,
+        upcoming:upcoming, upcomingN:upcoming.length, retrasadasN:retrasadasN, st:st};
+    });
+    var team={realizadas:0, upcoming:0, created:0, retrasadas:0, kgMes:0};
+    sellers.forEach(function(d){ team.realizadas+=d.realizadas; team.upcoming+=d.upcomingN; team.created+=d.created.length; team.retrasadas+=d.retrasadasN; team.kgMes+=d.kgMes; });
+    return {week:{start:start,end:end,label:wrRange(wb.mon,wb.sun)}, inProgress:inProgress, asOf:asOf, asOfLabel:shortDate(asOf),
+      mesLabel:(MESNOMS[curMn-1]||"").slice(0,3), sellers:sellers, team:team};
+  }
+  var WR_TAGC={ win:["#dff0e2","#1f7244"], no:["#f1f3ef","#7d887f"], cong:["#fbf2d6","#b5830f"], perd:["#f6e4e4","#b23b3b"],
+    cli:["#e3efe4","#1f7244"], pro:["#efe7f6","#7a5cc0"], ev:["#fbf2d6","#b5830f"], ok:["#e3efe4","#1f7244"], new:["#e7eefc","#1f6091"] };
+  function wrDraw(ctx){
+    function txt(t,x,y,sz,col,b,al){ ctx.fillStyle=col||"#1a231d"; ctx.font=(b?"bold ":"")+sz+"px Arial, sans-serif"; ctx.textAlign=al||"left"; ctx.fillText(t,x,y); }
+    function box(x,y,w,h,r,fill,stroke){ roundRect(ctx,x,y,w,h,r); if(fill){ctx.fillStyle=fill;ctx.fill();} if(stroke){ctx.strokeStyle=stroke;ctx.lineWidth=1;ctx.stroke();} }
+    function tagR(t,xRight,yMid){ var cl=WR_TAGC[t.cls]||WR_TAGC.no; ctx.font="bold 10px Arial, sans-serif"; var w=ctx.measureText(t.t).width+15, x=xRight-w; roundRect(ctx,x,yMid-8.5,w,17,8); ctx.fillStyle=cl[0]; ctx.fill(); ctx.fillStyle=cl[1]; ctx.textAlign="left"; ctx.fillText(t.t,x+7.5,yMid+3.4); }
+    function hr(x1,y,x2,col){ ctx.strokeStyle=col||"#eef0ea"; ctx.lineWidth=1; ctx.beginPath(); ctx.moveTo(x1,y); ctx.lineTo(x2,y); ctx.stroke(); }
+    function trunc(s,font,maxW){ ctx.font=font; s=""+s; if(ctx.measureText(s).width<=maxW) return s; while(s.length>3 && ctx.measureText(s+"…").width>maxW) s=s.slice(0,-1); return s+"…"; }
+    return {txt:txt, box:box, tagR:tagR, hr:hr, trunc:trunc};
+  }
+  function drawWRSeller(ctx, sd, data){
+    var D=wrDraw(ctx), M=48, W=794, PH=1123, y=50, s=sd.seller;
+    ctx.fillStyle=s.color||"#2f6b43"; ctx.beginPath(); ctx.arc(M+7,y-6,7,0,7); ctx.fill();
+    D.txt(s.name, M+22, y, 22, "#245334", true);
+    D.txt(s.role||"Comercial", M+22, y+15, 11, "#7d887f");
+    D.txt("Probal", W-M, y-3, 15, "#2f6b43", true, "right");
+    D.txt("Semana "+data.week.label, W-M, y+12, 10.5, "#7d887f", false, "right");
+    if(data.inProgress) D.txt("EN CURSO · al "+data.asOfLabel, W-M, y+27, 10, "#b5830f", true, "right");
+    y+=30; ctx.strokeStyle="#2f6b43"; ctx.lineWidth=2; ctx.beginPath(); ctx.moveTo(M,y); ctx.lineTo(W-M,y); ctx.stroke(); y+=22;
+    // KPIs (5)
+    var n=5, gap=8, bw=(W-2*M-(n-1)*gap)/n, bh=56;
+    function kbox(i,val,sub,label,col){ var x=M+i*(bw+gap); D.box(x,y,bw,bh,10,"#f4f7f2","#e4e8df");
+      D.txt(""+val, x+bw/2, y+24, 17, col||"#245334", true, "center");
+      if(sub) D.txt(sub, x+bw/2, y+35, 9, "#b5830f", true, "center");
+      D.txt(label, x+bw/2, y+(sub?47:42), 8.8, "#7d887f", false, "center"); }
+    kbox(0, sd.realizadas, (sd.upcomingN?("+"+sd.upcomingN+" agend."):""), "Visitas hechas", "#245334");
+    kbox(1, sd.cliVis.length, "", "Clientes visit.", "#1f7244");
+    kbox(2, fmtKg(sd.kgMes), "", "kg del mes ("+data.mesLabel+")", "#1f7244");
+    kbox(3, sd.created.length, "", "Prosp. nuevos", "#1f6091");
+    kbox(4, sd.retrasadasN, "", "Retrasadas", sd.retrasadasN?"#b23b3b":"#245334");
+    y+=bh+18;
+    function sec(title, col){ D.txt(title, M, y, 11, col||"#2f6b43", true); y+=16; }
+    function rows(list, cap, emptyTxt){
+      if(!list.length){ D.txt(emptyTxt||"—", M, y+9, 11.5, "#9aa39a"); ctx.font="italic 11.5px Arial"; y+=20; return; }
+      var show=list.slice(0,cap);
+      show.forEach(function(it){
+        D.txt(shortDate(it.d), M, y+10, 11, "#7d887f", true);
+        var nm=D.trunc(it.nome||"—", "bold 12px Arial, sans-serif", W-2*M-200);
+        D.txt(nm, M+66, y+10, 12, "#1a231d", true);
+        if(it.tag) D.tagR(it.tag, W-M, y+6);
+        D.hr(M, y+16, W-M, "#f1f3ef"); y+=20;
+      });
+      if(list.length>cap){ D.txt("+ "+(list.length-cap)+" más…", M+66, y+10, 11, "#7d887f"); y+=18; }
+    }
+    sec("CLIENTES VISITADOS ("+sd.cliVis.length+")");
+    rows(sd.cliVis, 9, "Sin visitas a clientes esta semana.");
+    y+=4; sec("PROSPECTOS VISITADOS ("+sd.proVis.length+")");
+    rows(sd.proVis, 7, "Sin visitas a prospectos esta semana.");
+    y+=4; sec("PROSPECTOS CREADOS ("+sd.created.length+")");
+    rows(sd.created.map(function(c){ return {d:c.d, nome:c.nome, tag:{t:"Nuevo",cls:"new"}}; }), 7, "No creó prospectos esta semana.");
+    if(data.inProgress && sd.upcoming.length){
+      y+=6; D.box(M, y-4, W-2*M, 0, 0); // noop
+      sec("PROYECCIÓN · RESTO DE LA SEMANA ("+sd.upcoming.length+")", "#8a6a0a");
+      rows(sd.upcoming, 10, "");
+    }
+    y+=6; sec("ESTADO DE PROSPECCIONES");
+    var st=sd.st, parts=[];
+    if(st.activo) parts.push(st.activo+" activos"); if(st.pausado) parts.push(st.pausado+" congelados");
+    if(st.vend) parts.push(st.vend+" vendidos"); if(st.perdido) parts.push(st.perdido+" perdidos");
+    D.txt(parts.length?parts.join("  ·  "):"Sin prospectos cargados.", M, y+9, 12, "#355e3b", true); y+=24;
+    D.txt("Probal Track · Gestión · generado "+fmtDate(todayISO()), W/2, PH-34, 10, "#9aa39a", false, "center");
+  }
+  function drawWRCover(ctx, data){
+    var D=wrDraw(ctx), M=48, W=794, y=64;
+    var lw=132, lh=34; if(_logoImg && _logoImg.naturalWidth) lh=_logoImg.naturalHeight*lw/_logoImg.naturalWidth;
+    if(_logoImg && _logoImg.complete && _logoImg.naturalWidth){ ctx.drawImage(_logoImg,(W-lw)/2,y,lw,lh); y+=lh+18; } else { D.txt("Probal", W/2, y, 20, "#2f6b43", true, "center"); y+=26; }
+    D.txt("Resumen semanal del equipo", W/2, y, 21, "#245334", true, "center"); y+=22;
+    D.txt("Semana "+data.week.label+(data.inProgress?(" · EN CURSO al "+data.asOfLabel):" · cerrada")+" · generado "+fmtDate(todayISO()), W/2, y, 12, "#7d887f", false, "center"); y+=30;
+    // team totals (5 boxes)
+    var n=5, gap=8, bw=(W-2*M-(n-1)*gap)/n, bh=58;
+    function tbox(i,val,label,col){ var x=M+i*(bw+gap); D.box(x,y,bw,bh,10,"#f4f7f2","#e4e8df"); D.txt(""+val, x+bw/2, y+26, 19, col||"#245334", true, "center"); D.txt(label, x+bw/2, y+44, 9, "#7d887f", false, "center"); }
+    tbox(0, data.team.realizadas, "Visitas hechas", "#245334");
+    tbox(1, data.team.upcoming, "Agendadas (resto)", "#8a6a0a");
+    tbox(2, data.team.created, "Prosp. nuevos", "#1f6091");
+    tbox(3, data.team.retrasadas, "Retrasadas", data.team.retrasadas?"#b23b3b":"#245334");
+    tbox(4, fmtKg(data.team.kgMes), "kg del mes ("+data.mesLabel+")", "#1f7244");
+    y+=bh+22;
+    D.txt("POR VENDEDOR", M, y, 11, "#2f6b43", true); y+=16;
+    // mini tabla
+    var cx=[M+66, 430, 500, 575, 650, W-M]; // Realiz, Agend, Nuevos, Retras, kgMes (right)
+    D.txt("Vendedor", M, y+9, 10, "#7d887f", true);
+    D.txt("Realiz.", cx[1], y+9, 10, "#7d887f", true, "right");
+    D.txt("Agend.", cx[2], y+9, 10, "#7d887f", true, "right");
+    D.txt("Nuevos", cx[3], y+9, 10, "#7d887f", true, "right");
+    D.txt("Retras.", cx[4], y+9, 10, "#7d887f", true, "right");
+    D.txt("kg mes", cx[5], y+9, 10, "#7d887f", true, "right");
+    D.hr(M, y+15, W-M, "#dfe3da"); y+=23;
+    data.sellers.forEach(function(d,i){ if(i%2===1){ ctx.fillStyle="#fafbf9"; ctx.fillRect(M-6, y-12, W-2*M+12, 20); }
+      ctx.fillStyle=d.seller.color||"#2f6b43"; ctx.beginPath(); ctx.arc(M+5, y-1, 5, 0, 7); ctx.fill();
+      D.txt(D.trunc(d.seller.name, "bold 12px Arial, sans-serif", 220), M+16, y+3, 12, "#1a231d", true);
+      D.txt(""+d.realizadas, cx[1], y+3, 12, "#245334", true, "right");
+      D.txt(d.upcomingN?("+"+d.upcomingN):"—", cx[2], y+3, 12, "#8a6a0a", false, "right");
+      D.txt(""+d.created.length, cx[3], y+3, 12, "#1f6091", false, "right");
+      D.txt(""+d.retrasadasN, cx[4], y+3, 12, d.retrasadasN?"#b23b3b":"#7d887f", true, "right");
+      D.txt(fmtKg(d.kgMes), cx[5], y+3, 12, "#1f7244", false, "right");
+      D.hr(M, y+9, W-M, "#f1f3ef"); y+=22;
+    });
+    D.txt("kg del mes = acumulado del mes desde la importación (referencia, no semanal).", M, y+14, 10, "#9aa39a");
+    D.txt("Probal Track · Gestión", W/2, 1123-34, 10, "#9aa39a", false, "center");
+  }
+  function weeklyReportPDF(){
+    var sel=($("#wrDate")&&$("#wrDate").value)||todayISO();
+    var btn=$("#wrBtn"), old=btn?btn.textContent:""; if(btn){ btn.disabled=true; btn.textContent="Generando…"; }
+    try{
+      var data=weeklyReportData(sel);
+      var PW=794, PH=1123, SCALE=2, pages=[];
+      function newPage(){ var c=document.createElement("canvas"); c.width=PW*SCALE; c.height=PH*SCALE; var x=c.getContext("2d"); x.scale(SCALE,SCALE); x.fillStyle="#fff"; x.fillRect(0,0,PW,PH);
+        if(_logoImg && _logoImg.complete && _logoImg.naturalWidth){ var ww=PW*0.72, wh=_logoImg.naturalHeight*ww/_logoImg.naturalWidth; x.save(); x.globalAlpha=0.05; x.drawImage(_logoImg,(PW-ww)/2,(PH-wh)/2,ww,wh); x.restore(); } return {c:c,x:x}; }
+      function flush(pg){ pages.push({jpeg:b64ToBytes(pg.c.toDataURL("image/jpeg",0.92)), w:pg.c.width, h:pg.c.height}); }
+      var cov=newPage(); drawWRCover(cov.x, data); flush(cov);
+      data.sellers.forEach(function(sd){ var pg=newPage(); drawWRSeller(pg.x, sd, data); flush(pg); });
+      var pdf=buildPDF(pages), fname="Reporte_semanal_"+data.week.start+".pdf";
+      if(!(window.claude && window.claude.use)){
+        var blob=new Blob([pdf],{type:"application/pdf"}), url=URL.createObjectURL(blob);
+        var a=document.createElement("a"); a.href=url; a.download=fname; document.body.appendChild(a); a.click(); a.remove();
+        setTimeout(function(){ URL.revokeObjectURL(url); },3000); toast("PDF generado ✓"); if(btn){btn.disabled=false; btn.textContent=old;} return;
+      }
+      var pd; try{ pd=window.claude.use("downloads"); }catch(e){ pd=null; }
+      if(!pd){ toast("Exportar PDF no disponible aquí.", true); if(btn){btn.disabled=false; btn.textContent=old;} return; }
+      Promise.resolve(pd).then(function(dl){ dl.save({filename:fname,data:pdf}).then(function(){ toast("PDF generado ✓"); }).catch(function(){ toast("No se pudo guardar.", true); }); if(btn){btn.disabled=false; btn.textContent=old;} });
+    }catch(e){ toast("No se pudo generar el reporte.", true); if(btn){btn.disabled=false; btn.textContent=old;} }
+  }
+  if($("#wrDate") && !$("#wrDate").value) $("#wrDate").value=todayISO();
+  if($("#wrBtn")) $("#wrBtn").addEventListener("click", weeklyReportPDF);
 
   // ---- Exportar mis ventas a Excel (toneladas, por cliente × mes) ----
   function exportVentasExcel(){
