@@ -2108,9 +2108,10 @@
           <div class="admin-row" style="align-items:center;gap:9px;flex-wrap:wrap">
             <label style="font-size:12.5px;color:var(--ink-faint);font-weight:600">Día:</label>
             <input type="date" id="wrDate" class="ev-inp" style="max-width:168px">
+            <div class="egseg" id="wrMode"><button type="button" data-m="week" class="on">Semana</button><button type="button" data-m="month">Mes</button></div>
             <button class="btn-sec" id="wrBtn" style="background:#1f7244;color:#fff;border-color:#1f7244">⬇ Generar PDF</button>
           </div>
-          <div class="admin-note">Toma la semana (lun–dom) del día elegido, con todos los vendedores (una hoja cada uno). Si está en curso, agrega la proyección de lo agendado que falta.</div>
+          <div class="admin-note">Toma la <b>semana (lun–dom)</b> o el <b>mes</b> del día elegido, con todos los vendedores (una hoja cada uno). Si el período está en curso, agrega la proyección de lo agendado que falta.</div>
         </div>
 
         <div class="kpis" id="mKpi"></div>
@@ -2841,6 +2842,9 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
   // Historial de versiones (changelog). Al agregar una mejora: sumar una entrada
   // arriba con la fecha y bumpear el número. APP_VERSION = la última entrada.
   var CHANGELOG = [
+    { v:"1.152", d:"27/10/2026", n:[
+        "Reporte del equipo (Gestión): ahora se puede generar por «Semana» o por «Mes» (selector al lado del día)."
+      ] },
     { v:"1.151", d:"27/10/2026", n:[
         "Gestión: nuevo «Reporte semanal del equipo» en PDF. Elegís un día → toma su semana (lun–dom), una hoja por vendedor con visitas, clientes visitados, prospectos creados/visitados, agenda y estado de prospecciones.",
         "Si la semana está en curso, agrega la proyección de lo agendado que falta. Incluye kg del mes (referencia) por vendedor."
@@ -3683,8 +3687,17 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
     if((v.situacao||"")==="Perdido") return {t:"Perdido"+(v.perdida&&v.perdida.motivo?" · "+v.perdida.motivo:""), cls:"perd"};
     return {t:"Visitado", cls:"ok"};
   }
-  function weeklyReportData(selISO){
-    var wb=weekBoundsISO(selISO), start=wb.start, end=wb.end, today=todayISO();
+  function periodBounds(selISO, mode){
+    var d=new Date(selISO+"T00:00:00"); if(isNaN(d)) d=new Date();
+    if(mode==="month"){
+      var fm=new Date(d.getFullYear(), d.getMonth(), 1), lm=new Date(d.getFullYear(), d.getMonth()+1, 0);
+      return {start:localISO(fm), end:localISO(lm), mon:fm, sun:lm, label:(MESNOMS[d.getMonth()]||"")+" "+d.getFullYear()};
+    }
+    var wb=weekBoundsISO(selISO); wb.label=wrRange(wb.mon,wb.sun); return wb;
+  }
+  function weeklyReportData(selISO, mode){
+    mode=(mode==="month")?"month":"week";
+    var wb=periodBounds(selISO, mode), start=wb.start, end=wb.end, today=todayISO();
     var inWeek=function(d){ return d && d>=start && d<=end; };
     var curMn=parseInt(selISO.split("-")[1],10), bi=baseIdxByMnMap(), kgIdx=bi[curMn];
     var closed=(end<today), inProgress=!closed;
@@ -3712,7 +3725,9 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
     });
     var team={realizadas:0, upcoming:0, created:0, retrasadas:0, kgMes:0};
     sellers.forEach(function(d){ team.realizadas+=d.realizadas; team.upcoming+=d.upcomingN; team.created+=d.created.length; team.retrasadas+=d.retrasadasN; team.kgMes+=d.kgMes; });
-    return {week:{start:start,end:end,label:wrRange(wb.mon,wb.sun)}, inProgress:inProgress, asOf:asOf, asOfLabel:shortDate(asOf),
+    return {mode:mode, titleWord:(mode==="month"?"mensual":"semanal"), periodWord:(mode==="month"?"Mes de":"Semana"),
+      restWord:(mode==="month"?"DEL MES":"DE LA SEMANA"),
+      period:{start:start,end:end,label:wb.label}, inProgress:inProgress, asOf:asOf, asOfLabel:shortDate(asOf),
       mesLabel:(MESNOMS[curMn-1]||"").slice(0,3), sellers:sellers, team:team};
   }
   var WR_TAGC={ win:["#dff0e2","#1f7244"], no:["#f1f3ef","#7d887f"], cong:["#fbf2d6","#b5830f"], perd:["#f6e4e4","#b23b3b"],
@@ -3731,7 +3746,7 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
     D.txt(s.name, M+22, y, 22, "#245334", true);
     D.txt(s.role||"Comercial", M+22, y+15, 11, "#7d887f");
     D.txt("Probal", W-M, y-3, 15, "#2f6b43", true, "right");
-    D.txt("Semana "+data.week.label, W-M, y+12, 10.5, "#7d887f", false, "right");
+    D.txt(data.periodWord+" "+data.period.label, W-M, y+12, 10.5, "#7d887f", false, "right");
     if(data.inProgress) D.txt("EN CURSO · al "+data.asOfLabel, W-M, y+27, 10, "#b5830f", true, "right");
     y+=30; ctx.strokeStyle="#2f6b43"; ctx.lineWidth=2; ctx.beginPath(); ctx.moveTo(M,y); ctx.lineTo(W-M,y); ctx.stroke(); y+=22;
     // KPIs (5)
@@ -3767,7 +3782,7 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
     rows(sd.created.map(function(c){ return {d:c.d, nome:c.nome, tag:{t:"Nuevo",cls:"new"}}; }), 7, "No creó prospectos esta semana.");
     if(data.inProgress && sd.upcoming.length){
       y+=6; D.box(M, y-4, W-2*M, 0, 0); // noop
-      sec("PROYECCIÓN · RESTO DE LA SEMANA ("+sd.upcoming.length+")", "#8a6a0a");
+      sec("PROYECCIÓN · RESTO "+data.restWord+" ("+sd.upcoming.length+")", "#8a6a0a");
       rows(sd.upcoming, 10, "");
     }
     y+=6; sec("ESTADO DE PROSPECCIONES");
@@ -3781,8 +3796,8 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
     var D=wrDraw(ctx), M=48, W=794, y=64;
     var lw=132, lh=34; if(_logoImg && _logoImg.naturalWidth) lh=_logoImg.naturalHeight*lw/_logoImg.naturalWidth;
     if(_logoImg && _logoImg.complete && _logoImg.naturalWidth){ ctx.drawImage(_logoImg,(W-lw)/2,y,lw,lh); y+=lh+18; } else { D.txt("Probal", W/2, y, 20, "#2f6b43", true, "center"); y+=26; }
-    D.txt("Resumen semanal del equipo", W/2, y, 21, "#245334", true, "center"); y+=22;
-    D.txt("Semana "+data.week.label+(data.inProgress?(" · EN CURSO al "+data.asOfLabel):" · cerrada")+" · generado "+fmtDate(todayISO()), W/2, y, 12, "#7d887f", false, "center"); y+=30;
+    D.txt("Resumen "+data.titleWord+" del equipo", W/2, y, 21, "#245334", true, "center"); y+=22;
+    D.txt(data.periodWord+" "+data.period.label+(data.inProgress?(" · EN CURSO al "+data.asOfLabel):" · cerrada")+" · generado "+fmtDate(todayISO()), W/2, y, 12, "#7d887f", false, "center"); y+=30;
     // team totals (5 boxes)
     var n=5, gap=8, bw=(W-2*M-(n-1)*gap)/n, bh=58;
     function tbox(i,val,label,col){ var x=M+i*(bw+gap); D.box(x,y,bw,bh,10,"#f4f7f2","#e4e8df"); D.txt(""+val, x+bw/2, y+26, 19, col||"#245334", true, "center"); D.txt(label, x+bw/2, y+44, 9, "#7d887f", false, "center"); }
@@ -3819,14 +3834,14 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
     var sel=($("#wrDate")&&$("#wrDate").value)||todayISO();
     var btn=$("#wrBtn"), old=btn?btn.textContent:""; if(btn){ btn.disabled=true; btn.textContent="Generando…"; }
     try{
-      var data=weeklyReportData(sel);
+      var data=weeklyReportData(sel, wrMode);
       var PW=794, PH=1123, SCALE=2, pages=[];
       function newPage(){ var c=document.createElement("canvas"); c.width=PW*SCALE; c.height=PH*SCALE; var x=c.getContext("2d"); x.scale(SCALE,SCALE); x.fillStyle="#fff"; x.fillRect(0,0,PW,PH);
         if(_logoImg && _logoImg.complete && _logoImg.naturalWidth){ var ww=PW*0.72, wh=_logoImg.naturalHeight*ww/_logoImg.naturalWidth; x.save(); x.globalAlpha=0.05; x.drawImage(_logoImg,(PW-ww)/2,(PH-wh)/2,ww,wh); x.restore(); } return {c:c,x:x}; }
       function flush(pg){ pages.push({jpeg:b64ToBytes(pg.c.toDataURL("image/jpeg",0.92)), w:pg.c.width, h:pg.c.height}); }
       var cov=newPage(); drawWRCover(cov.x, data); flush(cov);
       data.sellers.forEach(function(sd){ var pg=newPage(); drawWRSeller(pg.x, sd, data); flush(pg); });
-      var pdf=buildPDF(pages), fname="Reporte_semanal_"+data.week.start+".pdf";
+      var pdf=buildPDF(pages), fname="Reporte_"+data.titleWord+"_"+data.period.start+".pdf";
       if(!(window.claude && window.claude.use)){
         var blob=new Blob([pdf],{type:"application/pdf"}), url=URL.createObjectURL(blob);
         var a=document.createElement("a"); a.href=url; a.download=fname; document.body.appendChild(a); a.click(); a.remove();
@@ -3837,6 +3852,8 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
       Promise.resolve(pd).then(function(dl){ dl.save({filename:fname,data:pdf}).then(function(){ toast("PDF generado ✓"); }).catch(function(){ toast("No se pudo guardar.", true); }); if(btn){btn.disabled=false; btn.textContent=old;} });
     }catch(e){ toast("No se pudo generar el reporte.", true); if(btn){btn.disabled=false; btn.textContent=old;} }
   }
+  var wrMode="week";
+  if($("#wrMode")) $$("#wrMode button").forEach(function(b){ b.addEventListener("click", function(){ wrMode=b.dataset.m; $$("#wrMode button").forEach(function(x){x.classList.toggle("on",x===b);}); }); });
   if($("#wrDate") && !$("#wrDate").value) $("#wrDate").value=todayISO();
   if($("#wrBtn")) $("#wrBtn").addEventListener("click", weeklyReportPDF);
 
