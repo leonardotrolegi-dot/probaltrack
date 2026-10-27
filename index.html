@@ -2171,6 +2171,18 @@
         </div>
 
         <div id="mCalWrap">
+          <div class="route-filter" style="margin-bottom:8px;display:flex;align-items:center;gap:8px">
+            <label style="font-size:12px;color:var(--ink-faint);font-weight:600;white-space:nowrap">Filtrar evento:</label>
+            <select id="calEvtFilter" class="fb-period" style="flex:1;max-width:220px">
+              <option value="__all__">Todos los eventos</option>
+              <option value="Reunión">Reunión</option>
+              <option value="Entrenamiento">Entrenamiento</option>
+              <option value="Expo">Expo</option>
+              <option value="Remate">Remate</option>
+              <option value="Salida de Campo">Salida de Campo</option>
+              <option value="Evento">Evento</option>
+            </select>
+          </div>
           <div class="calcard">
             <div class="mnav">
               <button class="arw" id="calPrev"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg></button>
@@ -2842,6 +2854,9 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
   // Historial de versiones (changelog). Al agregar una mejora: sumar una entrada
   // arriba con la fecha y bumpear el número. APP_VERSION = la última entrada.
   var CHANGELOG = [
+    { v:"1.153", d:"27/10/2026", n:[
+        "Rutas (Gestión) · calendario: filtro por tipo de evento (Reunión, Expo, Remate, etc.) para ver solo ese tipo en el mes."
+      ] },
     { v:"1.152", d:"27/10/2026", n:[
         "Reporte del equipo (Gestión): ahora se puede generar por «Semana» o por «Mes» (selector al lado del día)."
       ] },
@@ -5532,9 +5547,9 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
   }
 
   // ---------- CALENDARIO (genérico: gestor y vendedor) ----------
-  var rutaView="cal";
+  var rutaView="cal", calEvtFilter="__all__";
   function dayInMonth(iso,y,m){ if(!iso) return null; var p=iso.split("-"); if(+p[0]!==y||(+p[1]-1)!==m) return null; return +p[2]; }
-  function monthActivities(users,y,m){
+  function monthActivities(users,y,m,evtTipo){
     var byDay={};
     function push(day,k,obj){ if(!byDay[day]) byDay[day]={a:0,p:0,e:0,items:[]}; byDay[day][k]++; obj._k=k; byDay[day].items.push(obj); }
     (users||[]).forEach(function(s){
@@ -5545,7 +5560,7 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
       var used={};
       routeFor(s.id).forEach(function(it){
         var d=dayInMonth(it.fecha,y,m); if(d==null) return;
-        if(it.kind==="evento"){ push(d,'e',{s:s, ev:it}); return; }
+        if(it.kind==="evento"){ if(evtTipo && evtTipo!=="__all__" && (it.tipo||"")!==evtTipo) return; push(d,'e',{s:s, ev:it}); return; }
         var v=it.visitId?byId[it.visitId]:byKey[it.cliente+"|"+it.fecha];
         if(v){ used[v.id]=1; push(d,'a',{s:s, visit:v, cliente:it.cliente, motivo:it.motivo}); }
         else push(d,'p',{s:s, cliente:it.cliente, motivo:it.motivo});
@@ -5558,7 +5573,7 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
     var st=cfg.state;
     if(st.y==null){ var n=new Date(); st.y=n.getFullYear(); st.m=n.getMonth(); }
     $("#"+cfg.titleId).textContent = cap(MESES[st.m])+" "+st.y;
-    var byDay=monthActivities(cfg.users(), st.y, st.m);
+    var byDay=monthActivities(cfg.users(), st.y, st.m, cfg.evtTipo);
     var first=new Date(st.y,st.m,1), offset=(first.getDay()+6)%7, ndays=new Date(st.y,st.m+1,0).getDate();
     var tISO=todayISO(), html="";
     for(var i=0;i<offset;i++) html+='<div class="cal-cell out"></div>';
@@ -5641,7 +5656,8 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
   // configs de cada calendario
   var calMgr={ state:{y:null,m:null,sel:null}, gridId:"calGrid", titleId:"calTitle", dayId:"calDay", showWho:true, users:function(){ return [GESTOR].concat(SELLERS).concat([TECNICA]); } };
   var calSel_={ state:{y:null,m:null,sel:null}, gridId:"sCalGrid", titleId:"sCalTitle", dayId:"sCalDay", showWho:false, users:function(){ return current?[current]:[]; } };
-  function renderMgrCalendar(){ renderCalendar(calMgr); renderMgrPend(); }
+  function renderMgrCalendar(){ calMgr.evtTipo=calEvtFilter; renderCalendar(calMgr); renderMgrPend(); }
+  if($("#calEvtFilter")) $("#calEvtFilter").addEventListener("change", function(){ calEvtFilter=this.value; renderMgrCalendar(); });
   function renderSellerCalendar(){ renderCalendar(calSel_); renderSellerPend(); }
   function calStep(cfg, delta){ if(cfg.state.y==null){ var n=new Date(); cfg.state.y=n.getFullYear(); cfg.state.m=n.getMonth(); } cfg.state.m+=delta; if(cfg.state.m<0){cfg.state.m=11;cfg.state.y--;} if(cfg.state.m>11){cfg.state.m=0;cfg.state.y++;} cfg.state.sel=null; renderCalendar(cfg); }
   function renderRutasView(){ if(rutaView==="cal") renderMgrCalendar(); else renderMgrRoutes(); }
