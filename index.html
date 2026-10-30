@@ -320,6 +320,26 @@
   .egseg button.on{background:var(--accent);color:#fff}
   .eg-be{background:#d9a520;color:#3a2d00;border-radius:13px;padding:13px 15px;display:flex;justify-content:space-between;align-items:center;margin-top:10px}
   .eg-be .k{font-size:13px;font-weight:700}.eg-be .v{font-size:21px;font-weight:800;font-variant-numeric:tabular-nums}
+  .cat-leg{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin:8px 0 14px}
+  .cat-leg>span{display:flex;align-items:center;gap:8px;background:#f6f8f4;border:1px solid var(--line);border-radius:10px;padding:7px 9px;font-size:11.5px;color:var(--ink-faint)}
+  .cat-b{width:21px;height:21px;border-radius:6px;display:grid;place-items:center;color:#fff;font-weight:800;font-size:11.5px;flex:none;font-style:normal}
+  .cat-b.bA{background:#2f6b43}.cat-b.bB{background:#1f6091}.cat-b.bC{background:#b5830f}.cat-b.bD{background:#8a8f98}
+  .catrow{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--line)}
+  .catrow .ci{flex:1;min-width:0}
+  .catrow .ci .nm{font-weight:700;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .catrow .ci .kg{font-size:11px;color:var(--ink-faint)}
+  .catseg2{display:inline-flex;gap:4px;flex:none}
+  .catseg2 button{width:30px;height:30px;border-radius:8px;border:1.5px solid var(--line);background:var(--surface);font-weight:800;font-size:13px;color:#9aa39a;cursor:pointer}
+  .catseg2 button.on.A{background:#2f6b43;border-color:#2f6b43;color:#fff}
+  .catseg2 button.on.B{background:#1f6091;border-color:#1f6091;color:#fff}
+  .catseg2 button.on.C{background:#b5830f;border-color:#b5830f;color:#fff}
+  .catseg2 button.on.D{background:#8a8f98;border-color:#8a8f98;color:#fff}
+  .cat-up{display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px dotted var(--line);font-size:12.5px}
+  .cat-up .d{flex:none;width:66px;color:var(--ink-faint);font-weight:700;font-size:11.5px}
+  .cat-up .c{flex:1;min-width:0;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .cat-up input[type=date]{border:1px solid var(--line);border-radius:7px;padding:5px 6px;font-size:11px}
+  .cat-up .mv{background:#1f6091;color:#fff;border:0;border-radius:7px;padding:6px 7px;font-size:11px;font-weight:700;cursor:pointer}
+  .cat-up .cx{background:color-mix(in srgb,#b23b3b 12%,transparent);color:#b23b3b;border:0;border-radius:7px;padding:6px 7px;font-size:11px;font-weight:700;cursor:pointer}
   .tool{display:flex;align-items:center;gap:12px;width:100%;text-align:left;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:13px;margin-bottom:10px;box-shadow:var(--shadow);font-family:inherit;cursor:pointer}
   .tool .ic{width:42px;height:42px;border-radius:11px;background:var(--accent);color:#fff;display:grid;place-items:center;font-size:20px;flex:none}
   .tool .ic svg{width:25px;height:25px}
@@ -1632,7 +1652,8 @@
       <div class="pl-sec">Vendedor</div>
       <select id="planSellerSel" class="ev-inp" style="margin-bottom:11px"></select>
       <button class="pl-open" id="objOpenBtn" style="background:#0b0e08;margin-bottom:8px">🎯 Objetivo por línea</button>
-      <button class="pl-open" id="objPersOpenBtn" style="background:#0b0e08;margin-bottom:12px">💰 Objetivo Personal (comisión)</button>
+      <button class="pl-open" id="objPersOpenBtn" style="background:#0b0e08;margin-bottom:8px">💰 Objetivo Personal (comisión)</button>
+      <button class="pl-open" id="catOpenBtn" style="background:#0b0e08;margin-bottom:12px">🗂️ Categorización de clientes</button>
       <div class="chart-card" style="margin:0 0 12px">
         <div class="vp-ttl">Previsto vs Realizado vs Objetivo · toneladas/mes</div>
         <div style="display:flex;gap:8px;align-items:center;margin-bottom:10px">
@@ -1681,6 +1702,29 @@
       <div id="opMix"></div>
       <button class="pl-add" id="opAddMix">＋ Agregar línea</button>
       <div id="opRes"></div>
+    </div>
+  </div>
+
+  <!-- CATEGORIZACIÓN DE CLIENTES -->
+  <div id="catPage" class="ventas-page hidden">
+    <div class="vp-top"><button class="vp-back" id="catBack">‹ Planificación</button><b>🗂️ Categorización de clientes</b></div>
+    <div class="hub-body">
+      <div class="hub-h">Categorización de clientes</div>
+      <div class="hub-s">Clasificá cada cliente y la app te arma la ruta: visitas repetidas según la categoría, arrancando la semana que viene.</div>
+      <div class="cat-leg">
+        <span><i class="cat-b bA">A</i> cada 15 días (máx.)</span>
+        <span><i class="cat-b bB">B</i> cada 30–45 días</span>
+        <span><i class="cat-b bC">C</i> cada 45–60 días</span>
+        <span><i class="cat-b bD">D</i> Remoto (sin agenda)</span>
+      </div>
+      <div class="pl-sec">Vendedor</div>
+      <select id="catSeller" class="ev-inp" style="margin-bottom:11px"></select>
+      <div id="catList"></div>
+      <div id="catSumm" style="font-size:12px;color:var(--ink-faint);margin:10px 0 2px"></div>
+      <button class="pl-open" id="catGenBtn" style="background:var(--accent);margin:8px 0 6px">📅 Generar agenda en la ruta</button>
+      <div class="hub-s" style="margin:0 2px 10px">Carga visitas por 2 meses (A=15 / B=30 / C=45 días), repartidas de a 2 por día hábil. Si cae fin de semana, pasa al lunes.</div>
+      <div class="pl-sec" style="margin-top:6px">Próximas visitas automáticas <span style="font-weight:600;text-transform:none;letter-spacing:0;color:var(--ink-faint)">· podés mover o cancelar</span></div>
+      <div id="catUpcoming"></div>
     </div>
   </div>
 
@@ -2171,9 +2215,9 @@
         </div>
 
         <div id="mCalWrap">
-          <div class="route-filter" style="margin-bottom:8px;display:flex;align-items:center;gap:8px">
-            <label style="font-size:12px;color:var(--ink-faint);font-weight:600;white-space:nowrap">Filtrar evento:</label>
-            <select id="calEvtFilter" class="fb-period" style="flex:1;max-width:220px">
+          <div class="route-filter" style="margin-bottom:8px;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+            <select id="calSellerFilter" class="fb-period" style="flex:1;min-width:150px;max-width:220px"><option value="__all__">Todo el equipo</option></select>
+            <select id="calEvtFilter" class="fb-period" style="flex:1;min-width:150px;max-width:220px">
               <option value="__all__">Todos los eventos</option>
               <option value="Reunión">Reunión</option>
               <option value="Entrenamiento">Entrenamiento</option>
@@ -2532,7 +2576,7 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
   // Catálogo (clientes/prospectos) — vem del banco vía importación del gestor
   var CAT_CLI=[], CAT_PRO=[], KGMAP={};
   var PLINES=["Balanceados","Proteicos","Concentrado","Núcleos","Sup. minerales","Balanceado ovino","Sup. minerales ovino","Proteico ovino","Sup. minerales equino","Balanceado equino","Núcleo ovino"];
-  var PLAN={}, OBJ={};
+  var PLAN={}, OBJ={}, CATC={};
   // líneas del objetivo (según planilla de Metas) y datos cargados 2026 (mensual Ene..Dic por vendedor)
   var OBJ_LINES=["Balanceados","Concentrado","Sup. minerales","Núcleos","Proteicos","Semen"];
   var DEFAULT_OBJ={
@@ -2598,6 +2642,10 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
   function saveObj(){
     if(useDB && dbh){ dbh.collection("planning").doc("__obj__").set({obj:OBJ}).catch(noop); }
     else { try{ localStorage.setItem("pt_obj", JSON.stringify(OBJ)); }catch(e){} }
+  }
+  function saveCat(){
+    if(useDB && dbh){ dbh.collection("planning").doc("__cat__").set({cat:CATC}).catch(noop); }
+    else { try{ localStorage.setItem("pt_cat", JSON.stringify(CATC)); }catch(e){} }
   }
   function kgFor(n){ return KGMAP[n]||0; }
   function listForMotivo(mot){
@@ -2730,7 +2778,7 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
       }
     }catch(e){}
   }
-  function localBoot(){ DB=absorbGabriel(seedIfEmpty()); ROUTES=absorbGabriel(loadRoutes()); try{ PLAN=JSON.parse(localStorage.getItem("pt_plan")||"{}")||{}; }catch(e){ PLAN={}; } try{ OBJ=JSON.parse(localStorage.getItem("pt_obj")||"{}")||{}; }catch(e){ OBJ={}; } reRenderCurrent(); if(!current && !isManager && autoMgr()) enterManager(); }
+  function localBoot(){ DB=absorbGabriel(seedIfEmpty()); ROUTES=absorbGabriel(loadRoutes()); try{ PLAN=JSON.parse(localStorage.getItem("pt_plan")||"{}")||{}; }catch(e){ PLAN={}; } try{ OBJ=JSON.parse(localStorage.getItem("pt_obj")||"{}")||{}; }catch(e){ OBJ={}; } try{ CATC=JSON.parse(localStorage.getItem("pt_cat")||"{}")||{}; }catch(e){ CATC={}; } reRenderCurrent(); if(!current && !isManager && autoMgr()) enterManager(); }
   function subscribeDB(){
     dbh.collection("visits").onSnapshot(function(snap){ DB=groupBySeller(snap.docs); reRenderCurrent(); }, noop);
     dbh.collection("routes").onSnapshot(function(snap){ ROUTES=groupBySeller(snap.docs); reRenderCurrent(); }, noop);
@@ -2751,7 +2799,7 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
     }, noop);
     dbh.collection("planning").onSnapshot(function(snap){
       if(planEditingNow()) return; // no tocar PLAN/OBJ ni re-renderizar mientras el usuario edita (evita pisar lo que está cargando)
-      PLAN={}; OBJ={}; snap.docs.forEach(function(d){ if(d.id==="__obj__"){ OBJ=(d.data()||{}).obj||{}; } else { PLAN[d.id]=d.data()||{}; } });
+      PLAN={}; OBJ={}; CATC={}; snap.docs.forEach(function(d){ if(d.id==="__obj__"){ OBJ=(d.data()||{}).obj||{}; } else if(d.id==="__cat__"){ CATC=(d.data()||{}).cat||{}; } else { PLAN[d.id]=d.data()||{}; } });
       if($("#planPage") && !$("#planPage").classList.contains("hidden")) renderPlan();
       if($("#objPage") && !$("#objPage").classList.contains("hidden")) renderObj();
     }, noop);
@@ -2854,6 +2902,13 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
   // Historial de versiones (changelog). Al agregar una mejora: sumar una entrada
   // arriba con la fecha y bumpear el número. APP_VERSION = la última entrada.
   var CHANGELOG = [
+    { v:"1.155", d:"30/10/2026", n:[
+        "Planificación: nueva «Categorización de clientes» (A/B/C/D). Clasificás cada cliente y la app genera la agenda en tu ruta: visitas repetidas según la categoría (A=15, B=30, C=45 días), arrancando la semana que viene.",
+        "Se mantiene sola: al registrar una visita recalcula la próxima; al postergar una visita, reajusta las siguientes en cascada; cancelar no afecta al resto."
+      ] },
+    { v:"1.154", d:"30/10/2026", n:[
+        "Rutas (Gestión) · calendario: ahora también se puede filtrar por vendedor (además del filtro por tipo de evento)."
+      ] },
     { v:"1.153", d:"27/10/2026", n:[
         "Rutas (Gestión) · calendario: filtro por tipo de evento (Reunión, Expo, Remate, etc.) para ver solo ese tipo en el mes."
       ] },
@@ -3577,6 +3632,85 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
   }
   if($("#objPersOpenBtn")) $("#objPersOpenBtn").addEventListener("click", openObjPers);
   if($("#objPersBack")) $("#objPersBack").addEventListener("click", closeObjPers);
+
+  // ===== Categorización de clientes + agenda automática =====
+  var CAT_INT={A:15,B:30,C:45,D:0}, catSellerId="";
+  function catKey(c){ return planKey(c.nome, c.vendedor); }
+  function catOf(c){ return CATC[catKey(c)]||""; }
+  function _cd(iso){ return new Date(iso+"T00:00:00"); }
+  function dAdd(iso,n){ var d=_cd(iso); d.setDate(d.getDate()+n); return localISO(d); }
+  function dMoveBiz(iso){ var d=_cd(iso), w=d.getDay(); if(w===6) d.setDate(d.getDate()+2); else if(w===0) d.setDate(d.getDate()+1); return localISO(d); }
+  function nextWeekMondayISO(){ var t=new Date(); var dow=(t.getDay()+6)%7; var m=new Date(t); m.setDate(t.getDate()-dow+7); return localISO(m); }
+  function bizDayFrom(startISO,n){ var d=_cd(startISO),c=0; while(true){ var w=d.getDay(); if(w!==0&&w!==6){ if(c===n) return localISO(d); c++; } d.setDate(d.getDate()+1); } }
+  function addCatVisit(sid,cli,fecha,cat){ putRoute({id:"rc"+Date.now().toString(36)+Math.random().toString(36).slice(2,6), sellerId:sid, kind:"visita", cliente:cli, motivo:"Cliente", fecha:fecha, catGen:true, catCat:cat}); }
+  function clearFutureCat(sid,cli){ (ROUTES[sid]||[]).slice().filter(function(it){ return it.catGen && !it.done && it.fecha>=todayISO() && (!cli || norm(it.cliente)===norm(cli)); }).forEach(function(it){ delRoute(sid, it.id); }); }
+  function genSeries(sid,cli,cat,firstISO){ var intv=CAT_INT[cat]; if(!intv) return; var horizon=dAdd(firstISO,62), f=firstISO, guard=0; while(f<=horizon && guard++<40){ addCatVisit(sid,cli,f,cat); f=dMoveBiz(dAdd(f,intv)); } }
+  function catGenerateAll(sid){
+    if(!sid || sid==="__all__" || !SELLER_BY[sid]) return 0;
+    clearFutureCat(sid, null);
+    var clients=clientsForSeller(sid).filter(function(c){ var cat=catOf(c); return cat && cat!=="D" && CAT_INT[cat]; }).sort(function(a,b){ return (b.kg||0)-(a.kg||0); });
+    var start=nextWeekMondayISO(), slot=0;
+    clients.forEach(function(c){ var cat=catOf(c); var first=dMoveBiz(bizDayFrom(start, Math.floor(slot/2))); slot++; genSeries(sid, c.nome, cat, first); });
+    return clients.length;
+  }
+  // regenerar la serie de un cliente desde una fecha ancla (reglas: registrar / postergar)
+  function catRegenFrom(sid,cli,cat,fromISO,keepId){
+    var intv=CAT_INT[cat]; if(!intv) return;
+    (ROUTES[sid]||[]).slice().filter(function(it){ return it.catGen && !it.done && norm(it.cliente)===norm(cli) && it.id!==keepId && it.fecha>=todayISO(); }).forEach(function(it){ delRoute(sid, it.id); });
+    var f=dMoveBiz(dAdd(fromISO,intv)), horizon=dAdd(fromISO,62), guard=0;
+    while(f<=horizon && guard++<40){ addCatVisit(sid,cli,f,cat); f=dMoveBiz(dAdd(f,intv)); }
+  }
+  function catOfClientName(sid, cliName){ var cs=clientsForSeller(sid).filter(function(c){ return norm(c.nome)===norm(cliName); }); return cs.length? catOf(cs[0]) : ""; }
+  function renderCatList(){
+    var el=$("#catList"); if(!el) return;
+    if(!catSellerId || catSellerId==="__all__"){ el.innerHTML='<div class="vp-empty" style="padding:14px 0">Elegí un vendedor para categorizar sus clientes.</div>'; $("#catSumm").textContent=""; renderCatUpcoming(); return; }
+    var clients=clientsForSeller(catSellerId).filter(function(c){ return (+c.kg||0)>0; }).slice().sort(function(a,b){ return (b.kg||0)-(a.kg||0); });
+    if(!clients.length){ el.innerHTML='<div class="vp-empty" style="padding:14px 0">Este vendedor no tiene clientes con compras en el año.</div>'; $("#catSumm").textContent=""; renderCatUpcoming(); return; }
+    el.innerHTML=clients.map(function(c,i){ var cur=catOf(c);
+      var seg=["A","B","C","D"].map(function(k){ return '<button class="'+k+(cur===k?" on":"")+'" data-i="'+i+'" data-k="'+k+'">'+k+'</button>'; }).join("");
+      return '<div class="catrow"><div class="ci"><div class="nm">'+esc(c.nome)+'</div><div class="kg">'+fmtKg(c.kg)+' kg/año</div></div><div class="catseg2">'+seg+'</div></div>';
+    }).join("");
+    $$(".catseg2 button",el).forEach(function(b){ b.addEventListener("click", function(){ var c=clients[+b.dataset.i], k=b.dataset.k, key=catKey(c); if(CATC[key]===k) delete CATC[key]; else CATC[key]=k; saveCat(); renderCatList(); }); });
+    var cnt={A:0,B:0,C:0,D:0,n:0}; clients.forEach(function(c){ var cat=catOf(c); if(cat){ cnt[cat]++; cnt.n++; } });
+    $("#catSumm").textContent=cnt.n+" de "+clients.length+" categorizados · "+cnt.A+" A · "+cnt.B+" B · "+cnt.C+" C · "+cnt.D+" D";
+    renderCatUpcoming();
+  }
+  function renderCatUpcoming(){
+    var el=$("#catUpcoming"); if(!el) return;
+    if(!catSellerId || catSellerId==="__all__"){ el.innerHTML=""; return; }
+    var up=(ROUTES[catSellerId]||[]).filter(function(it){ return it.catGen && !it.done && it.fecha>=todayISO(); }).sort(function(a,b){ return (a.fecha||"")<(b.fecha||"")?-1:1; }).slice(0,30);
+    if(!up.length){ el.innerHTML='<div class="hub-s" style="margin:2px">Todavía no hay visitas automáticas futuras. Categorizá y tocá «Generar agenda».</div>'; return; }
+    el.innerHTML=up.map(function(it){
+      return '<div class="cat-up" data-id="'+esc(it.id)+'" data-cli="'+esc(it.cliente)+'" data-cat="'+esc(it.catCat||"")+'"><span class="d">'+shortDate(it.fecha)+'</span><span class="c">'+esc(it.cliente)+' <small style="color:var(--ink-faint)">'+esc(it.catCat||"")+'</small></span><input type="date" value="'+esc(it.fecha)+'"><button class="mv">Mover</button><button class="cx">✕</button></div>';
+    }).join("");
+    $$(".cat-up",el).forEach(function(row){
+      var id=row.dataset.id, cli=row.dataset.cli, cat=row.dataset.cat;
+      row.querySelector(".mv").addEventListener("click", function(){
+        var nd=row.querySelector("input").value; if(!nd){ toast("Elegí una fecha.", true); return; }
+        var it=(ROUTES[catSellerId]||[]).filter(function(x){return x.id===id;})[0]; if(!it) return;
+        it.fecha=nd; it.sellerId=catSellerId; putRoute(it);
+        catRegenFrom(catSellerId, cli, cat, nd, id);
+        toast("Movida a "+fmtDate(nd)+" · próximas reajustadas ✓"); renderCatUpcoming();
+      });
+      row.querySelector(".cx").addEventListener("click", function(){ delRoute(catSellerId, id); toast("Visita cancelada."); renderCatUpcoming(); });
+    });
+  }
+  function openCat(){ $("#planPage").classList.add("hidden");
+    if(VCTX==="mgr"){ fillSellerSelect($("#catSeller"), (catSellerId&&catSellerId!=="__all__")?catSellerId:((planSeller&&planSeller!=="__all__")?planSeller:"__all__")); catSellerId=$("#catSeller").value; }
+    else if(current){ catSellerId=current.id; $("#catSeller").innerHTML='<option value="'+current.id+'">'+esc(current.name)+'</option>'; $("#catSeller").value=current.id; }
+    renderCatList(); $("#catPage").classList.remove("hidden");
+  }
+  function closeCat(){ $("#catPage").classList.add("hidden"); $("#planPage").classList.remove("hidden"); }
+  if($("#catOpenBtn")) $("#catOpenBtn").addEventListener("click", openCat);
+  if($("#catBack")) $("#catBack").addEventListener("click", closeCat);
+  if($("#catSeller")) $("#catSeller").addEventListener("change", function(){ catSellerId=this.value; renderCatList(); });
+  if($("#catGenBtn")) $("#catGenBtn").addEventListener("click", function(){
+    if(!catSellerId || catSellerId==="__all__"){ toast("Elegí un vendedor.", true); return; }
+    var n=catGenerateAll(catSellerId);
+    toast(n? ("Agenda generada para "+n+" cliente"+(n!==1?"s":"")+" ✓") : "No hay clientes A/B/C para agendar.", !n);
+    renderCatUpcoming();
+  });
+
   if($("#opComis")) $("#opComis").addEventListener("input", function(){ renderOpResult(salesMonths()); });
   if($("#opSeller")) $("#opSeller").addEventListener("change", function(){ renderOpResult(salesMonths()); });
   if($("#opAddMix")) $("#opAddMix").addEventListener("click", function(){
@@ -4380,6 +4514,8 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
     // próxima visita agenda-se sozinha na ruta
     var agendou = false;
     if(rec2.proxima){ addRouteVisit(current.id, cli, motivo, rec2.proxima); agendou = true; }
+    // categorización: si el cliente es A/B/C, reprograma su serie automática desde esta visita
+    if(motivo==="Cliente"){ var _cc=catOfClientName(current.id, cli); if(_cc && CAT_INT[_cc]) catRegenFrom(current.id, cli, _cc, rec2.data); }
     // reset
     acInput.value=""; $("#fObs").value=""; baseText=""; $("#fProxima").value="";
     $("#fData").value = todayISO();
@@ -5136,7 +5272,8 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
       wrap.querySelector('[data-act="res"]').addEventListener("click", function(e){ e.stopPropagation();
         var nd=wrap.querySelector(".mra-date").value; if(!nd){ toast("Elegí una fecha.", true); return; }
         it.sellerId=it.sellerId||current.id; it.fecha=nd; putRoute(it);
-        toast("Reagendada para "+fmtDate(nd)+" ✓"); refresh();
+        if(it.catGen) catRegenFrom(current.id, it.cliente, it.catCat, nd, it.id);
+        toast("Reagendada para "+fmtDate(nd)+(it.catGen?" · próximas reajustadas":"")+" ✓"); refresh();
       });
       wrap.querySelector('[data-act="can"]').addEventListener("click", function(e){ e.stopPropagation();
         var acts=wrap.querySelector(".mr-acts");
@@ -5547,7 +5684,7 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
   }
 
   // ---------- CALENDARIO (genérico: gestor y vendedor) ----------
-  var rutaView="cal", calEvtFilter="__all__";
+  var rutaView="cal", calEvtFilter="__all__", calSellerFilter="__all__";
   function dayInMonth(iso,y,m){ if(!iso) return null; var p=iso.split("-"); if(+p[0]!==y||(+p[1]-1)!==m) return null; return +p[2]; }
   function monthActivities(users,y,m,evtTipo){
     var byDay={};
@@ -5654,10 +5791,15 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
     });
   }
   // configs de cada calendario
-  var calMgr={ state:{y:null,m:null,sel:null}, gridId:"calGrid", titleId:"calTitle", dayId:"calDay", showWho:true, users:function(){ return [GESTOR].concat(SELLERS).concat([TECNICA]); } };
+  function calMgrUsers(){ var all=[GESTOR].concat(SELLERS).concat([TECNICA]); return (calSellerFilter==="__all__") ? all : all.filter(function(u){ return u && u.id===calSellerFilter; }); }
+  var calMgr={ state:{y:null,m:null,sel:null}, gridId:"calGrid", titleId:"calTitle", dayId:"calDay", showWho:true, users:calMgrUsers };
   var calSel_={ state:{y:null,m:null,sel:null}, gridId:"sCalGrid", titleId:"sCalTitle", dayId:"sCalDay", showWho:false, users:function(){ return current?[current]:[]; } };
   function renderMgrCalendar(){ calMgr.evtTipo=calEvtFilter; renderCalendar(calMgr); renderMgrPend(); }
   if($("#calEvtFilter")) $("#calEvtFilter").addEventListener("change", function(){ calEvtFilter=this.value; renderMgrCalendar(); });
+  (function(){ var sf=$("#calSellerFilter"); if(!sf) return; var all=[GESTOR].concat(SELLERS).concat([TECNICA]);
+    sf.innerHTML='<option value="__all__">Todo el equipo</option>'+all.map(function(u){ return '<option value="'+esc(u.id)+'">'+esc(u.name)+'</option>'; }).join("");
+    sf.addEventListener("change", function(){ calSellerFilter=this.value; renderMgrCalendar(); });
+  })();
   function renderSellerCalendar(){ renderCalendar(calSel_); renderSellerPend(); }
   function calStep(cfg, delta){ if(cfg.state.y==null){ var n=new Date(); cfg.state.y=n.getFullYear(); cfg.state.m=n.getMonth(); } cfg.state.m+=delta; if(cfg.state.m<0){cfg.state.m=11;cfg.state.y--;} if(cfg.state.m>11){cfg.state.m=0;cfg.state.y++;} cfg.state.sel=null; renderCalendar(cfg); }
   function renderRutasView(){ if(rutaView==="cal") renderMgrCalendar(); else renderMgrRoutes(); }
