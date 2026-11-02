@@ -1021,6 +1021,8 @@
   .ev-inp{width:100%;box-sizing:border-box;border:1.5px solid var(--line);border-radius:10px;background:var(--surface);color:var(--ink);padding:10px 11px;font-size:14px;font-family:inherit;margin-bottom:4px}
   .cact.click-ev{cursor:pointer}
   .cact.click-ev .tag.ev{text-decoration:underline}
+  .cday-evdone{border:0;background:var(--accent-soft);color:var(--accent);border-radius:7px;padding:5px 9px;font-size:11.5px;font-weight:800;cursor:pointer;flex:none}
+  .cact.cday-evok{opacity:.62}
   .btn-add{
     display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:14px;
   }
@@ -2097,6 +2099,7 @@
       <div class="hf"><label>Cantidad de animales</label><div class="hinp"><input id="cfAnim" inputmode="numeric" value="50"><span class="hu">cab</span></div></div>
 
       <div id="creepRes" class="hres"></div>
+      <button class="btn-pdf" id="cfPDF" style="margin-top:12px">📄 Exportar PDF (para WhatsApp)</button>
       <div class="hint" style="margin-top:12px">Peso final = inicial + ganancia × días. Consumo = % del peso <b>promedio</b> × días. Rentabilidad = venta (peso final × mercado) − (animal a precio pagado + suplemento). Gs total = por animal × cantidad.</div>
     </div>
   </div>
@@ -2914,6 +2917,10 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
   // Historial de versiones (changelog). Al agregar una mejora: sumar una entrada
   // arriba con la fecha y bumpear el número. APP_VERSION = la última entrada.
   var CHANGELOG = [
+    { v:"1.161", d:"02/11/2026", n:[
+        "HUB · Viabilidad Creep Feeding: nuevo botón «Exportar PDF» (mismo modelo que las otras: logo Probal de marca de agua, colores, una página).",
+        "Rutas (Gestión) · calendario: ahora también se pueden marcar como «Realizado» los eventos / agendas especiales (antes solo en la lista)."
+      ] },
     { v:"1.160", d:"02/11/2026", n:[
         "Rutas (Gestión) · «Visitas retrasadas de todo el equipo»: ahora se puede Realizar, Reagendar o Cancelar cada visita directo desde ahí, tocándola (para agilizar). «Realizar» la registra como hecha en el historial del vendedor."
       ] },
@@ -5822,15 +5829,17 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
       var s=o.s;
       var avatar = showWho ? '<div class="av" style="background:'+s.color+'">'+initials(s.name)+'</div>' : '';
       var who = showWho ? '<div class="who">'+esc(s.name)+'</div>' : '';
-      if(o._k==='e'){ var evCls = showWho ? ' click-ev' : '';
+      if(o._k==='e'){ var evDone=!!o.ev.done, evCls = showWho ? ' click-ev' : '';
         var evData = showWho ? (' data-agid="'+esc(o.ev.agId||"")+'" data-efecha="'+esc(o.ev.fecha||"")+'" data-etipo="'+esc(o.ev.tipo||"")+'" data-etit="'+esc(o.ev.titulo||"")+'"') : '';
-        return '<div class="cact'+evCls+'"'+evData+'>'+avatar+'<div style="min-width:0">'+who+'<div class="cli">'+esc(o.ev.tipo)+(o.ev.titulo?': '+esc(o.ev.titulo):'')+'</div></div><span class="tag ev">Evento</span></div>'; }
+        var evAct = showWho ? (evDone ? '<span class="cchk" title="Realizado">✓</span>' : '<button class="cday-evdone" data-sid="'+esc(s.id)+'" data-eid="'+esc(o.ev.id||"")+'">✓ Realizar</button>') : '';
+        return '<div class="cact'+evCls+(evDone?' cday-evok':'')+'"'+evData+'>'+avatar+'<div style="min-width:0">'+who+'<div class="cli">'+esc(o.ev.tipo)+(o.ev.titulo?': '+esc(o.ev.titulo):'')+'</div></div><span style="margin-left:auto;display:inline-flex;align-items:center;gap:8px;flex:none"><span class="tag ev">Evento</span>'+evAct+'</span></div>'; }
       var a=o.motivo==="Cliente";
       if(o._k==='a') return '<div class="cact click" data-visit="'+esc(o.visit.id)+'" data-sid="'+esc(s.id)+'">'+avatar+'<div style="min-width:0">'+who+'<div class="cli">'+esc(o.cliente)+'</div></div><span class="tag '+(a?"a":"p")+'">'+o.motivo+'</span><span class="cchk">✓</span></div>';
       return '<div class="cact">'+avatar+'<div style="min-width:0">'+who+'<div class="cli">'+esc(o.cliente)+'</div></div><span class="tag '+(a?"a":"p")+'">'+o.motivo+'</span><span class="cpend">pendiente</span></div>';
     }).join("");
     $$(".cact.click",el).forEach(function(row){ row.addEventListener("click", function(){ var v=(DB[row.dataset.sid]||[]).filter(function(x){return x.id===row.dataset.visit;})[0]; if(v) openModal(v); }); });
     $$(".cact.click-ev",el).forEach(function(row){ row.addEventListener("click", function(){ openEventEdit({agId:row.dataset.agid, fecha:row.dataset.efecha, tipo:row.dataset.etipo, titulo:row.dataset.etit}); }); });
+    $$(".cday-evdone",el).forEach(function(b){ b.addEventListener("click", function(e){ e.stopPropagation(); var sid=b.dataset.sid, it=(ROUTES[sid]||[]).filter(function(x){return x.id===b.dataset.eid;})[0]; if(!it) return; it.done=true; it.doneTs=Date.now(); it.sellerId=it.sellerId||sid; putRoute(it); toast("Evento realizado ✓"); renderMgrCalendar(); }); });
   }
   // editar un evento en una fecha: participantes, fecha, tipo/título (funciona con o sin agId)
   function openEventEdit(ref){
@@ -6615,7 +6624,66 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
     html+='<div class="dboxes"><div class="dbox big2"><span class="dk">Rentab. del período</span><b>'+(roi>=0?'+':'−')+dec1(Math.abs(roi))+'%</b><span class="ds">sobre Gs '+fmtGs(inv)+'</span></div><div class="dbox"><span class="dk">Mensual</span><b>'+(roiMes>=0?'+':'−')+dec1(Math.abs(roiMes))+'%</b><span class="ds">sobre '+dec1(meses)+' meses</span></div></div>';
     html+='<div class="epills"><div class="epill"><b>'+(roi>=0?'+':'−')+dec1(Math.abs(roi))+'%</b><span>% del período</span></div><div class="epill"><b>'+sgn+compactGs(Math.abs(rent))+'</b><span>Gs/animal</span></div><div class="epill"><b>'+(gsTotal>=0?'':'−')+compactGs(Math.abs(gsTotal))+'</b><span>Gs total · '+fmtGs(anim)+' cab</span></div></div>';
     $("#creepRes").innerHTML=html;
+    _creepData={peso:peso,gan:gan,dias:dias,cons:cons,supl:supl,otros:otros,pagado:pagado,venta:venta,anim:anim,pf:pf,consTot:consTot,costSupl:costSupl,costOtros:costOtros,costAnimal:costAnimal,inv:inv,ingreso:ingreso,rent:rent,roi:roi,roiMes:roiMes,meses:meses,gsTotal:gsTotal,si:si};
   }
+  var _creepData=null;
+  function drawCreep(ctx, d, paint){
+    var W=794, M=48, y=44, A="#2f6b43", Ad="#245334", ink="#1a231d", faint="#7d887f", line="#e2e6dd";
+    function txt(t,x,yy,sz,col,b,al){ if(paint){ ctx.fillStyle=col||ink; ctx.font=(b?"bold ":"")+sz+"px Arial, sans-serif"; ctx.textAlign=al||"left"; ctx.fillText(t,x,yy); } }
+    function row(k,v,yy){ txt(k,M,yy,13,faint); txt(v,W-M,yy,14,ink,true,"right"); if(paint){ ctx.strokeStyle=line; ctx.beginPath(); ctx.moveTo(M,yy+8); ctx.lineTo(W-M,yy+8); ctx.stroke(); } }
+    var lw=150, lh=42; if(_logoImg && _logoImg.naturalWidth) lh=_logoImg.naturalHeight*lw/_logoImg.naturalWidth;
+    if(paint && _logoImg && _logoImg.complete && _logoImg.naturalWidth){ ctx.drawImage(_logoImg,(W-lw)/2,y,lw,lh); }
+    y+=lh+22;
+    txt("Viabilidad Creep Feeding", W/2, y, 20, Ad, true, "center"); y+=22;
+    txt("Suplementación del ternero al pie de la madre · "+fmtDate(todayISO()), W/2, y, 12, faint, false, "center"); y+=28;
+    txt("ANIMAL", M, y, 11, A, true); y+=18;
+    row("Peso inicial → final", fmtGs(d.peso)+" → "+fmtGs(d.pf)+" kg  (+"+fmtGs(d.pf-d.peso)+" kg)", y); y+=26;
+    row("Ganancia · días", dec1(d.gan)+" kg/día · "+fmtGs(d.dias)+" días", y); y+=30;
+    txt("SUPLEMENTO", M, y, 11, A, true); y+=18;
+    row("Consumo", dec1(d.cons)+"% PV · total "+dec1(d.consTot)+" kg", y); y+=26;
+    row("Precio del suplemento", "Gs "+fmtGs(d.supl)+"/kg", y); y+=26;
+    row("Costo del suplemento", "Gs "+fmtGs(d.costSupl), y); y+=26;
+    if(d.costOtros>0){ row("Otros costos", "Gs "+fmtGs(d.costOtros), y); y+=26; }
+    y+=4; txt("INVERSIÓN Y VENTA", M, y, 11, A, true); y+=18;
+    row("Costo del animal · "+fmtGs(d.peso)+" kg × "+fmtGs(d.pagado), "Gs "+fmtGs(d.costAnimal), y); y+=26;
+    row("Inversión total", "Gs "+fmtGs(d.inv), y); y+=26;
+    row("Ingreso por venta · "+fmtGs(d.pf)+" kg × "+fmtGs(d.venta), "Gs "+fmtGs(d.ingreso), y); y+=34;
+    var sgn=d.rent>=0?"+":"−";
+    if(paint){ ctx.fillStyle=d.si?A:"#b23b3b"; roundRect(ctx,M,y-22,W-2*M,46,10); ctx.fill(); }
+    txt("Rentabilidad por animal", M+16, y-2, 13, "#fff"); txt((d.si?"SÍ conviene":"NO conviene"), M+16, y+13, 10.5, "#fff");
+    txt(sgn+"Gs "+fmtGs(Math.abs(d.rent)), W-M-16, y+6, 21, "#fff", true, "right"); y+=56;
+    if(paint){ ctx.fillStyle=d.gsTotal>=0?"#355e3b":"#b23b3b"; roundRect(ctx,M,y-22,W-2*M,44,10); ctx.fill(); }
+    txt("Rentabilidad del lote · "+fmtGs(d.anim)+" cab", M+16, y+4, 12.5, "#fff"); txt((d.gsTotal>=0?"+":"−")+"Gs "+fmtGs(Math.abs(d.gsTotal)), W-M-16, y+6, 19, "#fff", true, "right"); y+=44;
+    txt("ROI del período: "+(d.roi>=0?"+":"−")+dec1(Math.abs(d.roi))+"%   ·   mensual: "+(d.roiMes>=0?"+":"−")+dec1(Math.abs(d.roiMes))+"%   ·   ~"+dec1(d.meses)+" meses", M, y, 12, Ad, true); y+=28;
+    txt("Generado por Probal Track · valores estimados", M, y, 10.5, faint); y+=20;
+    return y;
+  }
+  function creepPDF(){
+    var d=_creepData||(computeCreep(),_creepData); if(!d){ toast("Complete los datos primero.", true); return; }
+    var btn=$("#cfPDF"), old=btn?btn.textContent:""; if(btn){ btn.disabled=true; btn.textContent="Generando…"; }
+    try{
+      var PW=794, SCALE=2, PH=1123;
+      var mc=document.createElement("canvas"); mc.width=PW*SCALE; mc.height=10; var mctx=mc.getContext("2d"); mctx.scale(SCALE,SCALE);
+      var H=Math.ceil(drawCreep(mctx,d,false))+20;
+      var bc=document.createElement("canvas"); bc.width=PW*SCALE; bc.height=H*SCALE; var bctx=bc.getContext("2d"); bctx.scale(SCALE,SCALE);
+      drawCreep(bctx,d,true);
+      var nP=Math.max(1,Math.ceil(H/PH)), pages=[];
+      for(var p=0;p<nP;p++){ var pc=document.createElement("canvas"); pc.width=PW*SCALE; pc.height=PH*SCALE; var pctx=pc.getContext("2d"); pctx.fillStyle="#fff"; pctx.fillRect(0,0,pc.width,pc.height);
+        if(_logoImg && _logoImg.complete && _logoImg.naturalWidth){ var ww=PW*SCALE*0.74, wh=_logoImg.naturalHeight*ww/_logoImg.naturalWidth; pctx.save(); pctx.globalAlpha=0.06; pctx.drawImage(_logoImg,(PW*SCALE-ww)/2,(PH*SCALE-wh)/2 + PH*SCALE*0.12,ww,wh); pctx.restore(); }
+        var sy=p*PH*SCALE, sh=Math.min(PH*SCALE, bc.height-sy); if(sh>0) pctx.drawImage(bc,0,sy,PW*SCALE,sh,0,0,PW*SCALE,sh);
+        pages.push({jpeg:b64ToBytes(pc.toDataURL("image/jpeg",0.9)), w:pc.width, h:pc.height}); }
+      var pdf=buildPDF(pages), fname="Viabilidad_Creep_"+todayISO()+".pdf";
+      if(!(window.claude && window.claude.use)){
+        var blob=new Blob([pdf],{type:"application/pdf"}), url=URL.createObjectURL(blob);
+        var a=document.createElement("a"); a.href=url; a.download=fname; document.body.appendChild(a); a.click(); a.remove();
+        setTimeout(function(){ URL.revokeObjectURL(url); },3000); toast("PDF generado ✓"); if(btn){btn.disabled=false; btn.textContent=old;} return;
+      }
+      var pd; try{ pd=window.claude.use("downloads"); }catch(e){ pd=null; }
+      if(!pd){ toast("Exportar PDF no disponible aquí.", true); if(btn){btn.disabled=false; btn.textContent=old;} return; }
+      Promise.resolve(pd).then(function(dl){ dl.save({filename:fname,data:pdf}).then(function(){ toast("PDF generado ✓"); }).catch(function(){ toast("No se pudo guardar.", true); }); if(btn){btn.disabled=false; btn.textContent=old;} });
+    }catch(e){ toast("No se pudo generar el PDF.", true); if(btn){btn.disabled=false; btn.textContent=old;} }
+  }
+  if($("#cfPDF")) $("#cfPDF").addEventListener("click", creepPDF);
   function openCreep(){ $("#hubPage").classList.add("hidden"); $$(".hub-logo").forEach(function(i){ if(!i.src) i.src=PROBAL_LOGO; }); var r=$("#creepRes"); if(r) r.style.setProperty("--wm", 'url("'+PROBAL_LOGO+'")'); computeCreep(); $("#creepPage").classList.remove("hidden"); }
   if($("#toolCreep")) $("#toolCreep").addEventListener("click", openCreep);
   if($("#cfBack")) $("#cfBack").addEventListener("click", function(){ $("#creepPage").classList.add("hidden"); openHub(); });
