@@ -2917,6 +2917,9 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
   // Historial de versiones (changelog). Al agregar una mejora: sumar una entrada
   // arriba con la fecha y bumpear el número. APP_VERSION = la última entrada.
   var CHANGELOG = [
+    { v:"1.162", d:"02/11/2026", n:[
+        "Rutas · eventos / agendas especiales: al tocar un evento se abre un menú con Realizar, Reagendar y Cancelar — en la lista y en el calendario de Gestión, y también para cada vendedor en su propio calendario (cada vendedor gestiona su copia; Gestión, la de todo el equipo)."
+      ] },
     { v:"1.161", d:"02/11/2026", n:[
         "HUB · Viabilidad Creep Feeding: nuevo botón «Exportar PDF» (mismo modelo que las otras: logo Probal de marca de agua, colores, una página).",
         "Rutas (Gestión) · calendario: ahora también se pueden marcar como «Realizado» los eventos / agendas especiales (antes solo en la lista)."
@@ -5733,34 +5736,17 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
         '<div><b>'+esc(s.name)+'</b><br><span>'+nDone+' realizada'+(nDone!==1?'s':'')+' · '+nPend+' pendiente'+(nPend!==1?'s':'')+'</span></div></div>';
       var body = lines.length ? '<div class="mr-days">'+lines.map(function(l){
         if(l.ev){ var evDone=!!l.ev.done;
-          return '<div class="mr-line"><span class="mr-date">'+shortDate(l.ev.fecha)+'</span><span class="mr-item ev"'+(evDone?' style="opacity:.6"':'')+'>'+esc(l.ev.tipo)+(l.ev.titulo?': '+esc(l.ev.titulo):'')+'</span>'+
-            '<span class="mr-acts">'+
-              (evDone ? '<span class="mr-check" title="Realizada">✓</span>'
-                      : '<button class="mr-evdone" title="Marcar realizada" data-sid="'+esc(s.id)+'" data-id="'+esc(l.ev.id)+'">✓ Realizar</button>')+
-              '<button class="mr-del" title="Eliminar evento" data-agid="'+esc(l.ev.agId||"")+'" data-sid="'+esc(s.id)+'" data-id="'+esc(l.ev.id)+'">✕</button>'+
-            '</span></div>'; }
+          return evWrapOpen(l.ev, s.id, true)+
+            '<div class="mr-line ev-hdr"><span class="mr-date">'+shortDate(l.ev.fecha)+'</span><span class="mr-item ev"'+(evDone?' style="opacity:.6"':'')+'>'+esc(l.ev.tipo)+(l.ev.titulo?': '+esc(l.ev.titulo):'')+'</span>'+
+              '<span style="margin-left:auto;display:inline-flex;align-items:center;gap:7px;flex:none">'+(evDone?'<span class="mr-check" title="Realizado">✓</span>':'<span class="mr-pend" style="color:#7a5cc0">evento</span>')+'<span class="mr-chev">▾</span></span>'+
+            '</div>'+evActsHTML(l.ev, evDone, false)+'</div>'; }
         var a=l.it.motivo==="Cliente";
         if(l.done) return '<div class="mr-line mr-done" data-visit="'+esc(l.visit.id)+'" data-sid="'+esc(s.id)+'"><span class="mr-date">'+shortDate(l.fecha)+'</span><span class="mr-item '+(a?"a":"p")+'">'+esc(l.it.cliente)+'</span><span class="mr-check" title="Realizada — toque para ver">✓</span></div>';
         return '<div class="mr-line"><span class="mr-date">'+shortDate(l.fecha)+'</span><span class="mr-item '+(a?"a":"p")+'">'+esc(l.it.cliente)+'</span><span class="mr-pend">pendiente</span></div>';
       }).join("")+'</div>' : '<div class="rday-empty">Sin ruta planificada.</div>';
       return '<div class="tcard">'+head+body+'</div>';
     }).join("");
-    $$(".mr-del",$("#mRutas")).forEach(function(b){
-      b.addEventListener("click", function(e){
-        e.stopPropagation();
-        if(!window.confirm("¿Eliminar este evento de la agenda? Se quita de la ruta de todos los vendedores a quienes se envió.")) return;
-        if(b.dataset.agid) deleteAgenda(b.dataset.agid); else delRoute(b.dataset.sid, b.dataset.id);
-        renderMgrRoutes(); toast("Evento eliminado ✓");
-      });
-    });
-    $$(".mr-evdone",$("#mRutas")).forEach(function(b){
-      b.addEventListener("click", function(e){
-        e.stopPropagation();
-        var sid=b.dataset.sid, it=(ROUTES[sid]||[]).filter(function(x){return x.id===b.dataset.id;})[0]; if(!it) return;
-        it.done=true; it.doneTs=Date.now(); it.sellerId=it.sellerId||sid; putRoute(it);
-        renderMgrRoutes(); toast("Evento realizado ✓");
-      });
-    });
+    wireEvWraps($("#mRutas"), renderMgrRoutes);
     $$(".mr-done",$("#mRutas")).forEach(function(row){
       row.addEventListener("click", function(){
         var v=(DB[row.dataset.sid]||[]).filter(function(x){return x.id===row.dataset.visit;})[0];
@@ -5773,6 +5759,43 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
     [GESTOR].concat(SELLERS).concat([TECNICA]).forEach(function(s){
       routeFor(s.id).filter(function(it){ return it.kind==="evento" && it.agId===agId; })
         .forEach(function(it){ delRoute(s.id, it.id); });
+    });
+  }
+  // ---------- acciones sobre eventos por ocurrencia (Gestión y vendedor) ----------
+  // all=true  → afecta todas las copias de la misma agenda (agId) en esa fecha = acción de Gestión sobre todo el equipo.
+  // all=false → afecta sólo la copia de ese vendedor = el vendedor gestiona su propia agenda.
+  function evOcc(agId, fecha, sid, id, all){
+    var res=[];
+    if(all && agId){
+      [GESTOR].concat(SELLERS).concat([TECNICA]).forEach(function(s){
+        routeFor(s.id).forEach(function(it){ if(it.kind==="evento" && it.agId===agId && it.fecha===fecha) res.push({sid:s.id, it:it}); });
+      });
+    } else {
+      var it=(ROUTES[sid]||[]).filter(function(x){return x.id===id;})[0];
+      if(it) res.push({sid:sid, it:it});
+    }
+    return res;
+  }
+  function evRealizar(agId,fecha,sid,id,all){ evOcc(agId,fecha,sid,id,all).forEach(function(o){ o.it.done=true; o.it.doneTs=Date.now(); o.it.sellerId=o.it.sellerId||o.sid; putRoute(o.it); }); }
+  function evReagendar(agId,fecha,sid,id,all,nd){ evOcc(agId,fecha,sid,id,all).forEach(function(o){ o.it.fecha=nd; o.it.sellerId=o.it.sellerId||o.sid; putRoute(o.it); }); }
+  function evCancelar(agId,fecha,sid,id,all){ evOcc(agId,fecha,sid,id,all).forEach(function(o){ delRoute(o.sid, o.it.id); }); }
+  function evWrapOpen(ev, sid, all){ return '<div class="mr-wrap ev-wrap" data-agid="'+esc(ev.agId||"")+'" data-efecha="'+esc(ev.fecha||"")+'" data-sid="'+esc(sid)+'" data-eid="'+esc(ev.id||"")+'" data-all="'+(all?"1":"0")+'" data-etipo="'+esc(ev.tipo||"")+'" data-etit="'+esc(ev.titulo||"")+'">'; }
+  function evActsHTML(ev, done, withEdit){ return '<div class="mr-acts">'+
+      (done?'':'<button class="mra-btn fin" data-act="fin">✓ Realizar</button>')+
+      '<input type="date" class="mra-date" value="'+esc(ev.fecha||"")+'">'+
+      '<button class="mra-btn res" data-act="res">📅 Reagendar</button>'+
+      '<button class="mra-btn can" data-act="can">✕ Cancelar</button>'+
+      (withEdit?'<button class="mra-btn gray" data-act="edit">✎ Editar</button>':'')+
+    '</div>'; }
+  function wireEvWraps(el, rerender){
+    $$(".ev-wrap",el).forEach(function(wrap){
+      var agid=wrap.dataset.agid, efe=wrap.dataset.efecha, sid=wrap.dataset.sid, eid=wrap.dataset.eid, all=wrap.dataset.all==="1";
+      var hdr=wrap.querySelector(".ev-hdr");
+      if(hdr){ hdr.style.cursor="pointer"; hdr.addEventListener("click", function(){ var was=wrap.classList.contains("open"); $$(".ev-wrap",el).forEach(function(w){ w.classList.remove("open"); }); if(!was) wrap.classList.add("open"); }); }
+      var fin=wrap.querySelector('[data-act="fin"]'); if(fin) fin.addEventListener("click", function(e){ e.stopPropagation(); evRealizar(agid,efe,sid,eid,all); toast("Evento realizado ✓"); rerender(); });
+      var res=wrap.querySelector('[data-act="res"]'); if(res) res.addEventListener("click", function(e){ e.stopPropagation(); var nd=wrap.querySelector(".mra-date").value; if(!nd){ toast("Elegí una fecha.", true); return; } evReagendar(agid,efe,sid,eid,all,nd); toast("Reagendado para "+fmtDate(nd)+" ✓"); rerender(); });
+      var ed=wrap.querySelector('[data-act="edit"]'); if(ed) ed.addEventListener("click", function(e){ e.stopPropagation(); openEventEdit({agId:agid, fecha:efe, tipo:wrap.dataset.etipo, titulo:wrap.dataset.etit}); });
+      var can=wrap.querySelector('[data-act="can"]'); if(can) can.addEventListener("click", function(e){ e.stopPropagation(); var acts=wrap.querySelector(".mr-acts"); acts.innerHTML='<span class="mra-confirm">'+(all?"¿Cancelar para todo el equipo?":"¿Cancelar este evento?")+'</span><button class="mra-btn can" data-y="1">Sí</button><button class="mra-btn gray" data-n="1">No</button>'; acts.querySelector('[data-y]').addEventListener("click", function(e2){ e2.stopPropagation(); evCancelar(agid,efe,sid,eid,all); toast("Evento cancelado."); rerender(); }); acts.querySelector('[data-n]').addEventListener("click", function(e2){ e2.stopPropagation(); rerender(); }); });
     });
   }
 
@@ -5829,17 +5852,16 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
       var s=o.s;
       var avatar = showWho ? '<div class="av" style="background:'+s.color+'">'+initials(s.name)+'</div>' : '';
       var who = showWho ? '<div class="who">'+esc(s.name)+'</div>' : '';
-      if(o._k==='e'){ var evDone=!!o.ev.done, evCls = showWho ? ' click-ev' : '';
-        var evData = showWho ? (' data-agid="'+esc(o.ev.agId||"")+'" data-efecha="'+esc(o.ev.fecha||"")+'" data-etipo="'+esc(o.ev.tipo||"")+'" data-etit="'+esc(o.ev.titulo||"")+'"') : '';
-        var evAct = showWho ? (evDone ? '<span class="cchk" title="Realizado">✓</span>' : '<button class="cday-evdone" data-sid="'+esc(s.id)+'" data-eid="'+esc(o.ev.id||"")+'">✓ Realizar</button>') : '';
-        return '<div class="cact'+evCls+(evDone?' cday-evok':'')+'"'+evData+'>'+avatar+'<div style="min-width:0">'+who+'<div class="cli">'+esc(o.ev.tipo)+(o.ev.titulo?': '+esc(o.ev.titulo):'')+'</div></div><span style="margin-left:auto;display:inline-flex;align-items:center;gap:8px;flex:none"><span class="tag ev">Evento</span>'+evAct+'</span></div>'; }
+      if(o._k==='e'){ var evDone=!!o.ev.done;
+        return evWrapOpen(o.ev, s.id, !!showWho)+
+          '<div class="cact ev-hdr'+(evDone?' cday-evok':'')+'">'+avatar+'<div style="min-width:0">'+who+'<div class="cli">'+esc(o.ev.tipo)+(o.ev.titulo?': '+esc(o.ev.titulo):'')+'</div></div><span style="margin-left:auto;display:inline-flex;align-items:center;gap:8px;flex:none"><span class="tag ev">Evento</span>'+(evDone?'<span class="cchk" title="Realizado">✓</span>':'')+'<span class="mr-chev">▾</span></span></div>'+
+          evActsHTML(o.ev, evDone, !!showWho)+'</div>'; }
       var a=o.motivo==="Cliente";
       if(o._k==='a') return '<div class="cact click" data-visit="'+esc(o.visit.id)+'" data-sid="'+esc(s.id)+'">'+avatar+'<div style="min-width:0">'+who+'<div class="cli">'+esc(o.cliente)+'</div></div><span class="tag '+(a?"a":"p")+'">'+o.motivo+'</span><span class="cchk">✓</span></div>';
       return '<div class="cact">'+avatar+'<div style="min-width:0">'+who+'<div class="cli">'+esc(o.cliente)+'</div></div><span class="tag '+(a?"a":"p")+'">'+o.motivo+'</span><span class="cpend">pendiente</span></div>';
     }).join("");
     $$(".cact.click",el).forEach(function(row){ row.addEventListener("click", function(){ var v=(DB[row.dataset.sid]||[]).filter(function(x){return x.id===row.dataset.visit;})[0]; if(v) openModal(v); }); });
-    $$(".cact.click-ev",el).forEach(function(row){ row.addEventListener("click", function(){ openEventEdit({agId:row.dataset.agid, fecha:row.dataset.efecha, tipo:row.dataset.etipo, titulo:row.dataset.etit}); }); });
-    $$(".cday-evdone",el).forEach(function(b){ b.addEventListener("click", function(e){ e.stopPropagation(); var sid=b.dataset.sid, it=(ROUTES[sid]||[]).filter(function(x){return x.id===b.dataset.eid;})[0]; if(!it) return; it.done=true; it.doneTs=Date.now(); it.sellerId=it.sellerId||sid; putRoute(it); toast("Evento realizado ✓"); renderMgrCalendar(); }); });
+    wireEvWraps(el, showWho?renderMgrCalendar:renderSellerCalendar);
   }
   // editar un evento en una fecha: participantes, fecha, tipo/título (funciona con o sin agId)
   function openEventEdit(ref){
