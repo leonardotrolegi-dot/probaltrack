@@ -2637,6 +2637,14 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
   // proporción general de ventas mes a mes (promedio de las líneas) — para distribuir el objetivo total
   var GEN_SEASON=(function(){ var a=[],m,l; for(m=0;m<12;m++){ var s=0,n=0; for(l in SEASON){ s+=SEASON[l][m]; n++; } a.push(n?s/n:0); } return a; })();
   function planKey(nome, vend){ return "pl_"+slug(nome||"")+"__"+slug(vend||""); }
+  // Grupos de nombres de un mismo vendedor (transición Gabriel↔Matías): si la previsión
+  // de un cliente quedó guardada bajo un nombre viejo, se la busca también bajo el otro.
+  var PLAN_MERGE=[["gabriel","matias"]];
+  function planAltSlugs(v){ var s=slug(v||""); for(var i=0;i<PLAN_MERGE.length;i++){ if(PLAN_MERGE[i].indexOf(s)>=0) return PLAN_MERGE[i]; } return [s]; }
+  function planHasData(k){ var d=PLAN[k]; return !!(d && d.plan && Object.keys(d.plan).length>0); }
+  // clave del doc de planificación a usar (lectura y escritura): la canónica si tiene datos,
+  // si no, la de un alias del grupo que sí los tenga; si ninguna, la canónica.
+  function planCanonKey(c){ var nmS=slug(c.nome||""), base="pl_"+nmS+"__"+slug(c.vendedor||""); if(planHasData(base)) return base; var al=planAltSlugs(c.vendedor); for(var i=0;i<al.length;i++){ var k="pl_"+nmS+"__"+al[i]; if(planHasData(k)) return k; } return base; }
   var _planSaveT=null;
   function savePlan(key){
     var doc=PLAN[key]; if(!doc) return;
@@ -2906,6 +2914,9 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
   // Historial de versiones (changelog). Al agregar una mejora: sumar una entrada
   // arriba con la fecha y bumpear el número. APP_VERSION = la última entrada.
   var CHANGELOG = [
+    { v:"1.159", d:"02/11/2026", n:[
+        "Corregido: la planificación de Gabriel (cartera que venía de Matías) no se mostraba después de la transición. Ahora la app busca la previsión de cada cliente también bajo el nombre anterior del vendedor, así que vuelve a aparecer. El dato no se había perdido."
+      ] },
     { v:"1.158", d:"02/11/2026", n:[
         "Corregido: en «Categorización de clientes» la categoría A/B/C/D no quedaba guardada al pasar a otro cliente. Ahora se guarda bien y se mantiene."
       ] },
@@ -3373,7 +3384,7 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
   function baseIdxByMnMap(){ var b=salesMonths(), map={}; b.forEach(function(lbl,i){ var mn=parseInt((""+lbl).split("-")[1],10); if(mn) map[mn]=i; }); return map; }
   // meses editables: vendedor carga su previsión de Oct a Dic; gestor edita todo el año
   function editorMonths(){ var y=planYear(); var nums=(VCTX==="mgr")?[1,2,3,4,5,6,7,8,9,10,11,12]:[10,11,12]; return nums.map(function(m){ return y+"-"+m; }); }
-  function planDoc(c){ var k=planKey(c.nome,c.vendedor); if(!PLAN[k]) PLAN[k]={cliente:c.nome, vendedor:c.vendedor||"", plan:{}}; if(!PLAN[k].plan) PLAN[k].plan={}; return PLAN[k]; }
+  function planDoc(c){ var k=planCanonKey(c); if(!PLAN[k]) PLAN[k]={cliente:c.nome, vendedor:c.vendedor||"", plan:{}}; if(!PLAN[k].plan) PLAN[k].plan={}; return PLAN[k]; }
   function planMonthsWithData(doc){ var n=0, p=doc&&doc.plan||{}; for(var m in p){ if((p[m]||[]).some(function(r){return (+r.kg||0)>0;})) n++; } return n; }
   function curMonthLabel(months){ var mn=(new Date()).getMonth()+1; for(var i=0;i<months.length;i++){ if(parseInt((""+months[i]).split("-")[1],10)===mn) return months[i]; } return months[months.length-1]||""; }
   function loadedInMonth(doc, mLbl){ if(!doc||!doc.plan||!mLbl) return false; return (doc.plan[mLbl]||[]).some(function(r){ return (+r.kg||0)>0; }); }
@@ -3401,7 +3412,7 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
     var curM=curMonthLabel(months), curTxt=curM?fmtMes(curM):"mes";
     var html="";
     list.slice(0,150).forEach(function(c){
-      var key=planKey(c.nome,c.vendedor);
+      var key=planCanonKey(c);
       if(key===planOpenKey){ html+=planEditorHTML(c, key, months); return; }
       var doc=PLAN[key], done=loadedInMonth(doc, curM);
       html+='<button class="pl-cli '+(done?'pl-done':'pl-todo')+'" data-key="'+esc(key)+'"><span class="pl-dotc"></span><span class="pl-nm">'+esc(c.nome)+'</span><span class="pl-kg">'+fmtKg(c.kg||0)+' kg</span><span class="pl-st '+(done?'ok':'no')+'">'+(done?curTxt+' ✓':'sin '+curTxt)+'</span></button>';
@@ -3458,7 +3469,7 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
     var y=planYear(), bi=baseIdxByMnMap();
     var pv={}, rz={}, ob={}; for(var m=1;m<=12;m++){ pv[m]=0; rz[m]=0; ob[m]=0; }
     planClients().forEach(function(c){
-      var doc=PLAN[planKey(c.nome,c.vendedor)];
+      var doc=PLAN[planCanonKey(c)];
       if(doc&&doc.plan){ for(var m=1;m<=12;m++){ var lbl=y+"-"+m; if(doc.plan[lbl]) doc.plan[lbl].forEach(function(r){ pv[m]+=(+r.kg||0); }); } }
       if(c.meses){ for(var m=1;m<=12;m++){ var k=bi[m]; if(k!=null) rz[m]+=(+c.meses[k]||0); } }
     });
@@ -3648,7 +3659,7 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
 
   // ===== Categorización de clientes + agenda automática =====
   var CAT_INT={A:15,B:30,C:45,D:0}, catSellerId="";
-  function catKey(c){ return planKey(c.nome, c.vendedor); }
+  function catKey(c){ return planCanonKey(c); }
   // La categoría se guarda como campo `cat` en el doc de planificación del cliente
   // (doc id = planKey, igual que los pronósticos). NO en un doc "__cat__": ese id
   // coincide con el patrón reservado de Firestore (__.*__) y la escritura se rechaza.
@@ -3750,7 +3761,7 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
       var o=objSellerData(s.id)||{};
       // Comparativo: cliente (por tamaño) → mes
       clients.forEach(function(c){
-        var doc=PLAN[planKey(c.nome,c.vendedor)];
+        var doc=PLAN[planCanonKey(c)];
         MONS.forEach(function(m){
           var prev=0; if(doc&&doc.plan&&doc.plan[y+"-"+m]) doc.plan[y+"-"+m].forEach(function(r){ prev+=(+r.kg||0); });
           var k=bi[m], real=(k!=null&&c.meses&&c.meses[k]!=null)?(+c.meses[k]||0):0, fut=(m>curMn);
@@ -3763,7 +3774,7 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
       MONS.forEach(function(m){
         var obj=0; OBJ_LINES.forEach(function(l){ if(o[l]&&o[l][m-1]!=null) obj+=(+o[l][m-1]||0); });
         var real=0, prev=0;
-        clients.forEach(function(c){ var doc=PLAN[planKey(c.nome,c.vendedor)];
+        clients.forEach(function(c){ var doc=PLAN[planCanonKey(c)];
           if(doc&&doc.plan&&doc.plan[y+"-"+m]) doc.plan[y+"-"+m].forEach(function(r){ prev+=(+r.kg||0); });
           var k=bi[m]; if(k!=null&&c.meses&&c.meses[k]!=null) real+=(+c.meses[k]||0);
         });
