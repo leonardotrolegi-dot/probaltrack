@@ -961,6 +961,10 @@
   .mr-check{margin-left:auto;flex:none;color:#fff;background:var(--accent);width:20px;height:20px;border-radius:50%;
     display:grid;place-items:center;font-size:12px;font-weight:800}
   .mr-pend{margin-left:auto;flex:none;font-size:10.5px;font-weight:700;color:var(--ink-faint);text-transform:uppercase;letter-spacing:.03em}
+  .mr-acts{margin-left:auto;flex:none;display:inline-flex;gap:6px;align-items:center}
+  .mr-evdone{flex:none;border:0;background:var(--accent-soft);color:var(--accent);border-radius:7px;padding:5px 9px;font-size:11.5px;font-weight:800;cursor:pointer}
+  .mr-evdone:hover{filter:brightness(.96)}
+  .mr-acts .mr-del,.mr-acts .mr-check{margin-left:0}
   .mr-line.mr-over .mr-pend{color:#b23b3b}
   .mr-line.mr-over .mr-date{color:#b23b3b;font-weight:700}
   .mr-wrap{border-bottom:1px solid var(--line)}
@@ -2902,6 +2906,15 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
   // Historial de versiones (changelog). Al agregar una mejora: sumar una entrada
   // arriba con la fecha y bumpear el número. APP_VERSION = la última entrada.
   var CHANGELOG = [
+    { v:"1.158", d:"02/11/2026", n:[
+        "Corregido: en «Categorización de clientes» la categoría A/B/C/D no quedaba guardada al pasar a otro cliente. Ahora se guarda bien y se mantiene."
+      ] },
+    { v:"1.157", d:"02/11/2026", n:[
+        "Reporte del equipo: cada vendedor ahora muestra el «Objetivo del mes» al lado del kg del mes, y el «% logrado» (kg ÷ objetivo) debajo del kg. También en la portada (totales y tabla)."
+      ] },
+    { v:"1.156", d:"30/10/2026", n:[
+        "Rutas (Gestión) · lista: ahora Gestión puede marcar un evento como «Realizado» (✓) y queda en el historial de agendas hechas, además de poder eliminarlo."
+      ] },
     { v:"1.155", d:"30/10/2026", n:[
         "Planificación: nueva «Categorización de clientes» (A/B/C/D). Clasificás cada cliente y la app genera la agenda en tu ruta: visitas repetidas según la categoría (A=15, B=30, C=45 días), arrancando la semana que viene.",
         "Se mantiene sola: al registrar una visita recalcula la próxima; al postergar una visita, reajusta las siguientes en cascada; cancelar no afecta al resto."
@@ -3636,7 +3649,10 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
   // ===== Categorización de clientes + agenda automática =====
   var CAT_INT={A:15,B:30,C:45,D:0}, catSellerId="";
   function catKey(c){ return planKey(c.nome, c.vendedor); }
-  function catOf(c){ return CATC[catKey(c)]||""; }
+  // La categoría se guarda como campo `cat` en el doc de planificación del cliente
+  // (doc id = planKey, igual que los pronósticos). NO en un doc "__cat__": ese id
+  // coincide con el patrón reservado de Firestore (__.*__) y la escritura se rechaza.
+  function catOf(c){ var d=PLAN[catKey(c)]; return (d&&d.cat)||""; }
   function _cd(iso){ return new Date(iso+"T00:00:00"); }
   function dAdd(iso,n){ var d=_cd(iso); d.setDate(d.getDate()+n); return localISO(d); }
   function dMoveBiz(iso){ var d=_cd(iso), w=d.getDay(); if(w===6) d.setDate(d.getDate()+2); else if(w===0) d.setDate(d.getDate()+1); return localISO(d); }
@@ -3670,7 +3686,7 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
       var seg=["A","B","C","D"].map(function(k){ return '<button class="'+k+(cur===k?" on":"")+'" data-i="'+i+'" data-k="'+k+'">'+k+'</button>'; }).join("");
       return '<div class="catrow"><div class="ci"><div class="nm">'+esc(c.nome)+'</div><div class="kg">'+fmtKg(c.kg)+' kg/año</div></div><div class="catseg2">'+seg+'</div></div>';
     }).join("");
-    $$(".catseg2 button",el).forEach(function(b){ b.addEventListener("click", function(){ var c=clients[+b.dataset.i], k=b.dataset.k, key=catKey(c); if(CATC[key]===k) delete CATC[key]; else CATC[key]=k; saveCat(); renderCatList(); }); });
+    $$(".catseg2 button",el).forEach(function(b){ b.addEventListener("click", function(){ var c=clients[+b.dataset.i], k=b.dataset.k, key=catKey(c), d=planDoc(c); if(d.cat===k){ delete d.cat; } else { d.cat=k; } savePlan(key); renderCatList(); }); });
     var cnt={A:0,B:0,C:0,D:0,n:0}; clients.forEach(function(c){ var cat=catOf(c); if(cat){ cnt[cat]++; cnt.n++; } });
     $("#catSumm").textContent=cnt.n+" de "+clients.length+" categorizados · "+cnt.A+" A · "+cnt.B+" B · "+cnt.C+" C · "+cnt.D+" D";
     renderCatUpcoming();
@@ -3869,11 +3885,14 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
           return {d:it.fecha, nome:it.cliente, tag:(it.motivo==="Cliente"?{t:"Cliente",cls:"cli"}:{t:"Prospecto",cls:"pro"})}; });
       var retrasadasN=pendVis.filter(function(it){ return it.fecha<today; }).length;
       var st; try{ st=prospStates(visitsFor(s.id), prospUniverse(s.id)); }catch(e){ st={activo:0,pausado:0,perdido:0,vend:0}; }
-      return {seller:s, realizadas:vs.length, cliVis:cliVis, proVis:proVis, created:created, kgMes:kgMes,
+      var objMes=0, _o=objSellerData(s.id)||{}; OBJ_LINES.forEach(function(l){ if(_o[l]&&_o[l][curMn-1]!=null) objMes+=(+_o[l][curMn-1]||0); });
+      var pctMes=objMes>0?Math.round(kgMes/objMes*100):null;
+      return {seller:s, realizadas:vs.length, cliVis:cliVis, proVis:proVis, created:created, kgMes:kgMes, objMes:objMes, pctMes:pctMes,
         upcoming:upcoming, upcomingN:upcoming.length, retrasadasN:retrasadasN, st:st};
     });
-    var team={realizadas:0, upcoming:0, created:0, retrasadas:0, kgMes:0};
-    sellers.forEach(function(d){ team.realizadas+=d.realizadas; team.upcoming+=d.upcomingN; team.created+=d.created.length; team.retrasadas+=d.retrasadasN; team.kgMes+=d.kgMes; });
+    var team={realizadas:0, upcoming:0, created:0, retrasadas:0, kgMes:0, objMes:0};
+    sellers.forEach(function(d){ team.realizadas+=d.realizadas; team.upcoming+=d.upcomingN; team.created+=d.created.length; team.retrasadas+=d.retrasadasN; team.kgMes+=d.kgMes; team.objMes+=d.objMes; });
+    team.pctMes=team.objMes>0?Math.round(team.kgMes/team.objMes*100):null;
     return {mode:mode, titleWord:(mode==="month"?"mensual":"semanal"), periodWord:(mode==="month"?"Mes de":"Semana"),
       restWord:(mode==="month"?"DEL MES":"DE LA SEMANA"),
       period:{start:start,end:end,label:wb.label}, inProgress:inProgress, asOf:asOf, asOfLabel:shortDate(asOf),
@@ -3899,16 +3918,18 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
     if(data.inProgress) D.txt("EN CURSO · al "+data.asOfLabel, W-M, y+27, 10, "#b5830f", true, "right");
     y+=30; ctx.strokeStyle="#2f6b43"; ctx.lineWidth=2; ctx.beginPath(); ctx.moveTo(M,y); ctx.lineTo(W-M,y); ctx.stroke(); y+=22;
     // KPIs (5)
-    var n=5, gap=8, bw=(W-2*M-(n-1)*gap)/n, bh=56;
-    function kbox(i,val,sub,label,col){ var x=M+i*(bw+gap); D.box(x,y,bw,bh,10,"#f4f7f2","#e4e8df");
-      D.txt(""+val, x+bw/2, y+24, 17, col||"#245334", true, "center");
-      if(sub) D.txt(sub, x+bw/2, y+35, 9, "#b5830f", true, "center");
-      D.txt(label, x+bw/2, y+(sub?47:42), 8.8, "#7d887f", false, "center"); }
+    function pctCol(p){ return p==null?"#b5830f":(p>=100?"#1f7244":(p>=95?"#b5830f":"#b23b3b")); }
+    var n=6, gap=7, bw=(W-2*M-(n-1)*gap)/n, bh=56;
+    function kbox(i,val,sub,label,col,subCol){ var x=M+i*(bw+gap); D.box(x,y,bw,bh,10,"#f4f7f2","#e4e8df");
+      D.txt(""+val, x+bw/2, y+23, 16, col||"#245334", true, "center");
+      if(sub) D.txt(sub, x+bw/2, y+34, 9, subCol||"#b5830f", true, "center");
+      D.txt(label, x+bw/2, y+(sub?46:41), 8.5, "#7d887f", false, "center"); }
     kbox(0, sd.realizadas, (sd.upcomingN?("+"+sd.upcomingN+" agend."):""), "Visitas hechas", "#245334");
     kbox(1, sd.cliVis.length, "", "Clientes visit.", "#1f7244");
-    kbox(2, fmtKg(sd.kgMes), "", "kg del mes ("+data.mesLabel+")", "#1f7244");
-    kbox(3, sd.created.length, "", "Prosp. nuevos", "#1f6091");
-    kbox(4, sd.retrasadasN, "", "Retrasadas", sd.retrasadasN?"#b23b3b":"#245334");
+    kbox(2, fmtKg(sd.kgMes), (sd.pctMes!=null?(sd.pctMes+"% del obj"):""), "kg del mes ("+data.mesLabel+")", "#1f7244", pctCol(sd.pctMes));
+    kbox(3, fmtKg(sd.objMes), "", "Objetivo mes", "#1f6091");
+    kbox(4, sd.created.length, "", "Prosp. nuevos", "#1f6091");
+    kbox(5, sd.retrasadasN, "", "Retrasadas", sd.retrasadasN?"#b23b3b":"#245334");
     y+=bh+18;
     function sec(title, col){ D.txt(title, M, y, 11, col||"#2f6b43", true); y+=16; }
     function rows(list, cap, emptyTxt){
@@ -3947,36 +3968,40 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
     if(_logoImg && _logoImg.complete && _logoImg.naturalWidth){ ctx.drawImage(_logoImg,(W-lw)/2,y,lw,lh); y+=lh+18; } else { D.txt("Probal", W/2, y, 20, "#2f6b43", true, "center"); y+=26; }
     D.txt("Resumen "+data.titleWord+" del equipo", W/2, y, 21, "#245334", true, "center"); y+=22;
     D.txt(data.periodWord+" "+data.period.label+(data.inProgress?(" · EN CURSO al "+data.asOfLabel):" · cerrada")+" · generado "+fmtDate(todayISO()), W/2, y, 12, "#7d887f", false, "center"); y+=30;
-    // team totals (5 boxes)
-    var n=5, gap=8, bw=(W-2*M-(n-1)*gap)/n, bh=58;
-    function tbox(i,val,label,col){ var x=M+i*(bw+gap); D.box(x,y,bw,bh,10,"#f4f7f2","#e4e8df"); D.txt(""+val, x+bw/2, y+26, 19, col||"#245334", true, "center"); D.txt(label, x+bw/2, y+44, 9, "#7d887f", false, "center"); }
+    function pctCol(p){ return p==null?"#b5830f":(p>=100?"#1f7244":(p>=95?"#b5830f":"#b23b3b")); }
+    // team totals (6 boxes)
+    var n=6, gap=7, bw=(W-2*M-(n-1)*gap)/n, bh=58;
+    function tbox(i,val,label,col,sub,subCol){ var x=M+i*(bw+gap); D.box(x,y,bw,bh,10,"#f4f7f2","#e4e8df"); D.txt(""+val, x+bw/2, y+(sub?24:27), 17, col||"#245334", true, "center"); if(sub) D.txt(sub, x+bw/2, y+35, 8.5, subCol||"#b5830f", true, "center"); D.txt(label, x+bw/2, y+(sub?47:45), 8.3, "#7d887f", false, "center"); }
     tbox(0, data.team.realizadas, "Visitas hechas", "#245334");
-    tbox(1, data.team.upcoming, "Agendadas (resto)", "#8a6a0a");
+    tbox(1, data.team.upcoming, "Agendadas", "#8a6a0a");
     tbox(2, data.team.created, "Prosp. nuevos", "#1f6091");
     tbox(3, data.team.retrasadas, "Retrasadas", data.team.retrasadas?"#b23b3b":"#245334");
-    tbox(4, fmtKg(data.team.kgMes), "kg del mes ("+data.mesLabel+")", "#1f7244");
+    tbox(4, fmtKg(data.team.kgMes), "kg del mes ("+data.mesLabel+")", "#1f7244", (data.team.pctMes!=null?(data.team.pctMes+"% del obj"):""), pctCol(data.team.pctMes));
+    tbox(5, fmtKg(data.team.objMes), "Objetivo mes", "#1f6091");
     y+=bh+22;
     D.txt("POR VENDEDOR", M, y, 11, "#2f6b43", true); y+=16;
     // mini tabla
-    var cx=[M+66, 430, 500, 575, 650, W-M]; // Realiz, Agend, Nuevos, Retras, kgMes (right)
+    var cx=[M+16, 352, 410, 470, 530, 640, W-M]; // name, Realiz, Agend, Nuevos, Retras, kgMes, %obj (right)
     D.txt("Vendedor", M, y+9, 10, "#7d887f", true);
-    D.txt("Realiz.", cx[1], y+9, 10, "#7d887f", true, "right");
-    D.txt("Agend.", cx[2], y+9, 10, "#7d887f", true, "right");
-    D.txt("Nuevos", cx[3], y+9, 10, "#7d887f", true, "right");
-    D.txt("Retras.", cx[4], y+9, 10, "#7d887f", true, "right");
-    D.txt("kg mes", cx[5], y+9, 10, "#7d887f", true, "right");
+    D.txt("Realiz.", cx[1], y+9, 9.5, "#7d887f", true, "right");
+    D.txt("Agend.", cx[2], y+9, 9.5, "#7d887f", true, "right");
+    D.txt("Nuevos", cx[3], y+9, 9.5, "#7d887f", true, "right");
+    D.txt("Retras.", cx[4], y+9, 9.5, "#7d887f", true, "right");
+    D.txt("kg mes", cx[5], y+9, 9.5, "#7d887f", true, "right");
+    D.txt("% obj", cx[6], y+9, 9.5, "#7d887f", true, "right");
     D.hr(M, y+15, W-M, "#dfe3da"); y+=23;
     data.sellers.forEach(function(d,i){ if(i%2===1){ ctx.fillStyle="#fafbf9"; ctx.fillRect(M-6, y-12, W-2*M+12, 20); }
       ctx.fillStyle=d.seller.color||"#2f6b43"; ctx.beginPath(); ctx.arc(M+5, y-1, 5, 0, 7); ctx.fill();
-      D.txt(D.trunc(d.seller.name, "bold 12px Arial, sans-serif", 220), M+16, y+3, 12, "#1a231d", true);
-      D.txt(""+d.realizadas, cx[1], y+3, 12, "#245334", true, "right");
-      D.txt(d.upcomingN?("+"+d.upcomingN):"—", cx[2], y+3, 12, "#8a6a0a", false, "right");
-      D.txt(""+d.created.length, cx[3], y+3, 12, "#1f6091", false, "right");
-      D.txt(""+d.retrasadasN, cx[4], y+3, 12, d.retrasadasN?"#b23b3b":"#7d887f", true, "right");
-      D.txt(fmtKg(d.kgMes), cx[5], y+3, 12, "#1f7244", false, "right");
+      D.txt(D.trunc(d.seller.name, "bold 11.5px Arial, sans-serif", 300), M+14, y+3, 11.5, "#1a231d", true);
+      D.txt(""+d.realizadas, cx[1], y+3, 11, "#245334", true, "right");
+      D.txt(d.upcomingN?("+"+d.upcomingN):"—", cx[2], y+3, 11, "#8a6a0a", false, "right");
+      D.txt(""+d.created.length, cx[3], y+3, 11, "#1f6091", false, "right");
+      D.txt(""+d.retrasadasN, cx[4], y+3, 11, d.retrasadasN?"#b23b3b":"#7d887f", true, "right");
+      D.txt(fmtKg(d.kgMes), cx[5], y+3, 11, "#1f7244", false, "right");
+      D.txt(d.pctMes!=null?(d.pctMes+"%"):"—", cx[6], y+3, 11, pctCol(d.pctMes), true, "right");
       D.hr(M, y+9, W-M, "#f1f3ef"); y+=22;
     });
-    D.txt("kg del mes = acumulado del mes desde la importación (referencia, no semanal).", M, y+14, 10, "#9aa39a");
+    D.txt("kg del mes = acumulado desde la importación · % obj = kg del mes ÷ objetivo del mes (referencia, no semanal).", M, y+14, 9.5, "#9aa39a");
     D.txt("Probal Track · Gestión", W/2, 1123-34, 10, "#9aa39a", false, "center");
   }
   function weeklyReportPDF(){
@@ -5648,12 +5673,17 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
       // visitas realizadas sin ítem de ruta (igual aparecen con ✓)
       realized.forEach(function(v){ if(!usedVisit[v.id]) lines.push({fecha:v.data, done:true, visit:v, it:{cliente:v.cliente, motivo:v.motivo}}); });
       lines.sort(function(a,b){ return a.fecha<b.fecha?-1:(a.fecha>b.fecha?1:0); });
-      var nDone=lines.filter(function(l){return l.done;}).length, nPend=lines.filter(function(l){return l.it && !l.done;}).length;
+      var nDone=lines.filter(function(l){return l.done || (l.ev && l.ev.done);}).length, nPend=lines.filter(function(l){return (l.it && !l.done) || (l.ev && !l.ev.done);}).length;
       var head = '<div class="thead"><div class="avatar" style="background:'+s.color+'">'+initials(s.name)+'</div>'+
         '<div><b>'+esc(s.name)+'</b><br><span>'+nDone+' realizada'+(nDone!==1?'s':'')+' · '+nPend+' pendiente'+(nPend!==1?'s':'')+'</span></div></div>';
       var body = lines.length ? '<div class="mr-days">'+lines.map(function(l){
-        if(l.ev) return '<div class="mr-line"><span class="mr-date">'+shortDate(l.ev.fecha)+'</span><span class="mr-item ev">'+esc(l.ev.tipo)+(l.ev.titulo?': '+esc(l.ev.titulo):'')+'</span>'+
-          '<button class="mr-del" title="Eliminar evento" data-agid="'+esc(l.ev.agId||"")+'" data-sid="'+esc(s.id)+'" data-id="'+esc(l.ev.id)+'">✕</button></div>';
+        if(l.ev){ var evDone=!!l.ev.done;
+          return '<div class="mr-line"><span class="mr-date">'+shortDate(l.ev.fecha)+'</span><span class="mr-item ev"'+(evDone?' style="opacity:.6"':'')+'>'+esc(l.ev.tipo)+(l.ev.titulo?': '+esc(l.ev.titulo):'')+'</span>'+
+            '<span class="mr-acts">'+
+              (evDone ? '<span class="mr-check" title="Realizada">✓</span>'
+                      : '<button class="mr-evdone" title="Marcar realizada" data-sid="'+esc(s.id)+'" data-id="'+esc(l.ev.id)+'">✓ Realizar</button>')+
+              '<button class="mr-del" title="Eliminar evento" data-agid="'+esc(l.ev.agId||"")+'" data-sid="'+esc(s.id)+'" data-id="'+esc(l.ev.id)+'">✕</button>'+
+            '</span></div>'; }
         var a=l.it.motivo==="Cliente";
         if(l.done) return '<div class="mr-line mr-done" data-visit="'+esc(l.visit.id)+'" data-sid="'+esc(s.id)+'"><span class="mr-date">'+shortDate(l.fecha)+'</span><span class="mr-item '+(a?"a":"p")+'">'+esc(l.it.cliente)+'</span><span class="mr-check" title="Realizada — toque para ver">✓</span></div>';
         return '<div class="mr-line"><span class="mr-date">'+shortDate(l.fecha)+'</span><span class="mr-item '+(a?"a":"p")+'">'+esc(l.it.cliente)+'</span><span class="mr-pend">pendiente</span></div>';
@@ -5666,6 +5696,14 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
         if(!window.confirm("¿Eliminar este evento de la agenda? Se quita de la ruta de todos los vendedores a quienes se envió.")) return;
         if(b.dataset.agid) deleteAgenda(b.dataset.agid); else delRoute(b.dataset.sid, b.dataset.id);
         renderMgrRoutes(); toast("Evento eliminado ✓");
+      });
+    });
+    $$(".mr-evdone",$("#mRutas")).forEach(function(b){
+      b.addEventListener("click", function(e){
+        e.stopPropagation();
+        var sid=b.dataset.sid, it=(ROUTES[sid]||[]).filter(function(x){return x.id===b.dataset.id;})[0]; if(!it) return;
+        it.done=true; it.doneTs=Date.now(); it.sellerId=it.sellerId||sid; putRoute(it);
+        renderMgrRoutes(); toast("Evento realizado ✓");
       });
     });
     $$(".mr-done",$("#mRutas")).forEach(function(row){
