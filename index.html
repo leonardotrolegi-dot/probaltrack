@@ -2664,7 +2664,7 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
     else { try{ localStorage.setItem("pt_plan", JSON.stringify(PLAN)); }catch(e){} }
   }
   function saveObj(){
-    if(useDB && dbh){ dbh.collection("planning").doc("__obj__").set({obj:OBJ}).catch(noop); }
+    if(useDB && dbh){ dbh.collection("planning").doc("obj_meta").set({obj:OBJ}).catch(noop); }
     else { try{ localStorage.setItem("pt_obj", JSON.stringify(OBJ)); }catch(e){} }
   }
   function saveCat(){
@@ -2823,7 +2823,7 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
     }, noop);
     dbh.collection("planning").onSnapshot(function(snap){
       if(planEditingNow()) return; // no tocar PLAN/OBJ ni re-renderizar mientras el usuario edita (evita pisar lo que está cargando)
-      PLAN={}; OBJ={}; CATC={}; snap.docs.forEach(function(d){ if(d.id==="__obj__"){ OBJ=(d.data()||{}).obj||{}; } else if(d.id==="__cat__"){ CATC=(d.data()||{}).cat||{}; } else { PLAN[d.id]=d.data()||{}; } });
+      PLAN={}; OBJ={}; CATC={}; snap.docs.forEach(function(d){ if(d.id==="obj_meta"||d.id==="__obj__"){ OBJ=(d.data()||{}).obj||{}; } else if(d.id==="__cat__"){ CATC=(d.data()||{}).cat||{}; } else if(d.id.indexOf("pl_")===0){ PLAN[d.id]=d.data()||{}; } });
       if($("#planPage") && !$("#planPage").classList.contains("hidden")) renderPlan();
       if($("#objPage") && !$("#objPage").classList.contains("hidden")) renderObj();
     }, noop);
@@ -2926,6 +2926,9 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
   // Historial de versiones (changelog). Al agregar una mejora: sumar una entrada
   // arriba con la fecha y bumpear el número. APP_VERSION = la última entrada.
   var CHANGELOG = [
+    { v:"1.164", d:"03/11/2026", n:[
+        "Corregido: los «Objetivos por línea» (Gestión) no se guardaban. Se guardaban en un documento con un nombre que Firestore rechaza, así que la carga se perdía en silencio. Ahora se guardan bien y quedan para todos. Volvé a cargar los objetivos de noviembre y van a persistir."
+      ] },
     { v:"1.163", d:"03/11/2026", n:[
         "Creep Feeding: ahora es COMPARATIVO. Nuevo dato «Ganancia PV/día sin creep»; la herramienta y el PDF muestran cuántos kg sale el ternero y su valor en Gs con creep vs sin creep, y la ventaja neta del creep (por animal y por lote, ya descontado el suplemento).",
         "Calculadoras de viabilidad: «ROI» se muestra como «TIR» en todas (pantalla y PDF).",
