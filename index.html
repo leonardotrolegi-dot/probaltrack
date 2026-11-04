@@ -1688,6 +1688,8 @@
     <div class="hub-body">
       <div class="hub-h">Objetivo por línea de producto</div>
       <div class="hub-s">Meta <b>mensual</b> por línea, por vendedor. Cargada desde la planilla de Metas (podés editar y guardar).</div>
+      <div class="pl-sec">Año</div>
+      <select id="objYearSel" class="ev-inp" style="margin-bottom:11px"></select>
       <div class="pl-sec">Vendedor</div>
       <select id="objSellerSel" class="ev-inp" style="margin-bottom:11px"></select>
       <div class="pl-months" id="objMonths"></div>
@@ -2627,7 +2629,10 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
     };
     Object.keys(OCT).forEach(function(sid){ var o=DEFAULT_OBJ[sid]; if(!o) return; OCT[sid].forEach(function(v,i){ var l=OBJ_LINES[i]; if(o[l]) o[l][9]=v; }); });
   })();
-  function objSellerData(sid){ var o=OBJ[sid]; if(o && Object.keys(o).length) return o; return DEFAULT_OBJ[sid]||{}; }
+  var BASE_OBJ_YEAR="2026";
+  function curYearStr(){ return ""+(new Date().getFullYear()); }
+  // objetivos por año: OBJ[año][sid][línea][0..11]; para el año base cae a DEFAULT_OBJ si no hay cargado.
+  function objSellerData(sid, year){ year=year||curYearStr(); var yo=OBJ[year]||{}; var o=yo[sid]; if(o && Object.keys(o).length) return o; return (year===BASE_OBJ_YEAR?(DEFAULT_OBJ[sid]||{}):{}); }
   // familia de comisión por línea + tasas Gs/kg (base / logrado / superado%)
   var PFAM={"Balanceados":"Balanceado","Balanceado ovino":"Balanceado","Balanceado equino":"Balanceado","Proteicos":"Proteico","Proteico ovino":"Proteico","Concentrado":"Concentrado","Núcleos":"Núcleo","Núcleo ovino":"Núcleo","Sup. minerales":"Sal","Sup. minerales ovino":"Sal","Sup. minerales equino":"Sal"};
   var COMIS={"Balanceado":{base:7.7,logr:16.5,supPct:10,sup:22},"Proteico":{base:7.7,logr:16.5,supPct:10,sup:22},"Concentrado":{base:22,logr:33,supPct:30,sup:44},"Sal":{base:55,logr:55,supPct:0,sup:55},"Núcleo":{base:55,logr:55,supPct:0,sup:55}};
@@ -2824,6 +2829,7 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
     dbh.collection("planning").onSnapshot(function(snap){
       if(planEditingNow()) return; // no tocar PLAN/OBJ ni re-renderizar mientras el usuario edita (evita pisar lo que está cargando)
       PLAN={}; OBJ={}; CATC={}; snap.docs.forEach(function(d){ if(d.id==="obj_meta"||d.id==="__obj__"){ OBJ=(d.data()||{}).obj||{}; } else if(d.id==="__cat__"){ CATC=(d.data()||{}).cat||{}; } else if(d.id.indexOf("pl_")===0){ PLAN[d.id]=d.data()||{}; } });
+      if(Object.keys(OBJ).some(function(k){ return !/^\d{4}$/.test(k); })){ var _oy={}; _oy[BASE_OBJ_YEAR]=OBJ; OBJ=_oy; } // migra formato plano viejo a {año:{...}}
       if($("#planPage") && !$("#planPage").classList.contains("hidden")) renderPlan();
       if($("#objPage") && !$("#objPage").classList.contains("hidden")) renderObj();
     }, noop);
@@ -2926,6 +2932,9 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
   // Historial de versiones (changelog). Al agregar una mejora: sumar una entrada
   // arriba con la fecha y bumpear el número. APP_VERSION = la última entrada.
   var CHANGELOG = [
+    { v:"1.165", d:"04/11/2026", n:[
+        "Objetivos por línea ahora son POR AÑO: nuevo selector de año en «Objetivo por línea». Los de 2026 quedan guardados y en enero cargás 2027 aparte (empieza en blanco), sin pisar nada. (Primer paso para el cierre de año; siguen el gráfico comparativo de ventas 2026 vs 2027 y los filtros de año por informe.)"
+      ] },
     { v:"1.164", d:"03/11/2026", n:[
         "Corregido: los «Objetivos por línea» (Gestión) no se guardaban. Se guardaban en un documento con un nombre que Firestore rechaza, así que la carga se perdía en silencio. Ahora se guardan bien y quedan para todos. Volvé a cargar los objetivos de noviembre y van a persistir."
       ] },
@@ -3504,7 +3513,7 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
       if(c.meses){ for(var m=1;m<=12;m++){ var k=bi[m]; if(k!=null) rz[m]+=(+c.meses[k]||0); } }
     });
     var objSellers=(planSeller==="__all__")?SELLERS.map(function(s){return s.id;}):[planSeller];
-    objSellers.forEach(function(sid){ var o=objSellerData(sid); if(!o) return; for(var m=1;m<=12;m++){ OBJ_LINES.forEach(function(l){ if(o[l]&&o[l][m-1]!=null) ob[m]+=(+o[l][m-1]||0); }); } });
+    objSellers.forEach(function(sid){ var o=objSellerData(sid, y); if(!o) return; for(var m=1;m<=12;m++){ OBJ_LINES.forEach(function(l){ if(o[l]&&o[l][m-1]!=null) ob[m]+=(+o[l][m-1]||0); }); } });
     return {pv:pv, rz:rz, ob:ob, year:y};
   }
   function renderPlanChart(){
@@ -3564,16 +3573,20 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
     return s+'</svg>';
   }
   // ---- Objetivo por línea (Gestión) ----
-  var objSeller="__all__", objMonthIdx=0;
-  function objData(){ // datos editables del vendedor (siembra desde DEFAULT si está vacío)
-    if(!OBJ[objSeller] || !Object.keys(OBJ[objSeller]).length){ var d=DEFAULT_OBJ[objSeller]; OBJ[objSeller]={}; if(d) OBJ_LINES.forEach(function(l){ OBJ[objSeller][l]=(d[l]||[]).slice(); }); }
-    return OBJ[objSeller];
+  var objSeller="__all__", objMonthIdx=0, objYear=curYearStr();
+  function objYearOptions(){ var cur=+curYearStr(), set={}; [cur-1,cur,cur+1].forEach(function(y){ set[y]=1; }); set[+BASE_OBJ_YEAR]=1; Object.keys(OBJ).forEach(function(k){ if(/^\d{4}$/.test(k)) set[+k]=1; }); return Object.keys(set).map(Number).sort(function(a,b){ return b-a; }).map(String); }
+  function objData(){ // datos editables del vendedor para el año elegido (siembra desde el objetivo base del año: año base = DEFAULT, otros = 0)
+    var yo=OBJ[objYear]||(OBJ[objYear]={});
+    if(!yo[objSeller] || !Object.keys(yo[objSeller]).length){ var base=objSellerData(objSeller, objYear); yo[objSeller]={}; OBJ_LINES.forEach(function(l){ var arr=((base&&base[l])||[]).slice(); while(arr.length<12) arr.push(0); yo[objSeller][l]=arr; }); }
+    return yo[objSeller];
   }
-  function objAggregate(){ var agg={}; OBJ_LINES.forEach(function(l){ agg[l]=[0,0,0,0,0,0,0,0,0,0,0,0]; }); SELLERS.forEach(function(s){ var o=objSellerData(s.id)||{}; OBJ_LINES.forEach(function(l){ if(o[l]) for(var m=0;m<12;m++) agg[l][m]+=(+o[l][m]||0); }); }); return agg; }
+  function objAggregate(){ var agg={}; OBJ_LINES.forEach(function(l){ agg[l]=[0,0,0,0,0,0,0,0,0,0,0,0]; }); SELLERS.forEach(function(s){ var o=objSellerData(s.id, objYear)||{}; OBJ_LINES.forEach(function(l){ if(o[l]) for(var m=0;m<12;m++) agg[l][m]+=(+o[l][m]||0); }); }); return agg; }
   function objCurData(){ return (objSeller==="__all__") ? objAggregate() : objData(); }
   function openObj(){ $("#planPage").classList.add("hidden");
     objSeller=(planSeller&&planSeller!=="__all__")?planSeller:"__all__";
     objMonthIdx=(new Date()).getMonth();
+    if(!objYear || objYearOptions().indexOf(objYear)<0) objYear=curYearStr();
+    var ys=$("#objYearSel"); if(ys){ ys.innerHTML=objYearOptions().map(function(y){ return '<option value="'+y+'"'+(y===objYear?' selected':'')+'>'+y+'</option>'; }).join(""); ys.value=objYear; }
     var sel=$("#objSellerSel"); if(sel){ sel.innerHTML='<option value="__all__">Todo el equipo (suma)</option>'+SELLERS.map(function(s){ return '<option value="'+s.id+'">'+esc(s.name)+'</option>'; }).join(""); sel.value=objSeller; }
     $("#objPage").classList.remove("hidden"); renderObj(); }
   function closeObj(){ $("#objPage").classList.add("hidden"); $("#planPage").classList.remove("hidden"); renderPlan(); }
@@ -3594,6 +3607,7 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
   if($("#objOpenBtn")) $("#objOpenBtn").addEventListener("click", openObj);
   if($("#objBack")) $("#objBack").addEventListener("click", closeObj);
   if($("#objSellerSel")) $("#objSellerSel").addEventListener("change", function(){ objSeller=this.value; objMonthIdx=0; renderObj(); });
+  if($("#objYearSel")) $("#objYearSel").addEventListener("change", function(){ objYear=this.value; renderObj(); });
   if($("#objSaveBtn")) $("#objSaveBtn").addEventListener("click", function(){ saveObj(); var b=$("#objSaveBtn"); var o=b.textContent; b.textContent="Guardado ✓"; setTimeout(function(){ b.textContent=o; },1200); toast("Objetivo guardado ✓"); });
   if($("#planSellerSel")) $("#planSellerSel").addEventListener("change", function(){ planSeller=this.value; planOpenKey=null; renderPlan(); });
 
@@ -3788,7 +3802,7 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
     var rows=[], resumen=[], team={}; MONS.forEach(function(m){ team[m]={obj:0,real:0,prev:0}; });
     sellers.forEach(function(s){
       var clients=clientsForSeller(s.id).slice().sort(function(a,b){ return (b.kg||0)-(a.kg||0); }); // por tamaño desc
-      var o=objSellerData(s.id)||{};
+      var o=objSellerData(s.id, y)||{};
       // Comparativo: cliente (por tamaño) → mes
       clients.forEach(function(c){
         var doc=PLAN[planCanonKey(c)];
@@ -3926,7 +3940,7 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
           return {d:it.fecha, nome:it.cliente, tag:(it.motivo==="Cliente"?{t:"Cliente",cls:"cli"}:{t:"Prospecto",cls:"pro"})}; });
       var retrasadasN=pendVis.filter(function(it){ return it.fecha<today; }).length;
       var st; try{ st=prospStates(visitsFor(s.id), prospUniverse(s.id)); }catch(e){ st={activo:0,pausado:0,perdido:0,vend:0}; }
-      var objMes=0, _o=objSellerData(s.id)||{}; OBJ_LINES.forEach(function(l){ if(_o[l]&&_o[l][curMn-1]!=null) objMes+=(+_o[l][curMn-1]||0); });
+      var objMes=0, _o=objSellerData(s.id, selISO.split("-")[0])||{}; OBJ_LINES.forEach(function(l){ if(_o[l]&&_o[l][curMn-1]!=null) objMes+=(+_o[l][curMn-1]||0); });
       var pctMes=objMes>0?Math.round(kgMes/objMes*100):null;
       return {seller:s, realizadas:vs.length, cliVis:cliVis, proVis:proVis, created:created, kgMes:kgMes, objMes:objMes, pctMes:pctMes,
         upcoming:upcoming, upcomingN:upcoming.length, retrasadasN:retrasadasN, st:st};
