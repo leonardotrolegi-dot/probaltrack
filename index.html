@@ -1758,6 +1758,11 @@
       <div id="catCatList" class="cat-catlist hidden"></div>
       <div id="catList"></div>
       <div id="catSumm" style="font-size:12px;color:var(--ink-faint);margin:10px 0 2px"></div>
+      <div class="pl-sec" style="margin-top:16px">Prospectos <span style="font-weight:600;text-transform:none;letter-spacing:0;color:var(--ink-faint)">· A cada 30 · B cada 45 · C cada 60 días</span></div>
+      <div id="catPSummTop"></div>
+      <div id="catPCatList" class="cat-catlist hidden"></div>
+      <div id="catPList"></div>
+      <div id="catPSumm" style="font-size:12px;color:var(--ink-faint);margin:10px 0 2px"></div>
       <button class="pl-open" id="catGenBtn" style="background:var(--accent);margin:8px 0 6px">📅 Generar agenda en la ruta</button>
       <div class="hub-s" style="margin:0 2px 10px">Carga visitas por 2 meses (A=15 / B=30 / C=45 días), repartidas de a 2 por día hábil. Si cae fin de semana, pasa al lunes.</div>
       <div class="pl-sec" style="margin-top:6px">Próximas visitas automáticas <span style="font-weight:600;text-transform:none;letter-spacing:0;color:var(--ink-faint)">· podés mover o cancelar</span></div>
@@ -2831,7 +2836,7 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
       }
     }catch(e){}
   }
-  function localBoot(){ DB=absorbGabriel(seedIfEmpty()); ROUTES=absorbGabriel(loadRoutes()); try{ PLAN=JSON.parse(localStorage.getItem("pt_plan")||"{}")||{}; }catch(e){ PLAN={}; } try{ OBJ=JSON.parse(localStorage.getItem("pt_obj")||"{}")||{}; }catch(e){ OBJ={}; } try{ CATC=JSON.parse(localStorage.getItem("pt_cat")||"{}")||{}; }catch(e){ CATC={}; } reRenderCurrent(); if(!current && !isManager && autoMgr()) enterManager(); }
+  function localBoot(){ DB=absorbGabriel(seedIfEmpty()); ROUTES=absorbGabriel(loadRoutes()); try{ PLAN=JSON.parse(localStorage.getItem("pt_plan")||"{}")||{}; }catch(e){ PLAN={}; } try{ OBJ=JSON.parse(localStorage.getItem("pt_obj")||"{}")||{}; }catch(e){ OBJ={}; } try{ CATC=JSON.parse(localStorage.getItem("pt_cat")||"{}")||{}; }catch(e){ CATC={}; } try{ PROSPC=JSON.parse(localStorage.getItem("pt_prospcat")||"{}")||{}; }catch(e){ PROSPC={}; } reRenderCurrent(); if(!current && !isManager && autoMgr()) enterManager(); }
   function subscribeDB(){
     dbh.collection("visits").onSnapshot(function(snap){ DB=groupBySeller(snap.docs); reRenderCurrent(); }, noop);
     dbh.collection("routes").onSnapshot(function(snap){ ROUTES=groupBySeller(snap.docs); reRenderCurrent(); }, noop);
@@ -2852,7 +2857,7 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
     }, noop);
     dbh.collection("planning").onSnapshot(function(snap){
       if(planEditingNow()) return; // no tocar PLAN/OBJ ni re-renderizar mientras el usuario edita (evita pisar lo que está cargando)
-      PLAN={}; OBJ={}; CATC={}; snap.docs.forEach(function(d){ if(d.id==="obj_meta"||d.id==="__obj__"){ OBJ=(d.data()||{}).obj||{}; } else if(d.id==="__cat__"){ CATC=(d.data()||{}).cat||{}; } else if(d.id.indexOf("pl_")===0){ PLAN[d.id]=d.data()||{}; } });
+      PLAN={}; OBJ={}; CATC={}; PROSPC={}; snap.docs.forEach(function(d){ if(d.id==="obj_meta"||d.id==="__obj__"){ OBJ=(d.data()||{}).obj||{}; } else if(d.id==="__cat__"){ CATC=(d.data()||{}).cat||{}; } else if(d.id==="prospcat"){ PROSPC=(d.data()||{}).cat||{}; } else if(d.id.indexOf("pl_")===0){ PLAN[d.id]=d.data()||{}; } });
       if(Object.keys(OBJ).some(function(k){ return !/^\d{4}$/.test(k); })){ var _oy={}; _oy[BASE_OBJ_YEAR]=OBJ; OBJ=_oy; } // migra formato plano viejo a {año:{...}}
       if($("#planPage") && !$("#planPage").classList.contains("hidden")) renderPlan();
       if($("#objPage") && !$("#objPage").classList.contains("hidden")) renderObj();
@@ -2956,6 +2961,9 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
   // Historial de versiones (changelog). Al agregar una mejora: sumar una entrada
   // arriba con la fecha y bumpear el número. APP_VERSION = la última entrada.
   var CHANGELOG = [
+    { v:"1.168", d:"04/11/2026", n:[
+        "Categorización: ahora también los PROSPECTOS se categorizan (A/B/C) con su propio resumen (cantidad y %) y lista por categoría. Intervalos de prospectos: A cada 30 días, B cada 45, C cada 60. «Generar agenda» programa clientes y prospectos juntos; al mover/realizar una visita de prospecto se reajusta con su intervalo. Por vendedor y desde Gestión."
+      ] },
     { v:"1.167", d:"04/11/2026", n:[
         "Categorización de clientes: arriba aparece un resumen por categoría (A/B/C/D + total) con cantidad y porcentaje. Tocando una categoría se abre la lista de sus clientes. Funciona para cada vendedor y desde Gestión (eligiendo el vendedor)."
       ] },
@@ -3752,37 +3760,76 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
   if($("#objPersBack")) $("#objPersBack").addEventListener("click", closeObjPers);
 
   // ===== Categorización de clientes + agenda automática =====
-  var CAT_INT={A:15,B:30,C:45,D:0}, catSellerId="", catShowCat="";
+  var CAT_INT={A:15,B:30,C:45,D:0}, PROSP_INT={A:30,B:45,C:60}, catSellerId="", catShowCat="", catPShowCat="", PROSPC={};
   function catKey(c){ return planCanonKey(c); }
   // La categoría se guarda como campo `cat` en el doc de planificación del cliente
   // (doc id = planKey, igual que los pronósticos). NO en un doc "__cat__": ese id
   // coincide con el patrón reservado de Firestore (__.*__) y la escritura se rechaza.
   function catOf(c){ var d=PLAN[catKey(c)]; return (d&&d.cat)||""; }
+  // categoría de prospectos: guardada en un doc ÚNICO planning/prospcat = {cat:{<prospKey>:"A"}} (id válido, NO reservado). Intervalos A=30/B=45/C=60.
+  function prospKey(nome, sid){ return "pk_"+slug(nome||"")+"__"+slug(sid||""); }
+  function prospCatOf(nome, sid){ return PROSPC[prospKey(nome,sid)]||""; }
+  function setProspCat(nome, sid, k){ var key=prospKey(nome,sid); if(PROSPC[key]===k) delete PROSPC[key]; else PROSPC[key]=k; saveProspCat(); }
+  function saveProspCat(){ if(useDB && dbh){ dbh.collection("planning").doc("prospcat").set({cat:PROSPC}).catch(noop); } else { try{ localStorage.setItem("pt_prospcat", JSON.stringify(PROSPC)); }catch(e){} } }
   function _cd(iso){ return new Date(iso+"T00:00:00"); }
   function dAdd(iso,n){ var d=_cd(iso); d.setDate(d.getDate()+n); return localISO(d); }
   function dMoveBiz(iso){ var d=_cd(iso), w=d.getDay(); if(w===6) d.setDate(d.getDate()+2); else if(w===0) d.setDate(d.getDate()+1); return localISO(d); }
   function nextWeekMondayISO(){ var t=new Date(); var dow=(t.getDay()+6)%7; var m=new Date(t); m.setDate(t.getDate()-dow+7); return localISO(m); }
   function bizDayFrom(startISO,n){ var d=_cd(startISO),c=0; while(true){ var w=d.getDay(); if(w!==0&&w!==6){ if(c===n) return localISO(d); c++; } d.setDate(d.getDate()+1); } }
-  function addCatVisit(sid,cli,fecha,cat){ putRoute({id:"rc"+Date.now().toString(36)+Math.random().toString(36).slice(2,6), sellerId:sid, kind:"visita", cliente:cli, motivo:"Cliente", fecha:fecha, catGen:true, catCat:cat}); }
+  function addCatVisit(sid,cli,fecha,cat,motivo){ putRoute({id:"rc"+Date.now().toString(36)+Math.random().toString(36).slice(2,6), sellerId:sid, kind:"visita", cliente:cli, motivo:motivo||"Cliente", fecha:fecha, catGen:true, catCat:cat}); }
   function clearFutureCat(sid,cli){ (ROUTES[sid]||[]).slice().filter(function(it){ return it.catGen && !it.done && it.fecha>=todayISO() && (!cli || norm(it.cliente)===norm(cli)); }).forEach(function(it){ delRoute(sid, it.id); }); }
-  function genSeries(sid,cli,cat,firstISO){ var intv=CAT_INT[cat]; if(!intv) return; var horizon=dAdd(firstISO,62), f=firstISO, guard=0; while(f<=horizon && guard++<40){ addCatVisit(sid,cli,f,cat); f=dMoveBiz(dAdd(f,intv)); } }
+  function genSeries(sid,cli,cat,firstISO,isProsp){ var intv=(isProsp?PROSP_INT:CAT_INT)[cat]; if(!intv) return; var horizon=dAdd(firstISO,62), f=firstISO, guard=0, mot=isProsp?"Prospecto":"Cliente"; while(f<=horizon && guard++<40){ addCatVisit(sid,cli,f,cat,mot); f=dMoveBiz(dAdd(f,intv)); } }
   function catGenerateAll(sid){
     if(!sid || sid==="__all__" || !SELLER_BY[sid]) return 0;
     clearFutureCat(sid, null);
     var clients=clientsForSeller(sid).filter(function(c){ var cat=catOf(c); return cat && cat!=="D" && CAT_INT[cat]; }).sort(function(a,b){ return (b.kg||0)-(a.kg||0); });
+    var prosps=prospUniverse(sid).filter(function(p){ var cat=prospCatOf(p.nome, sid); return cat && PROSP_INT[cat]; }).slice().sort(function(a,b){ return (a.nome||"")<(b.nome||"")?-1:1; });
     var start=nextWeekMondayISO(), slot=0;
-    clients.forEach(function(c){ var cat=catOf(c); var first=dMoveBiz(bizDayFrom(start, Math.floor(slot/2))); slot++; genSeries(sid, c.nome, cat, first); });
-    return clients.length;
+    clients.forEach(function(c){ var cat=catOf(c); var first=dMoveBiz(bizDayFrom(start, Math.floor(slot/2))); slot++; genSeries(sid, c.nome, cat, first, false); });
+    prosps.forEach(function(p){ var cat=prospCatOf(p.nome, sid); var first=dMoveBiz(bizDayFrom(start, Math.floor(slot/2))); slot++; genSeries(sid, p.nome, cat, first, true); });
+    return clients.length + prosps.length;
   }
   // regenerar la serie de un cliente desde una fecha ancla (reglas: registrar / postergar)
-  function catRegenFrom(sid,cli,cat,fromISO,keepId){
-    var intv=CAT_INT[cat]; if(!intv) return;
+  function catRegenFrom(sid,cli,cat,fromISO,keepId,isProsp){
+    var intv=(isProsp?PROSP_INT:CAT_INT)[cat]; if(!intv) return;
     (ROUTES[sid]||[]).slice().filter(function(it){ return it.catGen && !it.done && norm(it.cliente)===norm(cli) && it.id!==keepId && it.fecha>=todayISO(); }).forEach(function(it){ delRoute(sid, it.id); });
-    var f=dMoveBiz(dAdd(fromISO,intv)), horizon=dAdd(fromISO,62), guard=0;
-    while(f<=horizon && guard++<40){ addCatVisit(sid,cli,f,cat); f=dMoveBiz(dAdd(f,intv)); }
+    var f=dMoveBiz(dAdd(fromISO,intv)), horizon=dAdd(fromISO,62), guard=0, mot=isProsp?"Prospecto":"Cliente";
+    while(f<=horizon && guard++<40){ addCatVisit(sid,cli,f,cat,mot); f=dMoveBiz(dAdd(f,intv)); }
   }
   function catOfClientName(sid, cliName){ var cs=clientsForSeller(sid).filter(function(c){ return norm(c.nome)===norm(cliName); }); return cs.length? catOf(cs[0]) : ""; }
   function clearCatSumm(){ if($("#catSummTop")) $("#catSummTop").innerHTML=""; var cl=$("#catCatList"); if(cl){ cl.innerHTML=""; cl.classList.add("hidden"); } }
+  function clearCatPSumm(){ if($("#catPSummTop")) $("#catPSummTop").innerHTML=""; var cl=$("#catPCatList"); if(cl){ cl.innerHTML=""; cl.classList.add("hidden"); } }
+  function renderCatPSummary(prosps, cnt){
+    var top=$("#catPSummTop"); if(!top) return; var total=prosps.length;
+    function pct(x){ return total>0?Math.round(x/total*100):0; }
+    var cells=["A","B","C"].map(function(k){ return '<button class="cat-sc'+(catPShowCat===k?" on":"")+'" data-k="'+k+'"><i class="cat-b b'+k+'">'+k+'</i><b>'+cnt[k]+'</b><span>'+pct(cnt[k])+'%</span></button>'; }).join("");
+    cells+='<div class="cat-sc tot"><b>'+total+'</b><span>total</span></div>';
+    top.innerHTML='<div class="cat-summ-grid" style="grid-template-columns:repeat(4,1fr)">'+cells+'</div>';
+    $$(".cat-sc[data-k]",top).forEach(function(b){ b.addEventListener("click", function(){ var k=b.dataset.k; catPShowCat=(catPShowCat===k)?"":k; renderCatPSummary(prosps,cnt); }); });
+    renderCatPCatList(prosps);
+  }
+  function renderCatPCatList(prosps){
+    var el=$("#catPCatList"); if(!el) return;
+    if(!catPShowCat){ el.classList.add("hidden"); el.innerHTML=""; return; }
+    var k=catPShowCat, inCat=prosps.filter(function(p){ return prospCatOf(p.nome, catSellerId)===k; }).sort(function(a,b){ return (a.nome||"")<(b.nome||"")?-1:1; });
+    var rows = inCat.length ? inCat.map(function(p){ return '<div class="cc-row"><span>'+esc(p.nome)+'</span>'+(p.loc?'<span style="color:var(--ink-faint)">'+esc(p.loc)+'</span>':'')+'</div>'; }).join("") : '<div class="cc-empty">Ningún prospecto en esta categoría todavía.</div>';
+    el.innerHTML='<div class="cc-h">Prospectos '+k+' · '+inCat.length+'</div>'+rows;
+    el.classList.remove("hidden");
+  }
+  function renderCatProspects(){
+    var el=$("#catPList"); if(!el) return;
+    if(!catSellerId || catSellerId==="__all__"){ el.innerHTML=""; if($("#catPSumm")) $("#catPSumm").textContent=""; clearCatPSumm(); return; }
+    var prosps=prospUniverse(catSellerId).slice().sort(function(a,b){ return (a.nome||"")<(b.nome||"")?-1:1; });
+    if(!prosps.length){ el.innerHTML='<div class="vp-empty" style="padding:12px 0">Este vendedor no tiene prospectos.</div>'; if($("#catPSumm")) $("#catPSumm").textContent=""; clearCatPSumm(); return; }
+    el.innerHTML=prosps.map(function(p,i){ var cur=prospCatOf(p.nome, catSellerId);
+      var seg=["A","B","C"].map(function(k){ return '<button class="'+k+(cur===k?" on":"")+'" data-i="'+i+'" data-k="'+k+'">'+k+'</button>'; }).join("");
+      return '<div class="catrow"><div class="ci"><div class="nm">'+esc(p.nome)+'</div>'+(p.loc?'<div class="kg">'+esc(p.loc)+'</div>':'')+'</div><div class="catseg2">'+seg+'</div></div>';
+    }).join("");
+    $$(".catseg2 button",el).forEach(function(b){ b.addEventListener("click", function(){ var p=prosps[+b.dataset.i], k=b.dataset.k; setProspCat(p.nome, catSellerId, k); renderCatProspects(); }); });
+    var cnt={A:0,B:0,C:0,n:0}; prosps.forEach(function(p){ var cat=prospCatOf(p.nome, catSellerId); if(cat){ cnt[cat]++; cnt.n++; } });
+    renderCatPSummary(prosps, cnt);
+    if($("#catPSumm")) $("#catPSumm").textContent=cnt.n+" de "+prosps.length+" categorizados";
+  }
   function renderCatSummary(clients, cnt){
     var top=$("#catSummTop"); if(!top) return; var total=clients.length;
     function pct(x){ return total>0?Math.round(x/total*100):0; }
@@ -3802,9 +3849,9 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
   }
   function renderCatList(){
     var el=$("#catList"); if(!el) return;
-    if(!catSellerId || catSellerId==="__all__"){ el.innerHTML='<div class="vp-empty" style="padding:14px 0">Elegí un vendedor para categorizar sus clientes.</div>'; $("#catSumm").textContent=""; clearCatSumm(); renderCatUpcoming(); return; }
+    if(!catSellerId || catSellerId==="__all__"){ el.innerHTML='<div class="vp-empty" style="padding:14px 0">Elegí un vendedor para categorizar sus clientes.</div>'; $("#catSumm").textContent=""; clearCatSumm(); renderCatProspects(); renderCatUpcoming(); return; }
     var clients=clientsForSeller(catSellerId).filter(function(c){ return (+c.kg||0)>0; }).slice().sort(function(a,b){ return (b.kg||0)-(a.kg||0); });
-    if(!clients.length){ el.innerHTML='<div class="vp-empty" style="padding:14px 0">Este vendedor no tiene clientes con compras en el año.</div>'; $("#catSumm").textContent=""; clearCatSumm(); renderCatUpcoming(); return; }
+    if(!clients.length){ el.innerHTML='<div class="vp-empty" style="padding:14px 0">Este vendedor no tiene clientes con compras en el año.</div>'; $("#catSumm").textContent=""; clearCatSumm(); renderCatProspects(); renderCatUpcoming(); return; }
     el.innerHTML=clients.map(function(c,i){ var cur=catOf(c);
       var seg=["A","B","C","D"].map(function(k){ return '<button class="'+k+(cur===k?" on":"")+'" data-i="'+i+'" data-k="'+k+'">'+k+'</button>'; }).join("");
       return '<div class="catrow"><div class="ci"><div class="nm">'+esc(c.nome)+'</div><div class="kg">'+fmtKg(c.kg)+' kg/año</div></div><div class="catseg2">'+seg+'</div></div>';
@@ -3813,6 +3860,7 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
     var cnt={A:0,B:0,C:0,D:0,n:0}; clients.forEach(function(c){ var cat=catOf(c); if(cat){ cnt[cat]++; cnt.n++; } });
     renderCatSummary(clients, cnt);
     $("#catSumm").textContent=cnt.n+" de "+clients.length+" categorizados";
+    renderCatProspects();
     renderCatUpcoming();
   }
   function renderCatUpcoming(){
@@ -3821,21 +3869,22 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
     var up=(ROUTES[catSellerId]||[]).filter(function(it){ return it.catGen && !it.done && it.fecha>=todayISO(); }).sort(function(a,b){ return (a.fecha||"")<(b.fecha||"")?-1:1; }).slice(0,30);
     if(!up.length){ el.innerHTML='<div class="hub-s" style="margin:2px">Todavía no hay visitas automáticas futuras. Categorizá y tocá «Generar agenda».</div>'; return; }
     el.innerHTML=up.map(function(it){
-      return '<div class="cat-up" data-id="'+esc(it.id)+'" data-cli="'+esc(it.cliente)+'" data-cat="'+esc(it.catCat||"")+'"><span class="d">'+shortDate(it.fecha)+'</span><span class="c">'+esc(it.cliente)+' <small style="color:var(--ink-faint)">'+esc(it.catCat||"")+'</small></span><input type="date" value="'+esc(it.fecha)+'"><button class="mv">Mover</button><button class="cx">✕</button></div>';
+      var _isP=it.motivo==="Prospecto";
+      return '<div class="cat-up" data-id="'+esc(it.id)+'" data-cli="'+esc(it.cliente)+'" data-cat="'+esc(it.catCat||"")+'" data-prosp="'+(_isP?"1":"")+'"><span class="d">'+shortDate(it.fecha)+'</span><span class="c">'+esc(it.cliente)+' <small style="color:var(--ink-faint)">'+esc(it.catCat||"")+(_isP?" · prosp":"")+'</small></span><input type="date" value="'+esc(it.fecha)+'"><button class="mv">Mover</button><button class="cx">✕</button></div>';
     }).join("");
     $$(".cat-up",el).forEach(function(row){
-      var id=row.dataset.id, cli=row.dataset.cli, cat=row.dataset.cat;
+      var id=row.dataset.id, cli=row.dataset.cli, cat=row.dataset.cat, isP=row.dataset.prosp==="1";
       row.querySelector(".mv").addEventListener("click", function(){
         var nd=row.querySelector("input").value; if(!nd){ toast("Elegí una fecha.", true); return; }
         var it=(ROUTES[catSellerId]||[]).filter(function(x){return x.id===id;})[0]; if(!it) return;
         it.fecha=nd; it.sellerId=catSellerId; putRoute(it);
-        catRegenFrom(catSellerId, cli, cat, nd, id);
+        catRegenFrom(catSellerId, cli, cat, nd, id, isP);
         toast("Movida a "+fmtDate(nd)+" · próximas reajustadas ✓"); renderCatUpcoming();
       });
       row.querySelector(".cx").addEventListener("click", function(){ delRoute(catSellerId, id); toast("Visita cancelada."); renderCatUpcoming(); });
     });
   }
-  function openCat(){ $("#planPage").classList.add("hidden"); catShowCat="";
+  function openCat(){ $("#planPage").classList.add("hidden"); catShowCat=""; catPShowCat="";
     if(VCTX==="mgr"){ fillSellerSelect($("#catSeller"), (catSellerId&&catSellerId!=="__all__")?catSellerId:((planSeller&&planSeller!=="__all__")?planSeller:"__all__")); catSellerId=$("#catSeller").value; }
     else if(current){ catSellerId=current.id; $("#catSeller").innerHTML='<option value="'+current.id+'">'+esc(current.name)+'</option>'; $("#catSeller").value=current.id; }
     renderCatList(); $("#catPage").classList.remove("hidden");
@@ -3843,11 +3892,11 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
   function closeCat(){ $("#catPage").classList.add("hidden"); $("#planPage").classList.remove("hidden"); }
   if($("#catOpenBtn")) $("#catOpenBtn").addEventListener("click", openCat);
   if($("#catBack")) $("#catBack").addEventListener("click", closeCat);
-  if($("#catSeller")) $("#catSeller").addEventListener("change", function(){ catSellerId=this.value; catShowCat=""; renderCatList(); });
+  if($("#catSeller")) $("#catSeller").addEventListener("change", function(){ catSellerId=this.value; catShowCat=""; catPShowCat=""; renderCatList(); });
   if($("#catGenBtn")) $("#catGenBtn").addEventListener("click", function(){
     if(!catSellerId || catSellerId==="__all__"){ toast("Elegí un vendedor.", true); return; }
     var n=catGenerateAll(catSellerId);
-    toast(n? ("Agenda generada para "+n+" cliente"+(n!==1?"s":"")+" ✓") : "No hay clientes A/B/C para agendar.", !n);
+    toast(n? ("Agenda generada · "+n+" categorizado"+(n!==1?"s":"")+" (clientes y prospectos) ✓") : "No hay clientes ni prospectos A/B/C para agendar.", !n);
     renderCatUpcoming();
   });
 
@@ -4710,6 +4759,7 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
     if(rec2.proxima){ addRouteVisit(current.id, cli, motivo, rec2.proxima); agendou = true; }
     // categorización: si el cliente es A/B/C, reprograma su serie automática desde esta visita
     if(motivo==="Cliente"){ var _cc=catOfClientName(current.id, cli); if(_cc && CAT_INT[_cc]) catRegenFrom(current.id, cli, _cc, rec2.data); }
+    else if(motivo==="Prospecto"){ var _pc=prospCatOf(cli, current.id); if(_pc && PROSP_INT[_pc]) catRegenFrom(current.id, cli, _pc, rec2.data, null, true); }
     // reset
     acInput.value=""; $("#fObs").value=""; baseText=""; $("#fProxima").value="";
     $("#fData").value = todayISO();
@@ -5466,7 +5516,7 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
       wrap.querySelector('[data-act="res"]').addEventListener("click", function(e){ e.stopPropagation();
         var nd=wrap.querySelector(".mra-date").value; if(!nd){ toast("Elegí una fecha.", true); return; }
         it.sellerId=it.sellerId||current.id; it.fecha=nd; putRoute(it);
-        if(it.catGen) catRegenFrom(current.id, it.cliente, it.catCat, nd, it.id);
+        if(it.catGen) catRegenFrom(current.id, it.cliente, it.catCat, nd, it.id, it.motivo==="Prospecto");
         toast("Reagendada para "+fmtDate(nd)+(it.catGen?" · próximas reajustadas":"")+" ✓"); refresh();
       });
       wrap.querySelector('[data-act="can"]').addEventListener("click", function(e){ e.stopPropagation();
@@ -5503,13 +5553,13 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
       wrap.querySelector('[data-act="fin"]').addEventListener("click", function(e){ e.stopPropagation();
         var rec={ id:"v"+Date.now()+Math.random().toString(36).slice(2,5), sellerId:sid, cliente:it.cliente, motivo:it.motivo||"Cliente", situacao:defaultSit(it.motivo||"Cliente"), data:todayISO(), ts:Date.now(), byMgr:true };
         putVisit(rec); it.done=true; it.visitId=rec.id; it.sellerId=it.sellerId||sid; putRoute(it);
-        if(it.catGen) catRegenFrom(sid, it.cliente, it.catCat, todayISO());
+        if(it.catGen) catRegenFrom(sid, it.cliente, it.catCat, todayISO(), null, it.motivo==="Prospecto");
         toast("Marcada como realizada ✓"); renderMgrPend();
       });
       wrap.querySelector('[data-act="res"]').addEventListener("click", function(e){ e.stopPropagation();
         var nd=wrap.querySelector(".mra-date").value; if(!nd){ toast("Elegí una fecha.", true); return; }
         it.sellerId=it.sellerId||sid; it.fecha=nd; putRoute(it);
-        if(it.catGen) catRegenFrom(sid, it.cliente, it.catCat, nd, it.id);
+        if(it.catGen) catRegenFrom(sid, it.cliente, it.catCat, nd, it.id, it.motivo==="Prospecto");
         toast("Reagendada para "+fmtDate(nd)+(it.catGen?" · próximas reajustadas":"")+" ✓"); renderMgrPend();
       });
       wrap.querySelector('[data-act="can"]').addEventListener("click", function(e){ e.stopPropagation();
