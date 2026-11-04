@@ -381,6 +381,26 @@
   .cmp2h{display:grid;grid-template-columns:1.25fr 1fr 1fr;gap:8px;margin:11px 0 3px;font-size:10.5px;font-weight:800;letter-spacing:.03em}
   .cmp2h .cc{text-align:right;color:var(--accent)}
   .cmp2h .cs{text-align:right;color:var(--ink-faint)}
+  .vp-cmp{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:4px 0 8px;font-size:12px}
+  .vp-cmp-tog{display:inline-flex;align-items:center;gap:6px;color:var(--ink-soft);font-weight:600;cursor:pointer}
+  .vp-cmp-sel{display:inline-flex;align-items:center;gap:6px}
+  .vp-cmp-yr{border:1px solid var(--line);border-radius:7px;padding:3px 7px;font-size:12px;background:var(--surface);color:var(--ink);font-variant-numeric:tabular-nums}
+  .vp-cmp-vs{color:var(--ink-faint);font-size:11px}
+  .vp-cmp-leg{display:flex;gap:16px;font-size:11px;margin:-2px 0 7px;font-weight:800}
+  .vp-cmp-leg .lg-a{color:var(--accent-deep)}
+  .vp-cmp-leg .lg-b{color:var(--ink-faint)}
+  .cat-summ-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin:4px 0 10px}
+  .cat-sc{border:1px solid var(--line);border-radius:10px;padding:8px 3px 7px;text-align:center;background:var(--surface);cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px}
+  .cat-sc.on{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-soft)}
+  .cat-sc.tot{cursor:default;background:var(--surface-2)}
+  .cat-sc b{font-size:16px;font-weight:800;color:var(--ink);font-variant-numeric:tabular-nums;line-height:1}
+  .cat-sc span{font-size:10px;color:var(--ink-faint)}
+  .cat-sc .cat-b{width:20px;height:20px;font-size:11px;line-height:20px}
+  .cat-catlist{border:1px solid var(--line);border-radius:10px;padding:9px 11px;margin:-4px 0 11px;background:var(--surface-2)}
+  .cat-catlist .cc-h{font-size:12px;font-weight:800;margin-bottom:6px;color:var(--ink)}
+  .cat-catlist .cc-row{display:flex;justify-content:space-between;gap:8px;font-size:12.5px;padding:4px 0;border-bottom:1px solid var(--line)}
+  .cat-catlist .cc-row:last-child{border-bottom:0}
+  .cat-catlist .cc-empty{font-size:12px;color:var(--ink-faint)}
   .hutil{background:var(--accent);color:#fff;border-radius:11px;padding:12px 13px;margin-top:6px;display:flex;justify-content:space-between;align-items:center;gap:8px}
   .hutil .k{font-size:12px;opacity:.9}.hutil .v{font-size:19px;font-weight:800;font-variant-numeric:tabular-nums}
   .hmline{display:flex;justify-content:space-between;background:var(--accent-soft);border-radius:10px;padding:9px 11px;margin-top:9px;font-size:12px;color:var(--ink-soft)}
@@ -1648,6 +1668,8 @@
       <div class="kpis" id="vpKpis"></div>
       <div class="chart-card">
         <div class="vp-ttl" id="vpTtl">Todos mis clientes</div>
+        <div id="vpCmpBar" class="vp-cmp"><label class="vp-cmp-tog"><input type="checkbox" id="vpCmpOn"> Comparar años</label><span id="vpCmpSelWrap" class="vp-cmp-sel hidden"><select id="vpCmpA" class="vp-cmp-yr"></select><span class="vp-cmp-vs">vs</span><select id="vpCmpB" class="vp-cmp-yr"></select></span></div>
+        <div id="vpCmpLegend" class="vp-cmp-leg hidden"></div>
         <div id="vpChart"></div>
       </div>
       <button class="pl-open" id="vpXlsBtn" style="margin-top:10px">⬇ Exportar ventas a Excel (toneladas)</button>
@@ -1732,6 +1754,8 @@
       </div>
       <div class="pl-sec">Vendedor</div>
       <select id="catSeller" class="ev-inp" style="margin-bottom:11px"></select>
+      <div id="catSummTop"></div>
+      <div id="catCatList" class="cat-catlist hidden"></div>
       <div id="catList"></div>
       <div id="catSumm" style="font-size:12px;color:var(--ink-faint);margin:10px 0 2px"></div>
       <button class="pl-open" id="catGenBtn" style="background:var(--accent);margin:8px 0 6px">📅 Generar agenda en la ruta</button>
@@ -2819,12 +2843,12 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
       });
       cli.sort(function(a,b){ return (b.kg||0)-(a.kg||0); });
       pro.sort(function(a,b){ return a.nome<b.nome?-1:1; });
-      CAT_CLI=cli; CAT_PRO=pro; KGMAP=kg; reRenderCurrent();
+      CAT_CLI=cli; CAT_PRO=pro; KGMAP=kg; reRenderCurrent(); ensureYearArchived();
       if(!$("#ventasPage").classList.contains("hidden")) renderVentas();
     }, noop);
     dbh.collection("meta").onSnapshot(function(snap){
-      snap.docs.forEach(function(d){ var v=d.data()||{}; if(v.tipo) LAST_IMPORT[v.tipo]=v; });
-      renderImpStatus();
+      snap.docs.forEach(function(d){ var v=d.data()||{}; if(d.id.indexOf("sales_")===0 && v.year){ SALESYR[v.year]=v; } else if(v.tipo){ LAST_IMPORT[v.tipo]=v; } });
+      renderImpStatus(); ensureYearArchived();
     }, noop);
     dbh.collection("planning").onSnapshot(function(snap){
       if(planEditingNow()) return; // no tocar PLAN/OBJ ni re-renderizar mientras el usuario edita (evita pisar lo que está cargando)
@@ -2932,6 +2956,13 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
   // Historial de versiones (changelog). Al agregar una mejora: sumar una entrada
   // arriba con la fecha y bumpear el número. APP_VERSION = la última entrada.
   var CHANGELOG = [
+    { v:"1.167", d:"04/11/2026", n:[
+        "Categorización de clientes: arriba aparece un resumen por categoría (A/B/C/D + total) con cantidad y porcentaje. Tocando una categoría se abre la lista de sus clientes. Funciona para cada vendedor y desde Gestión (eligiendo el vendedor)."
+      ] },
+    { v:"1.166", d:"04/11/2026", n:[
+        "Ventas: nuevo modo «Comparar años» en el gráfico — superpone las curvas de dos años (ej. 2026 vs 2027) por vendedor, por equipo o por cliente, para Gestión y para cada vendedor. (Se activa cuando haya un segundo año importado.)",
+        "La base de ventas ahora se ARCHIVA por año automáticamente en cada importación (y se resguarda la actual), así el histórico no se pierde al subir la base del año nuevo."
+      ] },
     { v:"1.165", d:"04/11/2026", n:[
         "Objetivos por línea ahora son POR AÑO: nuevo selector de año en «Objetivo por línea». Los de 2026 quedan guardados y en enero cargás 2027 aparte (empieza en blanco), sin pisar nada. (Primer paso para el cierre de año; siguen el gráfico comparativo de ventas 2026 vs 2027 y los filtros de año por informe.)"
       ] },
@@ -3315,6 +3346,25 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
     return ""+Math.round(v);
   }
   function salesMonths(){ var m=(LAST_IMPORT["Cliente"]&&LAST_IMPORT["Cliente"].months)||[]; return m; }
+  // ---------- Archivo de ventas POR AÑO (histórico; para comparar 2026 vs 2027) ----------
+  // SALESYR["2026"]={year,months:[labels],clients:[{nome,vendedor,meses}],at}. La base ACTIVA (último import) vive en CAT_CLI; los años anteriores quedan archivados en meta/sales_<año>.
+  var SALESYR={}, _ensuredYears={};
+  function salesActiveYear(){ var m=salesMonths(); return m.length?(""+m[0]).split("-")[0]:""; }
+  function salesYears(){ var set={}; Object.keys(SALESYR).forEach(function(y){ if(/^\d{4}$/.test(y)) set[y]=1; }); var ay=salesActiveYear(); if(ay) set[ay]=1; return Object.keys(set).sort(function(a,b){ return a<b?1:-1; }); }
+  function monthsForYear(y){ if(y && y===salesActiveYear()) return salesMonths(); var a=SALESYR[y]; return (a&&a.months)||[]; }
+  function clientsForYear(y){ if(y && y===salesActiveYear()) return CAT_CLI.map(function(c){ return {nome:c.nome, vendedor:c.vendedor||"", meses:c.meses||[]}; }); var a=SALESYR[y]; return (a&&a.clients)||[]; }
+  // guarda un snapshot de la base de un año en meta/sales_<año> (idempotente). Sólo Gestión, una vez por sesión y solo si falta.
+  function ensureYearArchived(){
+    try{
+      if(!useDB || !dbh || !isManager) return;
+      var y=salesActiveYear(); if(!y || SALESYR[y] || _ensuredYears[y]) return;
+      if(!CAT_CLI || !CAT_CLI.length) return; var months=salesMonths(); if(!months.length) return;
+      _ensuredYears[y]=1;
+      var doc={kind:"salesYear", year:y, months:months.slice(), at:new Date().toISOString(),
+        clients:CAT_CLI.map(function(c){ return {nome:c.nome, vendedor:c.vendedor||"", meses:(c.meses||[]).slice()}; }) };
+      col_meta().doc("sales_"+y).set(doc).catch(noop); SALESYR[y]=doc;
+    }catch(e){}
+  }
   // El app usa el primer nombre (Matías, Francisco…); la planilla trae el nombre
   // completo (col. A). Casan si cada palabra del nombre corto está en el completo.
   // Alias de nombre para casar ventas/clientes: en la base las ventas de José Palacio
@@ -3702,7 +3752,7 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
   if($("#objPersBack")) $("#objPersBack").addEventListener("click", closeObjPers);
 
   // ===== Categorización de clientes + agenda automática =====
-  var CAT_INT={A:15,B:30,C:45,D:0}, catSellerId="";
+  var CAT_INT={A:15,B:30,C:45,D:0}, catSellerId="", catShowCat="";
   function catKey(c){ return planCanonKey(c); }
   // La categoría se guarda como campo `cat` en el doc de planificación del cliente
   // (doc id = planKey, igual que los pronósticos). NO en un doc "__cat__": ese id
@@ -3732,18 +3782,37 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
     while(f<=horizon && guard++<40){ addCatVisit(sid,cli,f,cat); f=dMoveBiz(dAdd(f,intv)); }
   }
   function catOfClientName(sid, cliName){ var cs=clientsForSeller(sid).filter(function(c){ return norm(c.nome)===norm(cliName); }); return cs.length? catOf(cs[0]) : ""; }
+  function clearCatSumm(){ if($("#catSummTop")) $("#catSummTop").innerHTML=""; var cl=$("#catCatList"); if(cl){ cl.innerHTML=""; cl.classList.add("hidden"); } }
+  function renderCatSummary(clients, cnt){
+    var top=$("#catSummTop"); if(!top) return; var total=clients.length;
+    function pct(x){ return total>0?Math.round(x/total*100):0; }
+    var cells=["A","B","C","D"].map(function(k){ return '<button class="cat-sc'+(catShowCat===k?" on":"")+'" data-k="'+k+'"><i class="cat-b b'+k+'">'+k+'</i><b>'+cnt[k]+'</b><span>'+pct(cnt[k])+'%</span></button>'; }).join("");
+    cells+='<div class="cat-sc tot"><b>'+total+'</b><span>total</span></div>';
+    top.innerHTML='<div class="pl-sec" style="margin-top:2px">Resumen por categoría <span style="font-weight:600;text-transform:none;letter-spacing:0;color:var(--ink-faint)">· tocá una para ver sus clientes</span></div><div class="cat-summ-grid">'+cells+'</div>';
+    $$(".cat-sc[data-k]",top).forEach(function(b){ b.addEventListener("click", function(){ var k=b.dataset.k; catShowCat=(catShowCat===k)?"":k; renderCatSummary(clients,cnt); }); });
+    renderCatCatList(clients);
+  }
+  function renderCatCatList(clients){
+    var el=$("#catCatList"); if(!el) return;
+    if(!catShowCat){ el.classList.add("hidden"); el.innerHTML=""; return; }
+    var k=catShowCat, inCat=clients.filter(function(c){ return catOf(c)===k; }).sort(function(a,b){ return (b.kg||0)-(a.kg||0); });
+    var rows = inCat.length ? inCat.map(function(c){ return '<div class="cc-row"><span>'+esc(c.nome)+'</span><span style="color:var(--ink-faint)">'+fmtKg(c.kg)+' kg</span></div>'; }).join("") : '<div class="cc-empty">Ningún cliente en esta categoría todavía.</div>';
+    el.innerHTML='<div class="cc-h">Categoría '+k+' · '+inCat.length+' cliente'+(inCat.length!==1?"s":"")+'</div>'+rows;
+    el.classList.remove("hidden");
+  }
   function renderCatList(){
     var el=$("#catList"); if(!el) return;
-    if(!catSellerId || catSellerId==="__all__"){ el.innerHTML='<div class="vp-empty" style="padding:14px 0">Elegí un vendedor para categorizar sus clientes.</div>'; $("#catSumm").textContent=""; renderCatUpcoming(); return; }
+    if(!catSellerId || catSellerId==="__all__"){ el.innerHTML='<div class="vp-empty" style="padding:14px 0">Elegí un vendedor para categorizar sus clientes.</div>'; $("#catSumm").textContent=""; clearCatSumm(); renderCatUpcoming(); return; }
     var clients=clientsForSeller(catSellerId).filter(function(c){ return (+c.kg||0)>0; }).slice().sort(function(a,b){ return (b.kg||0)-(a.kg||0); });
-    if(!clients.length){ el.innerHTML='<div class="vp-empty" style="padding:14px 0">Este vendedor no tiene clientes con compras en el año.</div>'; $("#catSumm").textContent=""; renderCatUpcoming(); return; }
+    if(!clients.length){ el.innerHTML='<div class="vp-empty" style="padding:14px 0">Este vendedor no tiene clientes con compras en el año.</div>'; $("#catSumm").textContent=""; clearCatSumm(); renderCatUpcoming(); return; }
     el.innerHTML=clients.map(function(c,i){ var cur=catOf(c);
       var seg=["A","B","C","D"].map(function(k){ return '<button class="'+k+(cur===k?" on":"")+'" data-i="'+i+'" data-k="'+k+'">'+k+'</button>'; }).join("");
       return '<div class="catrow"><div class="ci"><div class="nm">'+esc(c.nome)+'</div><div class="kg">'+fmtKg(c.kg)+' kg/año</div></div><div class="catseg2">'+seg+'</div></div>';
     }).join("");
     $$(".catseg2 button",el).forEach(function(b){ b.addEventListener("click", function(){ var c=clients[+b.dataset.i], k=b.dataset.k, key=catKey(c), d=planDoc(c); if(d.cat===k){ delete d.cat; } else { d.cat=k; } savePlan(key); renderCatList(); }); });
     var cnt={A:0,B:0,C:0,D:0,n:0}; clients.forEach(function(c){ var cat=catOf(c); if(cat){ cnt[cat]++; cnt.n++; } });
-    $("#catSumm").textContent=cnt.n+" de "+clients.length+" categorizados · "+cnt.A+" A · "+cnt.B+" B · "+cnt.C+" C · "+cnt.D+" D";
+    renderCatSummary(clients, cnt);
+    $("#catSumm").textContent=cnt.n+" de "+clients.length+" categorizados";
     renderCatUpcoming();
   }
   function renderCatUpcoming(){
@@ -3766,7 +3835,7 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
       row.querySelector(".cx").addEventListener("click", function(){ delRoute(catSellerId, id); toast("Visita cancelada."); renderCatUpcoming(); });
     });
   }
-  function openCat(){ $("#planPage").classList.add("hidden");
+  function openCat(){ $("#planPage").classList.add("hidden"); catShowCat="";
     if(VCTX==="mgr"){ fillSellerSelect($("#catSeller"), (catSellerId&&catSellerId!=="__all__")?catSellerId:((planSeller&&planSeller!=="__all__")?planSeller:"__all__")); catSellerId=$("#catSeller").value; }
     else if(current){ catSellerId=current.id; $("#catSeller").innerHTML='<option value="'+current.id+'">'+esc(current.name)+'</option>'; $("#catSeller").value=current.id; }
     renderCatList(); $("#catPage").classList.remove("hidden");
@@ -3774,7 +3843,7 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
   function closeCat(){ $("#catPage").classList.add("hidden"); $("#planPage").classList.remove("hidden"); }
   if($("#catOpenBtn")) $("#catOpenBtn").addEventListener("click", openCat);
   if($("#catBack")) $("#catBack").addEventListener("click", closeCat);
-  if($("#catSeller")) $("#catSeller").addEventListener("change", function(){ catSellerId=this.value; renderCatList(); });
+  if($("#catSeller")) $("#catSeller").addEventListener("change", function(){ catSellerId=this.value; catShowCat=""; renderCatList(); });
   if($("#catGenBtn")) $("#catGenBtn").addEventListener("click", function(){
     if(!catSellerId || catSellerId==="__all__"){ toast("Elegí un vendedor.", true); return; }
     var n=catGenerateAll(catSellerId);
@@ -4130,6 +4199,25 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
   }
   if($("#vpXlsBtn")) $("#vpXlsBtn").addEventListener("click", exportVentasExcel);
 
+  // ---- comparación de años en el gráfico de ventas (2026 vs 2027, por vendedor/equipo o cliente) ----
+  var vpCmp=false, vpCmpA=null, vpCmpB=null;
+  function poolMatch(vend){
+    if(VCTX==="mgr"){ var sel=VMGRSET?VMGRSET:SELLERS.map(function(s){return s.id;}); return sel.some(function(id){ var s=SELLER_BY[id]; return s && sellerMatchName(s.name, vend); }); }
+    return current ? sellerMatchName(current.name, vend) : true;
+  }
+  function yearSeries12(year){ // kg por número de mes (Ene..Dic) del año, respetando la selección actual
+    var arr=[0,0,0,0,0,0,0,0,0,0,0,0], months=monthsForYear(year), cls=clientsForYear(year);
+    function add(meses){ if(!meses) return; for(var i=0;i<meses.length;i++){ var lbl=months[i]; if(lbl==null) continue; var mn=parseInt((""+lbl).split("-")[1],10); if(mn>=1&&mn<=12) arr[mn-1]+=(+meses[i]||0); } }
+    if(VSEL!=="__todos__"){ var pool=ventasPool(), c=pool.list[VSEL], nm=c?c.nome:null; if(nm) cls.forEach(function(x){ if(x.nome===nm) add(x.meses); }); }
+    else { cls.forEach(function(x){ if(poolMatch(x.vendedor)) add(x.meses); }); }
+    return arr;
+  }
+  function populateCmpYears(years){
+    if(!vpCmpA || years.indexOf(vpCmpA)<0) vpCmpA=years[0]||"";
+    if(!vpCmpB || years.indexOf(vpCmpB)<0 || vpCmpB===vpCmpA){ vpCmpB=(years.filter(function(y){return y!==vpCmpA;})[0])||""; }
+    function opts(selv){ return years.map(function(y){ return '<option value="'+y+'"'+(y===selv?' selected':'')+'>'+y+'</option>'; }).join(""); }
+    var a=$("#vpCmpA"), b=$("#vpCmpB"); if(a){ a.innerHTML=opts(vpCmpA); a.value=vpCmpA; } if(b){ b.innerHTML=opts(vpCmpB); b.value=vpCmpB; }
+  }
   function renderVentas(){
     var pool=ventasPool(), list=pool.list, labels=salesMonths();
     $("#vpSeller").textContent = pool.label;
@@ -4151,6 +4239,29 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
       kpi='<div class="kpi"><b>'+fmtKg(tot)+'</b><span>kg vendidos (2026)'+impLine+'</span></div>'+
           (c&&c.vendedor?'<div class="kpi"><b style="font-size:15px">'+esc(c.vendedor)+'</b><span>vendedor</span></div>':'');
     }
+    // ---- modo comparación de años ----
+    var _years=salesYears();
+    if($("#vpCmpOn")) $("#vpCmpOn").checked=vpCmp;
+    if($("#vpCmpSelWrap")) $("#vpCmpSelWrap").classList.toggle("hidden", !vpCmp);
+    populateCmpYears(_years);
+    if(vpCmp){
+      if(_years.length<2){
+        $("#vpTtl").textContent="Comparar años";
+        $("#vpKpis").innerHTML='<div class="kpi"><b>—</b><span>Hay un solo año cargado</span></div>';
+        if($("#vpCmpLegend")) $("#vpCmpLegend").classList.add("hidden");
+        $("#vpChart").innerHTML='<div class="vp-empty">Todavía hay un solo año de ventas cargado.<br>Cuando importes la base 2027 vas a poder comparar las curvas de cada vendedor.</div>';
+        return;
+      }
+      var sA=yearSeries12(vpCmpA), sB=yearSeries12(vpCmpB);
+      var totA=sA.reduce(function(a,b){return a+b;},0), totB=sB.reduce(function(a,b){return a+b;},0);
+      var who=(VSEL!=="__todos__")?(((ventasPool().list[VSEL]||{}).nome)||"—"):ttl;
+      $("#vpTtl").textContent=who+" · "+vpCmpA+" vs "+vpCmpB;
+      $("#vpKpis").innerHTML='<div class="kpi"><b>'+fmtKg(totA)+'</b><span>kg '+esc(vpCmpA)+'</span></div><div class="kpi"><b>'+fmtKg(totB)+'</b><span>kg '+esc(vpCmpB)+'</span></div>';
+      if($("#vpCmpLegend")){ $("#vpCmpLegend").classList.remove("hidden"); $("#vpCmpLegend").innerHTML='<span class="lg-a">● '+esc(vpCmpA)+'</span><span class="lg-b">┈ '+esc(vpCmpB)+'</span>'; }
+      drawLine($("#vpChart"), sA, MESNOMS.slice(), sB);
+      return;
+    }
+    if($("#vpCmpLegend")) $("#vpCmpLegend").classList.add("hidden");
     $("#vpTtl").textContent=ttl;
     $("#vpKpis").innerHTML=kpi;
     drawLine($("#vpChart"), series, labels.map(fmtMes));
@@ -4224,6 +4335,9 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
   $("#ventasBtn").addEventListener("click", function(){ openVentas(false); });
   $("#mVentasBtn").addEventListener("click", function(){ openVentas(true); });
   $("#ventasBack").addEventListener("click", closeVentas);
+  if($("#vpCmpOn")) $("#vpCmpOn").addEventListener("change", function(){ vpCmp=this.checked; renderVentas(); });
+  if($("#vpCmpA")) $("#vpCmpA").addEventListener("change", function(){ vpCmpA=this.value; renderVentas(); });
+  if($("#vpCmpB")) $("#vpCmpB").addEventListener("change", function(){ vpCmpB=this.value; renderVentas(); });
   // ---- filtro multi-vendedor (gestor) ----
   function updateMgrFltLabel(){
     var allIds=SELLERS.map(function(s){return s.id;}), n=VMGRSET?VMGRSET.length:allIds.length, lbl;
@@ -7231,6 +7345,12 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
       if(tipo==="Cliente" && _lastMonths) meta.months=_lastMonths;
       col_meta().doc("lastImport_"+tipo).set(meta).catch(noop);
       LAST_IMPORT[tipo]=meta;
+      if(tipo==="Cliente" && _lastMonths && _lastMonths.length){ // archivar snapshot del año importado
+        var _yr=(""+_lastMonths[0]).split("-")[0];
+        var _sd={kind:"salesYear", year:_yr, months:_lastMonths.slice(), at:meta.at,
+          clients:items.map(function(it){ return {nome:it.nome, vendedor:it.vendedor||"", meses:(it.meses||[]).slice()}; }) };
+        col_meta().doc("sales_"+_yr).set(_sd).catch(noop); SALESYR[_yr]=_sd; _ensuredYears[_yr]=1;
+      }
       impMsg('<div class="imp-ok">✓ Importación exitosa · '+items.length+' '+(tipo==="Cliente"?"clientes":"prospectos")+(tipo==="Cliente"?" · "+fmtKg(kgTot)+" kg":"")+' · '+fmtDateTime(meta.at)+'</div>');
       toast("Base actualizada ✓");
     }).catch(function(){ impMsg('<div class="imp-err">✗ Error al importar. Revise el archivo e intente de nuevo.</div>'); toast("Error al importar.", true); });
