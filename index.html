@@ -2973,6 +2973,15 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
   // Historial de versiones (changelog). Al agregar una mejora: sumar una entrada
   // arriba con la fecha y bumpear el número. APP_VERSION = la última entrada.
   var CHANGELOG = [
+    { v:"1.172", d:"09/11/2026", n:[
+        "Transición Gabriel→Matías finalizada: todas las ventas cuyo vendedor contiene «Matías» (incluido el nombre completo de la planilla) ahora se le atribuyen al usuario Matías, con todo su histórico. Gabriel deja de tomar esa cartera."
+      ] },
+    { v:"1.171", d:"07/11/2026", n:[
+        "Si registrás una visita a un cliente que YA tenía una visita agendada pendiente, ahora esa visita agendada se completa automáticamente (no se crea una visita nueva). Así no queda duplicada ni retrasada. Solo si el cliente no tenía nada agendado, la visita cuenta como «Extra»."
+      ] },
+    { v:"1.170", d:"07/11/2026", n:[
+        "Cumplimiento de ruta: ahora «Planificadas» cuenta SOLO lo agendado de antemano (Categorización + próxima visita). Las visitas espontáneas (hechas sin estar agendadas) se muestran aparte como «Extra» y no afectan el % — que mide de verdad cuánto de la agenda planeada se cumplió."
+      ] },
     { v:"1.169", d:"04/11/2026", n:[
         "Reporte semanal (Gestión): debajo de cada vendedor, nuevo bloque «Cumplimiento de la ruta planificada» de la semana — Planificadas, Realizadas, Reagendadas, Canceladas y Sin hacer, con % de cumplimiento y barra. Usa el filtro de semana que ya tiene el reporte.",
         "Para eso, la app ahora registra un historial de los movimientos de la ruta (cancelar/reagendar visitas). Esas dos columnas se cuentan de las semanas a partir de ahora."
@@ -3393,12 +3402,12 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
   // completo (col. A). Casan si cada palabra del nombre corto está en el completo.
   // Alias de nombre para casar ventas/clientes: en la base las ventas de José Palacio
   // figuran con el vendedor "Rossmaryo" (se le cambió solo el nombre de login).
-  // "matias" (login del Matías nuevo) empareja clientes por su id propio "matias2", para que
-  // arranque vacío y NO tome la cartera vieja (vendedor "Matías"), que quedó en Gabriel.
-  var MATCH_ALIAS = { "jose palacio":"rossmaryo", "matias":"matias2" };
-  // Un login que debe emparejar datos de VARIOS nombres (transición Gabriel→Matías:
-  // el login "Gabriel" toma la cartera de Matías y además lo que creó como "Gabriel").
-  var MATCH_MULTI = { "gabriel":["gabriel","matias"] };
+  var MATCH_ALIAS = { "jose palacio":"rossmaryo" };
+  // Transición Gabriel→Matías COMPLETADA (09/11/2026, pedido del usuario): hoy TODA venta cuyo
+  // vendedor contenga "matias" (p.ej. "Matias Ezequiel Maudslay Giménez" o "Matías") va al
+  // usuario Matías (login "Matías" = id matias2, que empareja por el token "matias").
+  // Gabriel ya no toma esa cartera (queda vacío si no hay vendedor "Gabriel" en la base).
+  var MATCH_MULTI = {};
   function sellerMatchName(appName, vendName){
     if(!appName || !vendName) return false;
     var a=norm(appName), b=norm(vendName);
@@ -4078,17 +4087,20 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
       var pctMes=objMes>0?Math.round(kgMes/objMes*100):null;
       // cumplimiento de la ruta planificada de la semana (visitas): planificadas = realizadas + sin hacer + canceladas + reagendadas-fuera
       var inW=routeFor(s.id).filter(function(it){ return it.kind!=="evento" && inWeek(it.fecha); });
-      var rtR=inW.filter(function(it){ return it.done; }).length, rtP=inW.length-rtR;
+      var planned=inW.filter(function(it){ return !it.adhoc; }); // solo lo agendado de antemano (catGen + próxima visita)
+      var rtR=planned.filter(function(it){ return it.done; }).length;
+      var rtP=planned.filter(function(it){ return !it.done; }).length;
+      var rtExtra=inW.length-planned.length; // visitas espontáneas (no agendadas) hechas esa semana
       var rtC=RLOG.filter(function(e){ return e.sellerId===s.id && e.action==="cancel" && inWeek(e.plannedFecha); }).length;
       var rtRe=RLOG.filter(function(e){ return e.sellerId===s.id && e.action==="resched" && inWeek(e.plannedFecha) && !inWeek(e.toFecha); }).length;
       var rtPL=rtR+rtP+rtC+rtRe;
-      var ruta={ plan:rtPL, hechas:rtR, sin:rtP, canc:rtC, reag:rtRe, pct:(rtPL>0?Math.round(rtR/rtPL*100):null) };
+      var ruta={ plan:rtPL, hechas:rtR, sin:rtP, canc:rtC, reag:rtRe, extra:rtExtra, pct:(rtPL>0?Math.round(rtR/rtPL*100):null) };
       return {seller:s, realizadas:vs.length, cliVis:cliVis, proVis:proVis, created:created, kgMes:kgMes, objMes:objMes, pctMes:pctMes,
         upcoming:upcoming, upcomingN:upcoming.length, retrasadasN:retrasadasN, st:st, ruta:ruta};
     });
-    var team={realizadas:0, upcoming:0, created:0, retrasadas:0, kgMes:0, objMes:0, ruta:{plan:0,hechas:0,sin:0,canc:0,reag:0}};
+    var team={realizadas:0, upcoming:0, created:0, retrasadas:0, kgMes:0, objMes:0, ruta:{plan:0,hechas:0,sin:0,canc:0,reag:0,extra:0}};
     sellers.forEach(function(d){ team.realizadas+=d.realizadas; team.upcoming+=d.upcomingN; team.created+=d.created.length; team.retrasadas+=d.retrasadasN; team.kgMes+=d.kgMes; team.objMes+=d.objMes;
-      team.ruta.plan+=d.ruta.plan; team.ruta.hechas+=d.ruta.hechas; team.ruta.sin+=d.ruta.sin; team.ruta.canc+=d.ruta.canc; team.ruta.reag+=d.ruta.reag; });
+      team.ruta.plan+=d.ruta.plan; team.ruta.hechas+=d.ruta.hechas; team.ruta.sin+=d.ruta.sin; team.ruta.canc+=d.ruta.canc; team.ruta.reag+=d.ruta.reag; team.ruta.extra+=d.ruta.extra; });
     team.pctMes=team.objMes>0?Math.round(team.kgMes/team.objMes*100):null;
     team.ruta.pct=team.ruta.plan>0?Math.round(team.ruta.hechas/team.ruta.plan*100):null;
     return {mode:mode, titleWord:(mode==="month"?"mensual":"semanal"), periodWord:(mode==="month"?"Mes de":"Semana"),
@@ -4131,25 +4143,26 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
     y+=bh+18;
     // ---- Cumplimiento de la ruta planificada de la semana ----
     (function(){
-      var rt=sd.ruta||{plan:0,hechas:0,sin:0,canc:0,reag:0,pct:null}, rtH=112;
+      var rt=sd.ruta||{plan:0,hechas:0,sin:0,canc:0,reag:0,extra:0,pct:null}, rtH=112;
       D.box(M, y, W-2*M, rtH, 12, "#fffdf7", "#ecd9a6");
       D.txt("CUMPLIMIENTO DE LA RUTA PLANIFICADA", M+14, y+20, 11, "#245334", true);
       var pc=rt.pct, pcCol=(pc==null)?"#7d887f":(pc>=80?"#1f7244":(pc>=60?"#b5830f":"#b23b3b"));
       D.txt((pc==null?"s/datos":(pc+"%")), W-M-14, y+20, 14, pcCol, true, "right");
-      var cN=5, cGap=7, iL=M+14, iR=W-M-14, cW=((iR-iL)-(cN-1)*cGap)/cN, cy=y+30, cH=40;
+      var cN=6, cGap=6, iL=M+14, iR=W-M-14, cW=((iR-iL)-(cN-1)*cGap)/cN, cy=y+30, cH=40;
       var cells=[["Planificadas",rt.plan,"#1a231d","#ffffff","#e4e8df"],
         ["Realizadas",rt.hechas,"#1f7244","#eef5ee","#cfe0d2"],
         ["Reagendadas",rt.reag,"#b5830f","#fbf5e6","#ecdfb8"],
         ["Canceladas",rt.canc,"#b23b3b","#fbeeee","#eccfcf"],
-        ["Sin hacer",rt.sin,"#7d887f","#ffffff","#e4e8df"]];
+        ["Sin hacer",rt.sin,"#7d887f","#ffffff","#e4e8df"],
+        ["Extra",rt.extra,"#1f6091","#eef3fb","#cfe0f3"]];
       cells.forEach(function(c,i){ var x=iL+i*(cW+cGap); D.box(x,cy,cW,cH,8,c[3],c[4]);
         D.txt(""+c[1], x+cW/2, cy+19, 15, c[2], true, "center");
-        D.txt(c[0], x+cW/2, cy+32, 8, "#7d887f", false, "center"); });
+        D.txt(c[0], x+cW/2, cy+32, 7.5, "#7d887f", false, "center"); });
       var bx=M+14, bw=(W-2*M)-28, by=y+84, bH=9;
       D.box(bx,by,bw,bH,5,"#eceee8",null);
       var w2=(pc==null?0:Math.max(0,Math.min(100,pc))/100*bw);
       if(w2>1){ ctx.fillStyle=pcCol; roundRect(ctx,bx,by,w2,bH,5); ctx.fill(); }
-      D.txt(rt.hechas+" de "+rt.plan+" realizadas"+(pc==null?" · (sin ruta planificada esta semana)":""), bx, y+108, 9, "#7d887f");
+      D.txt(rt.hechas+" de "+rt.plan+" de la agenda"+(pc==null?" · (sin ruta planificada esta semana)":"")+(rt.extra?("  ·  +"+rt.extra+" espontáneas"):""), bx, y+108, 9, "#7d887f");
       y+=rtH+16;
     })();
     function sec(title, col){ D.txt(title, M, y, 11, col||"#2f6b43", true); y+=16; }
@@ -4799,8 +4812,13 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
     var fromRoute = false;
     if(pendingRoute){ pendingRoute.done=true; pendingRoute.visitId=rec2.id; putRoute(pendingRoute); pendingRoute=null; hideBanner(); fromRoute=true; }
     else {
-      // visita hecha directo (sin ruta): igual queda en la ruta del día como "Realizado"
-      putRoute({ id:"r"+Date.now()+Math.random().toString(36).slice(2,5), sellerId:current.id, kind:"visita", cliente:cli, motivo:motivo, fecha:rec2.data, done:true, visitId:rec2.id });
+      // ¿el cliente ya tenía una visita AGENDADA pendiente? entonces esta la COMPLETA (no duplica ni queda retrasada)
+      var _pend=(ROUTES[current.id]||[]).filter(function(it){ return it.kind!=="evento" && !it.adhoc && !it.done && norm(it.cliente)===norm(cli); })
+                 .sort(function(a,b){ return (a.fecha||"")<(b.fecha||"")?-1:1; });
+      if(_pend.length){ var _it=_pend[0]; _it.done=true; _it.visitId=rec2.id; _it.sellerId=_it.sellerId||current.id; putRoute(_it); fromRoute=true; }
+      else { // visita espontánea (sin agenda previa): queda como "Extra" del día
+        putRoute({ id:"r"+Date.now()+Math.random().toString(36).slice(2,5), sellerId:current.id, kind:"visita", cliente:cli, motivo:motivo, fecha:rec2.data, done:true, visitId:rec2.id, adhoc:true });
+      }
     }
     // próxima visita agenda-se sozinha na ruta
     var agendou = false;
