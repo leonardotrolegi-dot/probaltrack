@@ -2572,7 +2572,7 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
   function slug(s){ return s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/[^a-z0-9]+/g,"_").replace(/^_|_$/g,""); }
   // Vendedores desactivados: NO entran en SELLERS, así desaparecen de la pantalla de
   // login y de TODO el panel de gestión. Sus datos de venta/clientes quedan en la base.
-  var HIDDEN_SELLERS={ "billie":1, "martin":1, "pre_venta":1 };
+  var HIDDEN_SELLERS={ "billie":1, "martin":1, "pre_venta":1, "rodolfo":1 };
   var SELLERS=[], SELLER_BY={}, KEY={}, CLIENTES_FALLBACK=[], _cliSeen={};
   RAW_8020.split("\n").forEach(function(ln){
     ln=ln.trim(); if(!ln) return;
@@ -2973,6 +2973,10 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
   // Historial de versiones (changelog). Al agregar una mejora: sumar una entrada
   // arriba con la fecha y bumpear el número. APP_VERSION = la última entrada.
   var CHANGELOG = [
+    { v:"1.174", d:"10/11/2026", n:[
+        "Reporte: la torta «Visitas por cliente» ahora tiene una leyenda a la izquierda con la lista de clientes (color + cantidad y %), en orden de %, mostrando hasta 20 nombres (en vez de amontonar los nombres dentro de las porciones). «Otros» solo agrupa la cola más allá de los 20.",
+        "Rodolfo quedó desactivado: fuera del login y de los reportes/panel de Gestión (sus datos no se borran)."
+      ] },
     { v:"1.173", d:"10/11/2026", n:[
         "Reporte semanal: al pie de cada vendedor se agregó un «Resumen de visitas (histórico)» con dos tortas — (1) visitas por cliente (nombre + % dentro de cada porción; los de menos de 5% se agrupan en «Otros») y (2) Clientes vs Prospección (cantidad y %) — más el semáforo visual de prospecciones (activos/congelados/vendidos/perdidos)."
       ] },
@@ -4218,31 +4222,41 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
       sec("PROYECCIÓN · RESTO "+data.restWord+" ("+sd.upcoming.length+")", "#8a6a0a");
       rows(sd.upcoming, 10, "");
     }
-    // ---- Resumen de visitas (histórico): 2 tortas ----
+    // ---- Resumen de visitas (histórico) ----
     y+=10; sec("RESUMEN DE VISITAS · HISTÓRICO");
     var hist=sd.hist||{cliArr:[],cliCount:0,proCount:0};
-    var PAL=["#2f6b43","#1f6091","#b5830f","#7a5cc0","#4a9d5f","#3b7fae","#2f8f6b","#8a6a0a","#b23b3b","#546e7a","#6a8f1f","#9a4bae"];
-    var totCli=hist.cliCount||0, big=[], otros=0;
-    hist.cliArr.forEach(function(d){ if(totCli>0 && d.v/totCli>=0.05) big.push({n:d.n,v:d.v}); else otros+=d.v; });
-    if(!big.length && hist.cliArr.length){ otros=0; hist.cliArr.forEach(function(d,i){ if(i<8) big.push({n:d.n,v:d.v}); else otros+=d.v; }); } // visitas muy repartidas: muestra las primeras
+    var PAL=["#2f6b43","#1f6091","#b5830f","#7a5cc0","#4a9d5f","#3b7fae","#c2772e","#9a5bb0","#2f8f6b","#246b8f","#8a6a0a","#6a4a9a","#5a9e4a","#2e7d8f","#b23b3b","#546e7a","#6a8f1f","#9a4bae","#3f7d5a","#7a6a2a"];
+    var totCli=hist.cliCount||0, CAPN=20, big=[], otros=0;
+    hist.cliArr.forEach(function(d,i){ if(i<CAPN) big.push({n:d.n,v:d.v}); else otros+=d.v; }); // en orden de %, hasta 20 nombres; el resto a "Otros"
     big.forEach(function(d,i){ d.c=PAL[i%PAL.length]; });
     if(otros>0) big.push({n:"Otros",v:otros,c:"#9aa39a"});
     var cvp=[{n:"Clientes",v:hist.cliCount,c:"#2f6b43"},{n:"Prospección",v:hist.proCount,c:"#1f6091"}];
-    var cxA=218, cxB=576, pr=70, pcy=y+96;
-    D.txt("Visitas por cliente", cxA, y+14, 10.5, "#245334", true, "center");
-    D.txt("% sobre "+totCli+" visitas a clientes", cxA, y+26, 8.5, "#7d887f", false, "center");
-    D.txt("Clientes vs Prospección", cxB, y+14, 10.5, "#245334", true, "center");
-    D.txt("cantidad y % del total de visitas", cxB, y+26, 8.5, "#7d887f", false, "center");
-    wrPie(ctx, cxA, pcy, pr, big, {minLabel:0.05, showName:true, nameFont:6.8});
-    wrPie(ctx, cxB, pcy, pr, cvp, {minLabel:0.03, showName:false});
-    // leyenda torta B (centrada debajo)
-    var totB=(hist.cliCount+hist.proCount)||0, lgy=pcy+pr+16;
-    ctx.font="bold 9.5px Arial, sans-serif";
-    var t1="Clientes "+hist.cliCount+(totB?" ("+Math.round(hist.cliCount/totB*100)+"%)":""), t2="Prosp. "+hist.proCount+(totB?" ("+Math.round(hist.proCount/totB*100)+"%)":"");
-    var w1=ctx.measureText(t1).width, w2=ctx.measureText(t2).width, lgGap=18, lgTot=10+w1+lgGap+10+w2, lgx=cxB-lgTot/2;
-    ctx.fillStyle="#2f6b43"; ctx.fillRect(lgx, lgy-7, 7,7); ctx.fillStyle="#1a231d"; ctx.textAlign="left"; ctx.fillText(t1, lgx+10, lgy);
-    var lgx2=lgx+10+w1+lgGap; ctx.fillStyle="#1f6091"; ctx.fillRect(lgx2, lgy-7,7,7); ctx.fillStyle="#1a231d"; ctx.fillText(t2, lgx2+10, lgy);
-    y=pcy+pr+34;
+    var topY=y;
+    // --- Visitas por cliente: título + leyenda (izquierda, 2 col) + torta (derecha) ---
+    D.txt("Visitas por cliente", M, topY+12, 10.5, "#245334", true);
+    D.txt("sobre "+totCli+" visitas a clientes · "+hist.cliArr.length+" clientes", M, topY+24, 8, "#7d887f");
+    var legY=topY+40, rowH=12.5, nCol=(big.length>10?2:1), perCol=Math.ceil(big.length/nCol)||1, colW=232;
+    ctx.textAlign="left";
+    big.forEach(function(d,i){ var col=Math.floor(i/perCol), row=i%perCol, x=M+col*colW, yy=legY+row*rowH;
+      ctx.fillStyle=d.c; roundRect(ctx,x,yy-7.5,8,8,2); ctx.fill();
+      var pctv=totCli>0?Math.round(d.v/totCli*100):0, lab=" "+d.v+"·"+pctv+"%";
+      ctx.font="8.5px Arial, sans-serif"; var labW=ctx.measureText(lab).width, maxNm=colW-12-labW-8;
+      var nm=""+d.n; ctx.font="bold 8.5px Arial, sans-serif";
+      if(ctx.measureText(nm).width>maxNm){ while(nm.length>2 && ctx.measureText(nm+"…").width>maxNm) nm=nm.slice(0,-1); nm+="…"; }
+      ctx.fillStyle="#1a231d"; ctx.fillText(nm, x+12, yy);
+      var nw=ctx.measureText(nm).width; ctx.font="8.5px Arial, sans-serif"; ctx.fillStyle="#7d887f"; ctx.fillText(lab, x+12+nw+2, yy);
+    });
+    var pcxA=662, pcyA=topY+80, prA=58;
+    wrPie(ctx, pcxA, pcyA, prA, big, {minLabel:1.1, showName:false}); // torta limpia (nombres en la leyenda)
+    y=Math.max(legY+perCol*rowH, pcyA+prA)+16;
+    // --- Clientes vs Prospección: torta (izq) + leyenda (der) ---
+    D.txt("Clientes vs Prospección", M, y+12, 10.5, "#245334", true);
+    var pcxB=118, pcyB=y+58, prB=40, totB=(hist.cliCount+hist.proCount)||0;
+    wrPie(ctx, pcxB, pcyB, prB, cvp, {minLabel:0.03, showName:false});
+    cvp.forEach(function(d,i){ var yy=y+52+i*20; ctx.fillStyle=d.c; roundRect(ctx,196,yy-9,11,11,2); ctx.fill();
+      ctx.fillStyle="#1a231d"; ctx.font="bold 11px Arial, sans-serif"; ctx.textAlign="left";
+      ctx.fillText(d.n+": "+d.v+(totB?"  ("+Math.round(d.v/totB*100)+"%)":""), 212, yy); });
+    y=pcyB+prB+18;
     // ---- Semáforo de prospecciones ----
     sec("ESTADO DE PROSPECCIONES · semáforo");
     var st=sd.st, seg=[];
