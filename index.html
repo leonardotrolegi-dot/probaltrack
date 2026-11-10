@@ -2973,6 +2973,9 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
   // Historial de versiones (changelog). Al agregar una mejora: sumar una entrada
   // arriba con la fecha y bumpear el número. APP_VERSION = la última entrada.
   var CHANGELOG = [
+    { v:"1.173", d:"10/11/2026", n:[
+        "Reporte semanal: al pie de cada vendedor se agregó un «Resumen de visitas (histórico)» con dos tortas — (1) visitas por cliente (nombre + % dentro de cada porción; los de menos de 5% se agrupan en «Otros») y (2) Clientes vs Prospección (cantidad y %) — más el semáforo visual de prospecciones (activos/congelados/vendidos/perdidos)."
+      ] },
     { v:"1.172", d:"09/11/2026", n:[
         "Transición Gabriel→Matías finalizada: todas las ventas cuyo vendedor contiene «Matías» (incluido el nombre completo de la planilla) ahora se le atribuyen al usuario Matías, con todo su histórico. Gabriel deja de tomar esa cartera."
       ] },
@@ -4095,8 +4098,15 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
       var rtRe=RLOG.filter(function(e){ return e.sellerId===s.id && e.action==="resched" && inWeek(e.plannedFecha) && !inWeek(e.toFecha); }).length;
       var rtPL=rtR+rtP+rtC+rtRe;
       var ruta={ plan:rtPL, hechas:rtR, sin:rtP, canc:rtC, reag:rtRe, extra:rtExtra, pct:(rtPL>0?Math.round(rtR/rtPL*100):null) };
+      // histórico de visitas (para las tortas del pie de la hoja): TODO hasta hoy, no solo la semana
+      var allVis=visitsFor(s.id).filter(function(v){ return !v.stateChange; });
+      var hCli=allVis.filter(function(v){ return v.motivo==="Cliente"; }).length;
+      var hPro=allVis.filter(function(v){ return v.motivo==="Prospecto"; }).length;
+      var byCli={}; allVis.forEach(function(v){ if(v.motivo==="Cliente"){ var kk=v.cliente||"—"; byCli[kk]=(byCli[kk]||0)+1; } });
+      var cliArr=Object.keys(byCli).map(function(k){ return {n:k, v:byCli[k]}; }).sort(function(a,b){ return b.v-a.v; });
+      var hist={cliArr:cliArr, cliCount:hCli, proCount:hPro};
       return {seller:s, realizadas:vs.length, cliVis:cliVis, proVis:proVis, created:created, kgMes:kgMes, objMes:objMes, pctMes:pctMes,
-        upcoming:upcoming, upcomingN:upcoming.length, retrasadasN:retrasadasN, st:st, ruta:ruta};
+        upcoming:upcoming, upcomingN:upcoming.length, retrasadasN:retrasadasN, st:st, ruta:ruta, hist:hist};
     });
     var team={realizadas:0, upcoming:0, created:0, retrasadas:0, kgMes:0, objMes:0, ruta:{plan:0,hechas:0,sin:0,canc:0,reag:0,extra:0}};
     sellers.forEach(function(d){ team.realizadas+=d.realizadas; team.upcoming+=d.upcomingN; team.created+=d.created.length; team.retrasadas+=d.retrasadasN; team.kgMes+=d.kgMes; team.objMes+=d.objMes;
@@ -4117,6 +4127,25 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
     function hr(x1,y,x2,col){ ctx.strokeStyle=col||"#eef0ea"; ctx.lineWidth=1; ctx.beginPath(); ctx.moveTo(x1,y); ctx.lineTo(x2,y); ctx.stroke(); }
     function trunc(s,font,maxW){ ctx.font=font; s=""+s; if(ctx.measureText(s).width<=maxW) return s; while(s.length>3 && ctx.measureText(s+"…").width>maxW) s=s.slice(0,-1); return s+"…"; }
     return {txt:txt, box:box, tagR:tagR, hr:hr, trunc:trunc};
+  }
+  function wrPie(ctx, cx, cy, r, data, opt){
+    opt=opt||{}; var tot=data.reduce(function(s,d){return s+(d.v||0);},0);
+    if(tot<=0){ ctx.fillStyle="#9aa39a"; ctx.font="italic 10px Arial, sans-serif"; ctx.textAlign="center"; ctx.fillText("Sin visitas", cx, cy+3); return; }
+    var a=-Math.PI/2;
+    data.forEach(function(d){ if(!d.v) return;
+      var frac=d.v/tot, a1=a+frac*2*Math.PI, mid=(a+a1)/2;
+      ctx.beginPath(); ctx.moveTo(cx,cy); ctx.arc(cx,cy,r,a,a1); ctx.closePath();
+      ctx.fillStyle=d.c; ctx.fill(); ctx.strokeStyle="#fff"; ctx.lineWidth=1.5; ctx.stroke();
+      if(frac>=(opt.minLabel||0.05)){
+        var lx=cx+Math.cos(mid)*r*0.6, ly=cy+Math.sin(mid)*r*0.6, pct=Math.round(frac*100);
+        ctx.fillStyle="#fff"; ctx.textAlign="center";
+        if(opt.showName!==false){ var nf=opt.nameFont||6.8; ctx.font="bold "+nf+"px Arial, sans-serif";
+          var nm=""+d.n, maxW=r*0.88; if(ctx.measureText(nm).width>maxW){ while(nm.length>2 && ctx.measureText(nm+"…").width>maxW) nm=nm.slice(0,-1); nm+="…"; }
+          ctx.fillText(nm, lx, ly-1); ctx.fillText(pct+"%", lx, ly+nf+1.5);
+        } else { ctx.font="bold 12px Arial, sans-serif"; ctx.fillText(pct+"%", lx, ly+4); }
+      }
+      a=a1;
+    });
   }
   function drawWRSeller(ctx, sd, data){
     var D=wrDraw(ctx), M=48, W=794, PH=1123, y=50, s=sd.seller;
@@ -4189,11 +4218,49 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
       sec("PROYECCIÓN · RESTO "+data.restWord+" ("+sd.upcoming.length+")", "#8a6a0a");
       rows(sd.upcoming, 10, "");
     }
-    y+=6; sec("ESTADO DE PROSPECCIONES");
-    var st=sd.st, parts=[];
-    if(st.activo) parts.push(st.activo+" activos"); if(st.pausado) parts.push(st.pausado+" congelados");
-    if(st.vend) parts.push(st.vend+" vendidos"); if(st.perdido) parts.push(st.perdido+" perdidos");
-    D.txt(parts.length?parts.join("  ·  "):"Sin prospectos cargados.", M, y+9, 12, "#355e3b", true); y+=24;
+    // ---- Resumen de visitas (histórico): 2 tortas ----
+    y+=10; sec("RESUMEN DE VISITAS · HISTÓRICO");
+    var hist=sd.hist||{cliArr:[],cliCount:0,proCount:0};
+    var PAL=["#2f6b43","#1f6091","#b5830f","#7a5cc0","#4a9d5f","#3b7fae","#2f8f6b","#8a6a0a","#b23b3b","#546e7a","#6a8f1f","#9a4bae"];
+    var totCli=hist.cliCount||0, big=[], otros=0;
+    hist.cliArr.forEach(function(d){ if(totCli>0 && d.v/totCli>=0.05) big.push({n:d.n,v:d.v}); else otros+=d.v; });
+    if(!big.length && hist.cliArr.length){ otros=0; hist.cliArr.forEach(function(d,i){ if(i<8) big.push({n:d.n,v:d.v}); else otros+=d.v; }); } // visitas muy repartidas: muestra las primeras
+    big.forEach(function(d,i){ d.c=PAL[i%PAL.length]; });
+    if(otros>0) big.push({n:"Otros",v:otros,c:"#9aa39a"});
+    var cvp=[{n:"Clientes",v:hist.cliCount,c:"#2f6b43"},{n:"Prospección",v:hist.proCount,c:"#1f6091"}];
+    var cxA=218, cxB=576, pr=70, pcy=y+96;
+    D.txt("Visitas por cliente", cxA, y+14, 10.5, "#245334", true, "center");
+    D.txt("% sobre "+totCli+" visitas a clientes", cxA, y+26, 8.5, "#7d887f", false, "center");
+    D.txt("Clientes vs Prospección", cxB, y+14, 10.5, "#245334", true, "center");
+    D.txt("cantidad y % del total de visitas", cxB, y+26, 8.5, "#7d887f", false, "center");
+    wrPie(ctx, cxA, pcy, pr, big, {minLabel:0.05, showName:true, nameFont:6.8});
+    wrPie(ctx, cxB, pcy, pr, cvp, {minLabel:0.03, showName:false});
+    // leyenda torta B (centrada debajo)
+    var totB=(hist.cliCount+hist.proCount)||0, lgy=pcy+pr+16;
+    ctx.font="bold 9.5px Arial, sans-serif";
+    var t1="Clientes "+hist.cliCount+(totB?" ("+Math.round(hist.cliCount/totB*100)+"%)":""), t2="Prosp. "+hist.proCount+(totB?" ("+Math.round(hist.proCount/totB*100)+"%)":"");
+    var w1=ctx.measureText(t1).width, w2=ctx.measureText(t2).width, lgGap=18, lgTot=10+w1+lgGap+10+w2, lgx=cxB-lgTot/2;
+    ctx.fillStyle="#2f6b43"; ctx.fillRect(lgx, lgy-7, 7,7); ctx.fillStyle="#1a231d"; ctx.textAlign="left"; ctx.fillText(t1, lgx+10, lgy);
+    var lgx2=lgx+10+w1+lgGap; ctx.fillStyle="#1f6091"; ctx.fillRect(lgx2, lgy-7,7,7); ctx.fillStyle="#1a231d"; ctx.fillText(t2, lgx2+10, lgy);
+    y=pcy+pr+34;
+    // ---- Semáforo de prospecciones ----
+    sec("ESTADO DE PROSPECCIONES · semáforo");
+    var st=sd.st, seg=[];
+    if(st.activo) seg.push({n:"activos",v:st.activo,c:"#1f7244"});
+    if(st.pausado) seg.push({n:"congelados",v:st.pausado,c:"#1f6091"});
+    if(st.vend) seg.push({n:"vendidos",v:st.vend,c:"#b5830f"});
+    if(st.perdido) seg.push({n:"perdidos",v:st.perdido,c:"#b23b3b"});
+    var stot=seg.reduce(function(a2,d){return a2+d.v;},0);
+    if(stot>0){
+      var sbx=M, sbw=W-2*M, sby=y+2, sbh=16;
+      ctx.save(); roundRect(ctx,sbx,sby,sbw,sbh,8); ctx.clip();
+      var scx=sbx; seg.forEach(function(d){ var w=d.v/stot*sbw; ctx.fillStyle=d.c; ctx.fillRect(scx,sby,w+0.6,sbh); scx+=w; }); ctx.restore();
+      var chy=sby+sbh+16, chx=M;
+      seg.forEach(function(d){ ctx.fillStyle=d.c; ctx.beginPath(); ctx.arc(chx+5,chy-4,5,0,7); ctx.fill();
+        var t=d.v+" "+d.n+" · "+Math.round(d.v/stot*100)+"%"; ctx.fillStyle="#355e3b"; ctx.font="bold 11px Arial, sans-serif"; ctx.textAlign="left"; ctx.fillText(t, chx+15, chy);
+        chx+=15+ctx.measureText(t).width+20; });
+      y=chy+8;
+    } else { D.txt("Sin prospectos cargados.", M, y+12, 12, "#355e3b", true); y+=22; }
     D.txt("Probal Track · Gestión · generado "+fmtDate(todayISO()), W/2, PH-34, 10, "#9aa39a", false, "center");
   }
   function drawWRCover(ctx, data){
