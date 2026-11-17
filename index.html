@@ -3004,6 +3004,9 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
   // Historial de versiones (changelog). Al agregar una mejora: sumar una entrada
   // arriba con la fecha y bumpear el número. APP_VERSION = la última entrada.
   var CHANGELOG = [
+    { v:"1.181", d:"17/11/2026", n:[
+        "Arreglo del modo offline: el service worker ahora NO toca nada de Firebase, así que la sincronización vuelve a funcionar (lo que se carga en el teléfono sube al servidor y aparece en todos lados). Hay que volver a subir el sw.js."
+      ] },
     { v:"1.180", d:"17/11/2026", n:[
         "Modo offline: la app ahora se puede abrir y usar sin conexión (se instala en el teléfono). El vendedor registra visitas en el campo sin señal y se suben solas al reconectar. (Requiere subir también los archivos sw.js y manifest.json al sitio.)"
       ] },
