@@ -3004,6 +3004,9 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
   // Historial de versiones (changelog). Al agregar una mejora: sumar una entrada
   // arriba con la fecha y bumpear el número. APP_VERSION = la última entrada.
   var CHANGELOG = [
+    { v:"1.179", d:"17/11/2026", n:[
+        "Paneles de bienvenida (vendedor y Gestión): la lista se ordena siempre por el cliente que MENOS compró respecto a lo previsto (menor % de cumplimiento primero)."
+      ] },
     { v:"1.178", d:"17/11/2026", n:[
         "El panel de bienvenida ahora aparece CADA vez que entrás, salvo que marques «No mostrar de nuevo hoy» (casilla agregada). Antes salía una sola vez por día.",
         "Nuevo panel de bienvenida también para Gestión: cómo va el equipo contra el objetivo del mes + lista de clientes proyectados, del mayor al menor, con su % de cumplimiento (verde ≥100, ámbar ≥70, rojo <70)."
@@ -3345,7 +3348,7 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
       var comp=(kgIdx!=null && c.meses && c.meses[kgIdx]!=null)?(+c.meses[kgIdx]||0):0;
       if(comp<prev) list.push({nome:c.nome, previsto:prev, comprado:comp, falta:prev-comp, pct:Math.round(comp/prev*100)});
     });
-    list.sort(function(a,b){ return b.falta-a.falta; });
+    list.sort(function(a,b){ return (a.pct-b.pct) || (b.falta-a.falta); }); // el que menos compró de lo previsto (menor %) primero
     return {name:(SELLER_BY[sid]?SELLER_BY[sid].name:""), vendido:vendido, objetivo:objetivo, pct:pct, falta:(objetivo>vendido?objetivo-vendido:0), clients:list};
   }
   var _tipsTries=0;
@@ -3417,7 +3420,7 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
       var comp=(kgIdx!=null && c.meses && c.meses[kgIdx]!=null)?(+c.meses[kgIdx]||0):0;
       list.push({nome:c.nome, vendedor:c.vendedor||"", previsto:prev, comprado:comp, pct:Math.round(comp/prev*100)});
     });
-    list.sort(function(a,b){ return b.previsto-a.previsto; }); // del mayor proyectado al menor
+    list.sort(function(a,b){ return (a.pct-b.pct) || (b.previsto-a.previsto); }); // del que menos compró de lo previsto (menor %) al que más
     return {vendido:vendido, objetivo:objetivo, pct:pct, falta:(objetivo>vendido?objetivo-vendido:0), clients:list};
   }
   function renderMgrTips(t){
@@ -3430,7 +3433,7 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
       '<div class="tips-sub"><span>Vendido: <b>'+fmtKg(t.vendido)+' kg</b></span><span>Objetivo: '+fmtKg(t.objetivo)+' kg</span></div>'+
       (t.falta>0?'<div class="tips-sub" style="margin-top:3px"><span style="color:#b23b3b;font-weight:700">Faltan '+fmtKg(t.falta)+' kg para la meta</span></div>':'')+'</div>'; }
     if(t.clients.length){
-      html+='<div class="tips-sec">📊 Clientes proyectados — del mayor al menor (% de cumplimiento)</div>';
+      html+='<div class="tips-sec">📊 Clientes proyectados · del que menos compró de lo previsto (% cumplido)</div>';
       var row=function(c){ var pw=Math.max(2,Math.min(100,c.pct)), col=pctCol2(c.pct);
         return '<div class="tips-cli"><div class="tc-top"><span class="tc-nm">'+esc(c.nome)+(c.vendedor?' <small style="color:#7d887f;font-weight:600">· '+esc(firstName(c.vendedor))+'</small>':'')+'</span><span class="tc-falta" style="color:'+col+';background:'+col+'1e">'+c.pct+'%</span></div>'+
           '<div class="tc-pb"><span style="width:'+pw+'%;background:'+col+'"></span></div>'+
