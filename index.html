@@ -401,6 +401,33 @@
   .cat-catlist .cc-row{display:flex;justify-content:space-between;gap:8px;font-size:12.5px;padding:4px 0;border-bottom:1px solid var(--line)}
   .cat-catlist .cc-row:last-child{border-bottom:0}
   .cat-catlist .cc-empty{font-size:12px;color:var(--ink-faint)}
+  /* panel de Tips de bienvenida (vendedor) */
+  .tips-scrim{position:fixed;inset:0;background:rgba(16,28,12,.55);display:flex;align-items:center;justify-content:center;z-index:9000;padding:16px}
+  .tips-scrim.hidden{display:none}
+  .tips-card{width:360px;max-width:100%;max-height:92vh;overflow:auto;background:#fff;border-radius:18px;box-shadow:0 14px 40px rgba(0,0,0,.4)}
+  .tips-h{background:linear-gradient(135deg,#245334,#1f7244);color:#fff;padding:16px 18px 15px;position:relative}
+  .tips-hi{font-size:19px;font-weight:800;display:flex;align-items:center;gap:7px}
+  .tips-sb{font-size:12px;opacity:.92;margin-top:3px}
+  .tips-x{position:absolute;top:12px;right:14px;font-size:18px;opacity:.9;cursor:pointer}
+  .tips-body{padding:15px 16px 16px}
+  .tips-obj{background:#eef5ee;border:1px solid #d7e6da;border-radius:13px;padding:12px 13px}
+  .tips-obj .t{font-size:12.5px;color:#245334;font-weight:700}
+  .tips-obj .big{font-size:16px;font-weight:800;color:#1f7244}
+  .tips-bar{height:11px;border-radius:7px;background:#e2e6dd;overflow:hidden;margin:8px 0 6px}
+  .tips-bar>span{display:block;height:100%;background:linear-gradient(90deg,#2f8f6b,#1f7244);border-radius:7px}
+  .tips-sub{font-size:11px;color:#7d887f;display:flex;justify-content:space-between}
+  .tips-sub b{color:#1a231d}
+  .tips-sec{font-size:12px;font-weight:800;color:#245334;margin:16px 2px 9px}
+  .tips-cli{border:1px solid #e8ece4;border-radius:12px;padding:10px 11px;margin-bottom:8px}
+  .tc-top{display:flex;justify-content:space-between;align-items:center;gap:8px}
+  .tc-nm{font-size:13.5px;font-weight:800}
+  .tc-falta{font-size:11px;font-weight:800;color:#b23b3b;background:#fbeeee;border-radius:9px;padding:2px 8px;white-space:nowrap}
+  .tc-pb{height:7px;border-radius:5px;background:#eceee8;overflow:hidden;margin:7px 0 5px}
+  .tc-pb>span{display:block;height:100%;border-radius:5px;background:#b5830f}
+  .tc-de{font-size:10.5px;color:#7d887f;display:flex;justify-content:space-between}
+  .tc-de b{color:#1a231d;font-weight:700}
+  .tips-tip{font-size:12px;color:#5a3b00;background:#fff3d6;border:1px solid #ecd79a;border-radius:11px;padding:9px 11px;margin-top:4px;display:flex;gap:7px;align-items:flex-start}
+  .tips-btn{width:100%;margin-top:13px;background:#2f6b43;color:#fff;border:0;border-radius:12px;padding:12px;font-size:14px;font-weight:800;cursor:pointer}
   .hutil{background:var(--accent);color:#fff;border-radius:11px;padding:12px 13px;margin-top:6px;display:flex;justify-content:space-between;align-items:center;gap:8px}
   .hutil .k{font-size:12px;opacity:.9}.hutil .v{font-size:19px;font-weight:800;font-variant-numeric:tabular-nums}
   .hmline{display:flex;justify-content:space-between;background:var(--accent-soft);border-radius:10px;padding:9px 11px;margin-top:9px;font-size:12px;color:var(--ink-soft)}
@@ -2389,6 +2416,7 @@
   </div>
 
   <!-- MODAL visita em tela cheia -->
+  <div class="tips-scrim hidden" id="tipsModal"><div class="tips-card" id="tipsCard"></div></div>
   <div class="modal" id="modal">
     <div class="sheet">
       <div class="sheet-grab"></div>
@@ -2973,6 +3001,9 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
   // Historial de versiones (changelog). Al agregar una mejora: sumar una entrada
   // arriba con la fecha y bumpear el número. APP_VERSION = la última entrada.
   var CHANGELOG = [
+    { v:"1.176", d:"17/11/2026", n:[
+        "Nuevo panel de bienvenida para cada vendedor (1 vez por día al abrir la app): saludo + cómo va contra el objetivo del mes (vendido vs objetivo, con barra), y la lista de clientes que tenían previsión y todavía no compraron lo previsto (previsto vs comprado y cuánto falta), ordenados por lo que más falta."
+      ] },
     { v:"1.175", d:"10/11/2026", n:[
         "En la leyenda de «Visitas por cliente» se agregó, entre paréntesis, los kg comprados por cada cliente hasta la fecha del reporte."
       ] },
@@ -3286,6 +3317,71 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
     updateSit(); togglePresup();
     switchView("registo");
     renderRecent();
+    _tipsTries=0; setTimeout(maybeShowTips, 650); // panel de Tips de bienvenida (1 vez por día)
+  }
+  // ---------- Panel de Tips de bienvenida (vendedor) ----------
+  function fmtDateLong(d){ var dias=["domingo","lunes","martes","miércoles","jueves","viernes","sábado"], mes=["enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"]; return cap(dias[d.getDay()])+" "+d.getDate()+" de "+mes[d.getMonth()]; }
+  function bizDaysLeftInMonth(){ var t=new Date(), y=t.getFullYear(), m=t.getMonth(), last=new Date(y,m+1,0).getDate(), n=0; for(var d=t.getDate(); d<=last; d++){ var w=new Date(y,m,d).getDay(); if(w!==0&&w!==6) n++; } return n; }
+  function computeSellerTips(sid){
+    var curMn=(new Date()).getMonth()+1, bi=baseIdxByMnMap(), kgIdx=bi[curMn], y=planYear();
+    var clients=clientsForSeller(sid);
+    var vendido=0; if(kgIdx!=null) clients.forEach(function(c){ if(c.meses && c.meses[kgIdx]!=null) vendido+=(+c.meses[kgIdx]||0); });
+    var objetivo=0, o=objSellerData(sid, y)||{}; OBJ_LINES.forEach(function(l){ if(o[l]&&o[l][curMn-1]!=null) objetivo+=(+o[l][curMn-1]||0); });
+    var pct=objetivo>0?Math.round(vendido/objetivo*100):null;
+    var lbl=y+"-"+curMn, list=[];
+    clients.forEach(function(c){ var doc=PLAN[planCanonKey(c)], prev=0;
+      if(doc&&doc.plan&&doc.plan[lbl]) doc.plan[lbl].forEach(function(r){ prev+=(+r.kg||0); });
+      if(prev<=0) return;
+      var comp=(kgIdx!=null && c.meses && c.meses[kgIdx]!=null)?(+c.meses[kgIdx]||0):0;
+      if(comp<prev) list.push({nome:c.nome, previsto:prev, comprado:comp, falta:prev-comp, pct:Math.round(comp/prev*100)});
+    });
+    list.sort(function(a,b){ return b.falta-a.falta; });
+    return {name:(SELLER_BY[sid]?SELLER_BY[sid].name:""), vendido:vendido, objetivo:objetivo, pct:pct, falta:(objetivo>vendido?objetivo-vendido:0), clients:list};
+  }
+  var _tipsTries=0;
+  function maybeShowTips(){
+    if(!current || isManager || current.mkt || current.tecnica) return;
+    var sid=current.id, key="pt_tips_"+sid+"_"+todayISO();
+    try{ if(localStorage.getItem(key)) return; }catch(e){}
+    if(!CAT_CLI.length){ if(_tipsTries++<4) setTimeout(maybeShowTips, 850); return; }
+    var t=computeSellerTips(sid);
+    if(t.objetivo<=0 && !t.clients.length){ try{ localStorage.setItem(key,"1"); }catch(e){} return; }
+    try{ localStorage.setItem(key,"1"); }catch(e){}
+    renderTipsModal(t);
+  }
+  function renderTipsModal(t){
+    var card=$("#tipsCard"); if(!card) return;
+    var pctTxt=(t.pct!=null)?(t.pct+"%"):"—", pctW=(t.pct!=null)?Math.max(2,Math.min(100,t.pct)):0;
+    var sumFalta=t.clients.reduce(function(s,c){ return s+c.falta; }, 0);
+    var html='<div class="tips-h"><div class="tips-x" id="tipsX">✕</div><div class="tips-hi">👋 ¡Hola, '+esc(firstName(t.name))+'!</div>'+
+      '<div class="tips-sb">'+esc(fmtDateLong(new Date()))+' · quedan <b>'+bizDaysLeftInMonth()+' días hábiles</b> del mes</div></div><div class="tips-body">';
+    if(t.objetivo>0){
+      html+='<div class="tips-obj"><div class="t">Vas al <span class="big">'+pctTxt+'</span> de tu objetivo del mes</div>'+
+        '<div class="tips-bar"><span style="width:'+pctW+'%"></span></div>'+
+        '<div class="tips-sub"><span>Vendido: <b>'+fmtKg(t.vendido)+' kg</b></span><span>Objetivo: '+fmtKg(t.objetivo)+' kg</span></div>'+
+        (t.falta>0?'<div class="tips-sub" style="margin-top:3px"><span style="color:#b23b3b;font-weight:700">Te faltan '+fmtKg(t.falta)+' kg para la meta</span></div>'
+                  :'<div class="tips-sub" style="margin-top:3px"><span style="color:#1f7244;font-weight:700">¡Objetivo alcanzado! 🎉</span></div>')+
+      '</div>';
+    }
+    if(t.clients.length){
+      html+='<div class="tips-sec">📌 Clientes que tenías previstos y aún no compraron lo esperado</div>';
+      t.clients.slice(0,8).forEach(function(c){ var pw=c.previsto>0?Math.max(2,Math.min(100,Math.round(c.comprado/c.previsto*100))):0;
+        html+='<div class="tips-cli"><div class="tc-top"><span class="tc-nm">'+esc(c.nome)+'</span><span class="tc-falta">faltan '+fmtKg(c.falta)+' kg</span></div>'+
+          '<div class="tc-pb"><span style="width:'+pw+'%"></span></div>'+
+          '<div class="tc-de"><span>Previsto: <b>'+fmtKg(c.previsto)+'</b></span><span>Compró: <b>'+fmtKg(c.comprado)+'</b> ('+c.pct+'%)</span></div></div>';
+      });
+      if(t.clients.length>8) html+='<div style="font-size:11px;color:var(--ink-faint);text-align:center;margin-top:2px">+ '+(t.clients.length-8)+' clientes más…</div>';
+      if(sumFalta>0) html+='<div class="tips-tip">💡 <span>Un envión a estos clientes y sumás <b>'+fmtKg(sumFalta)+' kg</b>.</span></div>';
+    } else if(t.objetivo>0){
+      html+='<div class="tips-tip">✅ <span>No tenés clientes con previsión pendiente este mes. ¡Bien ahí!</span></div>';
+    }
+    html+='<button class="tips-btn" id="tipsOk">¡Dale, a cerrarlos! 💪</button></div>';
+    card.innerHTML=html;
+    $("#tipsModal").classList.remove("hidden");
+    function closeTips(){ $("#tipsModal").classList.add("hidden"); }
+    if($("#tipsX")) $("#tipsX").addEventListener("click", closeTips);
+    if($("#tipsOk")) $("#tipsOk").addEventListener("click", closeTips);
+    $("#tipsModal").addEventListener("click", function(e){ if(e.target===$("#tipsModal")) closeTips(); });
   }
   // recordar sesión SOLO del gestor (no pide PIN de nuevo hasta que salga)
   function rememberMgr(on){ try{ if(on) localStorage.setItem("pt_mgr","1"); else localStorage.removeItem("pt_mgr"); }catch(e){} }
