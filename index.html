@@ -429,6 +429,8 @@
   .tips-tip{font-size:12px;color:#5a3b00;background:#fff3d6;border:1px solid #ecd79a;border-radius:11px;padding:9px 11px;margin-top:4px;display:flex;gap:7px;align-items:flex-start}
   .tips-btn{width:100%;margin-top:13px;background:#2f6b43;color:#fff;border:0;border-radius:12px;padding:12px;font-size:14px;font-weight:800;cursor:pointer}
   .tips-more{font-size:11.5px;color:#1f7244;font-weight:800;text-align:center;margin:4px 0 6px;cursor:pointer;text-decoration:underline}
+  .tips-hide{display:flex;align-items:center;justify-content:center;gap:7px;font-size:11.5px;color:#7d887f;margin-top:11px;cursor:pointer}
+  .tips-hide input{width:15px;height:15px;accent-color:#2f6b43;cursor:pointer}
   .hutil{background:var(--accent);color:#fff;border-radius:11px;padding:12px 13px;margin-top:6px;display:flex;justify-content:space-between;align-items:center;gap:8px}
   .hutil .k{font-size:12px;opacity:.9}.hutil .v{font-size:19px;font-weight:800;font-variant-numeric:tabular-nums}
   .hmline{display:flex;justify-content:space-between;background:var(--accent-soft);border-radius:10px;padding:9px 11px;margin-top:9px;font-size:12px;color:var(--ink-soft)}
@@ -3002,6 +3004,10 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
   // Historial de versiones (changelog). Al agregar una mejora: sumar una entrada
   // arriba con la fecha y bumpear el número. APP_VERSION = la última entrada.
   var CHANGELOG = [
+    { v:"1.178", d:"17/11/2026", n:[
+        "El panel de bienvenida ahora aparece CADA vez que entrás, salvo que marques «No mostrar de nuevo hoy» (casilla agregada). Antes salía una sola vez por día.",
+        "Nuevo panel de bienvenida también para Gestión: cómo va el equipo contra el objetivo del mes + lista de clientes proyectados, del mayor al menor, con su % de cumplimiento (verde ≥100, ámbar ≥70, rojo <70)."
+      ] },
     { v:"1.177", d:"17/11/2026", n:[
         "Panel de bienvenida: el «+ ver N clientes más» ahora es clickeable y despliega el resto de los clientes con previsión pendiente (y se puede volver a colapsar)."
       ] },
@@ -3345,15 +3351,15 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
   var _tipsTries=0;
   function maybeShowTips(){
     if(!current || isManager || current.mkt || current.tecnica) return;
-    var sid=current.id, key="pt_tips_"+sid+"_"+todayISO();
-    try{ if(localStorage.getItem(key)) return; }catch(e){}
-    if(!CAT_CLI.length){ if(_tipsTries++<4) setTimeout(maybeShowTips, 850); return; }
+    var sid=current.id;
+    try{ if(localStorage.getItem("pt_tipshide_"+sid+"_"+todayISO())) return; }catch(e){} // solo se oculta si marcó "no mostrar más hoy"
+    // esperar a que carguen catálogo y planificación (hasta ~4s) para no mostrarlo vacío
+    if((!CAT_CLI.length || (!Object.keys(PLAN).length && !Object.keys(OBJ).length)) && _tipsTries++<5){ setTimeout(maybeShowTips, 850); return; }
     var t=computeSellerTips(sid);
-    if(t.objetivo<=0 && !t.clients.length){ try{ localStorage.setItem(key,"1"); }catch(e){} return; }
-    try{ localStorage.setItem(key,"1"); }catch(e){}
-    renderTipsModal(t);
+    if(t.objetivo<=0 && !t.clients.length) return; // nada útil para mostrar
+    renderTipsModal(t, sid);
   }
-  function renderTipsModal(t){
+  function renderTipsModal(t, sid){
     var card=$("#tipsCard"); if(!card) return;
     var pctTxt=(t.pct!=null)?(t.pct+"%"):"—", pctW=(t.pct!=null)?Math.max(2,Math.min(100,t.pct)):0;
     var sumFalta=t.clients.reduce(function(s,c){ return s+c.falta; }, 0);
@@ -3376,21 +3382,75 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
       t.clients.slice(0,8).forEach(function(c){ html+=cliRow(c); });
       if(t.clients.length>8){
         html+='<div id="tipsMore" style="display:none">'+t.clients.slice(8).map(cliRow).join("")+'</div>';
-        html+='<div class="tips-more" id="tipsMoreBtn">+ ver '+(t.clients.length-8)+' clientes más</div>';
+        html+='<div class="tips-more" id="tipsMoreBtn" data-more="'+(t.clients.length-8)+'">+ ver '+(t.clients.length-8)+' clientes más</div>';
       }
       if(sumFalta>0) html+='<div class="tips-tip">💡 <span>Un envión a estos clientes y sumás <b>'+fmtKg(sumFalta)+' kg</b>.</span></div>';
     } else if(t.objetivo>0){
       html+='<div class="tips-tip">✅ <span>No tenés clientes con previsión pendiente este mes. ¡Bien ahí!</span></div>';
     }
-    html+='<button class="tips-btn" id="tipsOk">¡Dale, a cerrarlos! 💪</button></div>';
+    html+='<button class="tips-btn" id="tipsOk">¡Dale, a cerrarlos! 💪</button>'+
+      '<label class="tips-hide"><input type="checkbox" id="tipsHideChk"> No mostrar de nuevo hoy</label></div>';
     card.innerHTML=html;
     $("#tipsModal").classList.remove("hidden");
-    function closeTips(){ $("#tipsModal").classList.add("hidden"); }
+    wireTipsModal(sid);
+  }
+  function wireTipsModal(sid){
+    function closeTips(){ try{ var ch=$("#tipsHideChk"); if(ch && ch.checked && sid) localStorage.setItem("pt_tipshide_"+sid+"_"+todayISO(),"1"); }catch(e){} $("#tipsModal").classList.add("hidden"); }
     if($("#tipsX")) $("#tipsX").addEventListener("click", closeTips);
     if($("#tipsOk")) $("#tipsOk").addEventListener("click", closeTips);
     var moreBtn=$("#tipsMoreBtn");
-    if(moreBtn) moreBtn.addEventListener("click", function(){ var m=$("#tipsMore"); if(!m) return; var open=(m.style.display!=="none"); m.style.display=open?"none":"block"; moreBtn.textContent=open?("+ ver "+(t.clients.length-8)+" clientes más"):"– ver menos"; });
+    if(moreBtn) moreBtn.addEventListener("click", function(){ var m=$("#tipsMore"); if(!m) return; var open=(m.style.display!=="none"); m.style.display=open?"none":"block"; moreBtn.textContent=open?("+ ver "+moreBtn.getAttribute("data-more")+" clientes más"):"– ver menos"; });
     $("#tipsModal").addEventListener("click", function(e){ if(e.target===$("#tipsModal")) closeTips(); });
+  }
+  // ---------- Panel de Tips para Gestión (resumen del equipo) ----------
+  function pctCol2(p){ return p>=100?"#1f7244":(p>=70?"#b5830f":"#b23b3b"); }
+  function computeMgrTips(){
+    var curMn=(new Date()).getMonth()+1, bi=baseIdxByMnMap(), kgIdx=bi[curMn], y=planYear();
+    var vendido=0, objetivo=0;
+    CAT_CLI.forEach(function(c){ if(kgIdx!=null && c.meses && c.meses[kgIdx]!=null) vendido+=(+c.meses[kgIdx]||0); });
+    SELLERS.forEach(function(s){ var o=objSellerData(s.id, y)||{}; OBJ_LINES.forEach(function(l){ if(o[l]&&o[l][curMn-1]!=null) objetivo+=(+o[l][curMn-1]||0); }); });
+    var pct=objetivo>0?Math.round(vendido/objetivo*100):null;
+    var lbl=y+"-"+curMn, list=[];
+    CAT_CLI.forEach(function(c){ var doc=PLAN[planCanonKey(c)], prev=0;
+      if(doc&&doc.plan&&doc.plan[lbl]) doc.plan[lbl].forEach(function(r){ prev+=(+r.kg||0); });
+      if(prev<=0) return;
+      var comp=(kgIdx!=null && c.meses && c.meses[kgIdx]!=null)?(+c.meses[kgIdx]||0):0;
+      list.push({nome:c.nome, vendedor:c.vendedor||"", previsto:prev, comprado:comp, pct:Math.round(comp/prev*100)});
+    });
+    list.sort(function(a,b){ return b.previsto-a.previsto; }); // del mayor proyectado al menor
+    return {vendido:vendido, objetivo:objetivo, pct:pct, falta:(objetivo>vendido?objetivo-vendido:0), clients:list};
+  }
+  function renderMgrTips(t){
+    var card=$("#tipsCard"); if(!card) return;
+    var pctTxt=(t.pct!=null)?(t.pct+"%"):"—", pctW=(t.pct!=null)?Math.max(2,Math.min(100,t.pct)):0;
+    var html='<div class="tips-h"><div class="tips-x" id="tipsX">✕</div><div class="tips-hi">👋 ¡Hola, Gestión!</div>'+
+      '<div class="tips-sb">'+esc(fmtDateLong(new Date()))+' · quedan <b>'+bizDaysLeftInMonth()+' días hábiles</b> del mes</div></div><div class="tips-body">';
+    if(t.objetivo>0){ html+='<div class="tips-obj"><div class="t">El equipo va al <span class="big">'+pctTxt+'</span> del objetivo del mes</div>'+
+      '<div class="tips-bar"><span style="width:'+pctW+'%"></span></div>'+
+      '<div class="tips-sub"><span>Vendido: <b>'+fmtKg(t.vendido)+' kg</b></span><span>Objetivo: '+fmtKg(t.objetivo)+' kg</span></div>'+
+      (t.falta>0?'<div class="tips-sub" style="margin-top:3px"><span style="color:#b23b3b;font-weight:700">Faltan '+fmtKg(t.falta)+' kg para la meta</span></div>':'')+'</div>'; }
+    if(t.clients.length){
+      html+='<div class="tips-sec">📊 Clientes proyectados — del mayor al menor (% de cumplimiento)</div>';
+      var row=function(c){ var pw=Math.max(2,Math.min(100,c.pct)), col=pctCol2(c.pct);
+        return '<div class="tips-cli"><div class="tc-top"><span class="tc-nm">'+esc(c.nome)+(c.vendedor?' <small style="color:#7d887f;font-weight:600">· '+esc(firstName(c.vendedor))+'</small>':'')+'</span><span class="tc-falta" style="color:'+col+';background:'+col+'1e">'+c.pct+'%</span></div>'+
+          '<div class="tc-pb"><span style="width:'+pw+'%;background:'+col+'"></span></div>'+
+          '<div class="tc-de"><span>Previsto: <b>'+fmtKg(c.previsto)+'</b></span><span>Compró: <b>'+fmtKg(c.comprado)+'</b></span></div></div>'; };
+      t.clients.slice(0,8).forEach(function(c){ html+=row(c); });
+      if(t.clients.length>8){ html+='<div id="tipsMore" style="display:none">'+t.clients.slice(8).map(row).join("")+'</div>'; html+='<div class="tips-more" id="tipsMoreBtn" data-more="'+(t.clients.length-8)+'">+ ver '+(t.clients.length-8)+' clientes más</div>'; }
+    }
+    html+='<button class="tips-btn" id="tipsOk">Entendido 👍</button>'+
+      '<label class="tips-hide"><input type="checkbox" id="tipsHideChk"> No mostrar de nuevo hoy</label></div>';
+    card.innerHTML=html;
+    $("#tipsModal").classList.remove("hidden");
+    wireTipsModal("gestion");
+  }
+  function maybeShowMgrTips(){
+    if(!isManager) return;
+    try{ if(localStorage.getItem("pt_tipshide_gestion_"+todayISO())) return; }catch(e){}
+    if((!CAT_CLI.length || (!Object.keys(PLAN).length && !Object.keys(OBJ).length)) && _tipsTries++<5){ setTimeout(maybeShowMgrTips, 850); return; }
+    var t=computeMgrTips();
+    if(t.objetivo<=0 && !t.clients.length) return;
+    renderMgrTips(t);
   }
   // recordar sesión SOLO del gestor (no pide PIN de nuevo hasta que salga)
   function rememberMgr(on){ try{ if(on) localStorage.setItem("pt_mgr","1"); else localStorage.removeItem("pt_mgr"); }catch(e){} }
@@ -3403,6 +3463,7 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
     $("#shell").classList.add("hidden");
     $("#mShell").classList.remove("hidden");
     switchMView("equipa");
+    _tipsTries=0; setTimeout(maybeShowMgrTips, 650); // panel de bienvenida (Gestión)
   }
   $("#logout").addEventListener("click", function(){
     current=null; $("#shell").classList.add("hidden"); stopRec(); resetLogin();
