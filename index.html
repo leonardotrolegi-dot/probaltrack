@@ -3004,6 +3004,9 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
   // Historial de versiones (changelog). Al agregar una mejora: sumar una entrada
   // arriba con la fecha y bumpear el número. APP_VERSION = la última entrada.
   var CHANGELOG = [
+    { v:"1.180", d:"17/11/2026", n:[
+        "Modo offline: la app ahora se puede abrir y usar sin conexión (se instala en el teléfono). El vendedor registra visitas en el campo sin señal y se suben solas al reconectar. (Requiere subir también los archivos sw.js y manifest.json al sitio.)"
+      ] },
     { v:"1.179", d:"17/11/2026", n:[
         "Paneles de bienvenida (vendedor y Gestión): la lista se ordena siempre por el cliente que MENOS compró respecto a lo previsto (menor % de cumplimiento primero)."
       ] },
@@ -7757,5 +7760,9 @@ Martin|JORGE DANIEL ORTIZ OCAMPOS|
 })();
 </script>
 
+<script>
+  /* Service worker: permite abrir y usar la app sin conexión (los datos se sincronizan solos al reconectar) */
+  if('serviceWorker' in navigator){ window.addEventListener('load', function(){ try{ navigator.serviceWorker.register('sw.js'); }catch(e){} }); }
+</script>
 </body>
 </html>
